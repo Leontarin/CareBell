@@ -21,10 +21,11 @@ export default function Calendar({ onClose }) {
   // State
   const [currentDate, setCurrentDate] = useState(new Date());
   const [events,      setEvents]      = useState([]);
-  const [weather,     setWeather]     = useState([]);  // will hold [{ day: String, icon, min, max }, …]
+  const [weather,     setWeather]     = useState([]);
   const [modalOpen,   setModalOpen]   = useState(false);
   const [dayViewOpen, setDayViewOpen] = useState(false);
   const [selectedDay, setSelectedDay] = useState(null);
+  const [showConfirmDelete, setShowConfirmDelete] = useState(false);
   const [editing,     setEditing]     = useState({
     _id:     null,
     date:    "",
@@ -46,7 +47,7 @@ export default function Calendar({ onClose }) {
       });
   }, [userId]);
 
-  // Fetch 7-day forecast and aggregate by dayString
+  // Fetch 7-day forecast
   const fetchWeather = useCallback(() => {
     if (!navigator.geolocation) return;
     navigator.geolocation.getCurrentPosition(({ coords }) => {
@@ -85,7 +86,7 @@ export default function Calendar({ onClose }) {
     setCurrentDate(new Date(y, m - 1, 1));
   };
 
-  // Build upcoming events list (next 7 days)
+  // Upcoming events (next 7 days)
   const weekAhead = new Date();
   weekAhead.setDate(weekAhead.getDate() + 7);
   const upcomingEvents = events
@@ -93,17 +94,19 @@ export default function Calendar({ onClose }) {
     .filter(e => e.dateObj >= new Date() && e.dateObj <= weekAhead)
     .sort((a, b) => a.dateObj - b.dateObj);
 
-  // Modal open/save/delete helpers
-  const openNew       = day  => {
+  // Modal actions
+  const openNew = day => {
     setEditing({ _id: null, date: formatDateLocal(day), time: "09:00", title: "", content: "" });
+    setShowConfirmDelete(false);
     setModalOpen(true);
   };
   const openNewAtHour = hour => {
     const d = new Date(selectedDay);
     setEditing({ _id: null, date: formatDateLocal(d), time: `${String(hour).padStart(2,"0")}:00`, title: "", content: "" });
+    setShowConfirmDelete(false);
     setModalOpen(true);
   };
-  const openEdit      = evt  => {
+  const openEdit = evt => {
     const d = new Date(evt.date);
     setEditing({
       _id:     evt._id,
@@ -112,10 +115,12 @@ export default function Calendar({ onClose }) {
       title:   evt.title,
       content: evt.content
     });
+    setShowConfirmDelete(false);
     setModalOpen(true);
   };
-  const deleteEvent   = id   => axios.delete(`${API}/reminders/${userId}/${id}`).then(fetchEvents);
-  const saveEvent     = ()   => {
+  const deleteEvent = id =>
+    axios.delete(`${API}/reminders/${userId}/${id}`).then(fetchEvents);
+  const saveEvent = () => {
     const { _id, date, time, title, content } = editing;
     const [h, m] = time.split(":").map(Number);
     const d = new Date(date); d.setHours(h, m);
@@ -127,8 +132,8 @@ export default function Calendar({ onClose }) {
   };
 
   // Day-detail view
-  const openDayView  = day => { setSelectedDay(day); setDayViewOpen(true); };
-  const closeDayView = ()  => setDayViewOpen(false);
+  const openDayView = day => { setSelectedDay(day); setDayViewOpen(true); };
+  const closeDayView = () => setDayViewOpen(false);
 
   // Build month grid
   const y   = currentDate.getFullYear();
@@ -185,12 +190,11 @@ export default function Calendar({ onClose }) {
           </div>
         </div>
 
-        {/* Month grid: only this scrolls */}
+        {/* Month grid */}
         <div className="flex-1 overflow-auto grid grid-cols-7 grid-rows-7 divide-y divide-x divide-gray-300">
           {["Mon","Tue","Wed","Thu","Fri","Sat","Sun"].map(w => (
             <div key={w} className="p-2 bg-blue-300 text-white font-semibold text-center">{w}</div>
           ))}
-
           {grid.map((day, idx) =>
             day ? (
               <div
@@ -204,27 +208,23 @@ export default function Calendar({ onClose }) {
                       : "bg-blue-100 text-blue-900"
                 }`}
               >
-                {/* Day number */}
                 <div className="text-xl font-medium">{day.getDate()}</div>
 
-                {/* Embedded weather for this day */}
-                {weather
-                  .filter(w => w.day === day.toDateString())
-                  .map(w => (
-                    <div key={w.day} className="flex items-center space-x-1 mt-1">
-                      <img
-                        src={`https://openweathermap.org/img/wn/${w.icon}@2x.png`}
-                        alt="weather"
-                        className="w-6 h-6"
-                      />
-                      <span className="text-s">
-                        {w.min}°/{w.max}°
-                      </span>
-                    </div>
-                  ))
-                }
+                {/* Weather */}
+                {weather.filter(w => w.day === day.toDateString()).map(w => (
+                  <div key={w.day} className="flex items-center space-x-1 mt-1">
+                    <img
+                      src={`https://openweathermap.org/img/wn/${w.icon}@2x.png`}
+                      alt="weather"
+                      className="w-6 h-6"
+                    />
+                    <span className="text-s">
+                      {w.min}°/{w.max}°
+                    </span>
+                  </div>
+                ))}
 
-                {/* Up to 2 events */}
+                {/* Events */}
                 {events
                   .filter(e => new Date(e.date).toDateString() === day.toDateString())
                   .slice(0, 2)
@@ -239,7 +239,6 @@ export default function Calendar({ onClose }) {
                   ))
                 }
 
-                {/* Add event button */}
                 <button
                   onClick={ev => { ev.stopPropagation(); openNew(day); }}
                   className="absolute bottom-1 right-1 text-green-600 font-bold"
@@ -286,19 +285,46 @@ export default function Calendar({ onClose }) {
               value={editing.content}
               onChange={e => setEditing({ ...editing, content: e.target.value })}
             />
-            <div className="mt-4 flex justify-end space-x-2">
-              {editing._id && (
-                <button onClick={() => { deleteEvent(editing._id); setModalOpen(false); }} className="text-red-600">
-                  Delete
-                </button>
-              )}
+
+            {/* Confirmation panel */}
+            {editing._id && !showConfirmDelete && (
+              <button
+                className="text-red-600 mb-2"
+                onClick={() => setShowConfirmDelete(true)}
+              >
+                Delete
+              </button>
+            )}
+            {showConfirmDelete && (
+              <div className="mb-2 p-2 border rounded bg-red-50">
+                <p className="mb-2 font-medium">Are you sure you want to delete this event?</p>
+                <div className="flex justify-end space-x-2">
+                  <button
+                    className="px-2 py-1 border rounded"
+                    onClick={() => setShowConfirmDelete(false)}
+                  >
+                    No
+                  </button>
+                  <button
+                    className="px-2 py-1 bg-red-600 text-white rounded"
+                    onClick={() => {
+                      deleteEvent(editing._id);
+                      setModalOpen(false);
+                    }}
+                  >
+                    Yes
+                  </button>
+                </div>
+              </div>
+            )}
+
               <button onClick={() => setModalOpen(false)}>Cancel</button>
               <button onClick={saveEvent} className="bg-blue-600 text-white px-3 py-1 rounded">
                 Save
               </button>
             </div>
           </div>
-        </div>
+      
       )}
 
       {/* Day-detail View */}
