@@ -4,42 +4,41 @@ import React, { useEffect, useState, useRef, useContext } from 'react';
 import Vapi from '@vapi-ai/web';
 import { FaPhone, FaPhoneSlash } from 'react-icons/fa';
 import bella_img from '../resources/Grafik3a.png';
+import { useTranslation } from 'react-i18next';                // ← import hook
 import { AppContext } from '../AppContext';
 import { API } from '../config';
 
 export default function Bella() {
+  const { t } = useTranslation();                              // ← get t()
   const { user } = useContext(AppContext);
-  const [callStatus, setCallStatus] = useState('ready');   // 'ready' | 'calling' | 'in-call'
+  const [callStatus, setCallStatus] = useState('ready');      // 'ready' | 'calling' | 'in-call'
   const [messages, setMessages] = useState([]);
   const [isChatOpen, setIsChatOpen] = useState(false);
 
   const vapiRef = useRef(null);
   const chatRef = useRef(null);
 
-  // Load and persist chat in localStorage
+  // Load/persist chat…
   useEffect(() => {
     const saved = localStorage.getItem('bella_chat');
     if (saved) {
       try { setMessages(JSON.parse(saved)); }
-      catch (err) { console.error('Failed to parse saved chat:', err); }
+      catch { /*ignore*/ }
     }
   }, []);
   useEffect(() => {
     localStorage.setItem('bella_chat', JSON.stringify(messages));
   }, [messages]);
-
-  // Auto-scroll on new messages
   useEffect(() => {
     if (chatRef.current && isChatOpen) {
       chatRef.current.scrollTop = chatRef.current.scrollHeight;
     }
   }, [messages, isChatOpen]);
 
-  // Initialize Vapi and handlers
+  // Init Vapi
   useEffect(() => {
     const vapi = (vapiRef.current = new Vapi(import.meta.env.VITE_VAPI_PUBLIC_KEY));
 
-    // On call start: inject all saved reminders
     vapi.on('call-start', async () => {
       setCallStatus('in-call');
       setIsChatOpen(true);
@@ -49,7 +48,10 @@ export default function Bella() {
         if (!res.ok) throw new Error(`Status ${res.status}`);
         const reminders = await res.json();
         for (let r of reminders) {
-          await vapi.send({ type: 'add-message', message: {role: "user", content: `Remember this about the user ${r.description}`}});
+          await vapi.send({
+            type: 'text',
+            text: `${t('Bella.greeting')} REMINDER: ${r.title} — ${r.description}`
+          });
         }
       } catch (err) {
         console.error('Could not load Bella reminders:', err);
@@ -58,25 +60,23 @@ export default function Bella() {
 
     vapi.on('call-end', () => setCallStatus('ready'));
 
-    // Handle transcripts
     vapi.on('message', msg => {
       if (msg.type !== 'transcript') return;
       const speaker = msg.role === 'assistant' ? 'assistant' : 'user';
       const text = msg.transcript;
 
-      // Partial vs final transcript handling
+      // partial vs final…
       if (msg.transcriptType === 'partial') {
         setMessages(prev => {
           const last = prev[prev.length - 1];
           if (last && last.speaker === speaker && last.partial) {
-            const upd = [...prev];
-            upd[upd.length - 1] = { speaker, text, partial: true };
-            return upd;
+            const up = [...prev];
+            up[up.length - 1] = { speaker, text, partial: true };
+            return up;
           }
           return [...prev, { speaker, text, partial: true }];
         });
       } else {
-        // final
         setMessages(prev => {
           const out = [...prev];
           const last = out[out.length - 1];
@@ -88,7 +88,7 @@ export default function Bella() {
           return out;
         });
 
-        // On final user transcript: analyze & react
+        // final user → analyze
         if (speaker === 'user' && user?.id) {
           fetch(`${API}/bellaReminders/analyze`, {
             method: 'POST',
@@ -101,28 +101,22 @@ export default function Bella() {
               if (!v) return;
 
               if (saved) {
-                console.log('✅ Saved personal fact:', reminder);
                 await v.send({
                   type: 'text',
-                  text: `Okay, I saved: ${reminder.title}.`
+                  text: t('Bella.confirmSaved', { title: reminder.title })
                 });
               } else if (label === 'question') {
-                // read back all reminders
                 const r2 = await fetch(`${API}/bellaReminders/user/${user.id}`);
-                if (!r2.ok) throw new Error('Failed to load reminders');
-                const list = await r2.json();
+                const list = (await r2.json()) || [];
                 if (list.length) {
                   for (let r of list) {
                     await v.send({
                       type: 'text',
-                      text: `REMINDER: ${r.title} — ${r.description}`
+                      text: `${t('Bella.reminderPrefix')} ${r.title} — ${r.description}`
                     });
                   }
                 } else {
-                  await v.send({
-                    type: 'text',
-                    text: `You have no saved reminders.`
-                  });
+                  await v.send({ type: 'text', text: t('Bella.noReminders') });
                 }
               }
             })
@@ -133,36 +127,43 @@ export default function Bella() {
 
     vapi.on('error', err => console.error('Vapi error', err));
     return () => vapi.removeAllListeners();
-  }, [user]);
+  }, [user, t]);
 
-  // Call controls
+  // call controls
   const startCall = () => {
     setCallStatus('calling');
-    vapiRef.current.start(
-      import.meta.env.VITE_VAPI_ASSISTANT_ID,
-      { clientMessages: ['transcript'] }
-    );
+    vapiRef.current.start(import.meta.env.VITE_VAPI_ASSISTANT_ID, {
+      clientMessages: ['transcript']
+    });
   };
   const endCall = () => vapiRef.current.stop();
   const toggleCall = () =>
     callStatus === 'ready' ? startCall() : endCall();
 
-  // Render
+  // labels
   const Icon = callStatus === 'ready' ? FaPhone : FaPhoneSlash;
   const callLabel =
     callStatus === 'ready'
-      ? 'Talk to Bella'
+      ? t('Bella.talk')
       : callStatus === 'calling'
-      ? 'Calling Bella…'
-      : 'Stop Call';
+      ? t('Bella.calling')
+      : t('Bella.stop');
+
+  const btnClass = `
+    inline-flex items-center justify-center
+    border-2 border-blue-900 rounded-xl
+    py-2 px-4 bg-blue-900 text-white
+    font-semibold hover:bg-blue-800
+    focus:outline-none focus:ring-2 focus:ring-white
+    transition
+  `;
 
   const chatBtnClass = `
     inline-flex items-center justify-center
-    border-2 border-blue-700
-    rounded-full py-1 px-4 text-sm
-    bg-blue-700 text-white font-semibold
-    hover:bg-blue-600 focus:outline-none
-    focus:ring-2 focus:ring-blue-300
+    border-2 border-blue-700 rounded-full
+    py-1 px-4 text-sm bg-blue-700
+    text-white font-semibold hover:bg-blue-600
+    focus:outline-none focus:ring-2 focus:ring-blue-300
     transition mb-4
   `;
 
@@ -171,8 +172,8 @@ export default function Bella() {
       {isChatOpen ? (
         <>
           <div
-            id="bella-img"
             className="rounded-full overflow-hidden border-[5px] border-blue-800 mb-2 w-24 h-24"
+            id="bella-img"
           >
             <img
               src={bella_img}
@@ -183,9 +184,9 @@ export default function Bella() {
           <button
             onClick={() => setIsChatOpen(false)}
             className={chatBtnClass}
-            aria-label="Close chat"
+            aria-label={t('Bella.closeChat')}
           >
-            Close Chat
+            {t('Bella.closeChat')}
           </button>
           <div
             ref={chatRef}
@@ -229,17 +230,14 @@ export default function Bella() {
             <button
               onClick={() => setIsChatOpen(true)}
               className={chatBtnClass}
-              aria-label="Open chat"
+              aria-label={t('Bella.openChat')}
             >
-              Open Chat
+              {t('Bella.openChat')}
             </button>
           )}
         </>
       )}
-      <button
-        onClick={toggleCall}
-        className="inline-flex items-center justify-center border-2 border-blue-900 rounded-xl py-2 px-4 bg-blue-900 text-white font-semibold hover:bg-blue-800 focus:outline-none focus:ring-2 focus:ring-white transition"
-      >
+      <button onClick={toggleCall} className={btnClass}>
         <Icon className="mr-2 text-xl" />
         {callLabel}
       </button>

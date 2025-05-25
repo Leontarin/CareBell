@@ -1,7 +1,14 @@
 {
   "Bella": {
     "greeting": "Hei, Bella!",
-    "inputPlaceholder": "Kirjoita viestisi..."
+    "closeChat": "Sulje keskustelu",
+    "openChat": "Avaa keskustelu",
+    "talk": "Puhu Bellan kanssa",
+    "calling": "Soitan Bellalle…",
+    "stop": "Lopeta puhelu",
+    "confirmSaved": "Tallensin: {{title}}.",
+    "reminderPrefix": "MUISTUTUS:",
+    "noReminders": "Sinulla ei ole tallennettuja muistutuksia."
   },
   "Calendar": {
     "Mon": "maanantai",

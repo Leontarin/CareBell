@@ -1,7 +1,14 @@
 {
   "Bella": {
     "greeting": "Hallo, Bella!",
-    "inputPlaceholder": "Gib deine Nachricht ein..."
+    "closeChat": "Chat schließen",
+    "openChat": "Chat öffnen",
+    "talk": "Mit Bella sprechen",
+    "calling": "Rufe Bella an…",
+    "stop": "Anruf beenden",
+    "confirmSaved": "Okay, ich habe gespeichert: {{title}}.",
+    "reminderPrefix": "ERINNERUNG:",
+    "noReminders": "Du hast keine gespeicherten Erinnerungen."
   },
   "Calendar": {
     "Mon": "Montag",

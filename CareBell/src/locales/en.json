@@ -1,7 +1,14 @@
 {
   "Bella": {
     "greeting": "Hello, Bella!",
-    "inputPlaceholder": "Type your message..."
+    "closeChat": "Close Chat",
+    "openChat": "Open Chat",
+    "talk": "Talk to Bella",
+    "calling": "Calling Bella…",
+    "stop": "Stop Call",
+    "confirmSaved": "Okay, I saved: {{title}}.",
+    "reminderPrefix": "REMINDER:",
+    "noReminders": "You have no saved reminders."
   },
   "Calendar": {
     "Mon": "Mon",

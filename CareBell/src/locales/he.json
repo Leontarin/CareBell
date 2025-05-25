@@ -1,7 +1,14 @@
 {
   "Bella": {
-    "greeting": "שלום, בלה!",
-    "inputPlaceholder": "הקלידי את ההודעה שלך..."
+    "greeting": "היי, בלה!",
+    "closeChat": "סגור שיחה",
+    "openChat": "פתח שיחה",
+    "talk": "דבר עם בלה",
+    "calling": "מתקשר אל בלה…",
+    "stop": "הפסק שיחה",
+    "confirmSaved": "בסדר, שמרתי: {{title}}.",
+    "reminderPrefix": "תזכורת:",
+    "noReminders": "אין לך תזכורות שמורות."
   },
   "Calendar": {
     "Mon": "שני",
