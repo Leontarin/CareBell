@@ -1,12 +1,12 @@
 // routes/bellaReminders.js
 require('dotenv').config();
-const express       = require('express');
-const axios         = require('axios');
-const router        = express.Router();
+const express = require('express');
+const axios = require('axios');
+const router = express.Router();
 const BellaReminder = require('../models/bellaReminder');
 
 const HF_API_URL = 'https://api-inference.huggingface.co/models/joeddav/xlm-roberta-large-xnli';
-const HF_TOKEN   = process.env.HF_API_TOKEN;
+const HF_TOKEN = process.env.HF_API_TOKEN;
 
 // 1) Manually add a reminder
 router.post('/addReminder', async (req, res) => {
@@ -33,7 +33,7 @@ router.get('/user/:userId', async (req, res) => {
   }
 });
 
-// 3) Analyze incoming text and auto-save if the model’s top label is 'personal fact'
+// 3) Analyze incoming text and auto-save if the model's top label is 'personal fact'
 router.post('/analyze', async (req, res) => {
   const { userId, text } = req.body;
   if (!userId || !text) {
@@ -53,16 +53,23 @@ router.post('/analyze', async (req, res) => {
       {
         headers: {
           Authorization: `Bearer ${HF_TOKEN}`,
-          'Content-Type': 'application/json'
+          'Content-Type': 'application/json',
+          'Accept': 'application/json'
         }
       }
     );
 
-    const { labels, scores } = hfResponse.data;
+    const data = hfResponse.data;
+    if (!data.labels || !data.scores) {
+      throw new Error('Invalid response from HF inference');
+    }
+
+    const labels = data.labels;
+    const scores = data.scores;
     const topLabel = labels[0];
     console.log(`→ topLabel: ${topLabel} (score ${scores[0].toFixed(3)})`);
 
-    // Only save if top label is 'personal fact'
+    // If the top label is 'personal fact', save it
     if (topLabel === 'personal fact') {
       const title = text.split(/,|\./)[0].trim();
       const exists = await BellaReminder.findOne({ userId, title });
