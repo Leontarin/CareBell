@@ -168,6 +168,8 @@
     "volume": "Äänenvoimakkuus",
     "speakingSpeed": "Puhenopeus",
     "close": "Sulje",
-    "language": "kieli"
+    "language": "kieli",
+    "User": "Vaihda käyttäjää",
+    "loading": "Ladataan käyttäjiä..."
   }
 }

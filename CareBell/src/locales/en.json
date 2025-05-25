@@ -173,6 +173,7 @@
     "speakingSpeed": "Speaking Speed",
     "close": "Close",
     "language": "Language",
-    "User": "Change User"
+    "User": "Change User",
+    "loading": "Loading users..."
   }
 }

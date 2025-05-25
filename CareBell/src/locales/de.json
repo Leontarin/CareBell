@@ -168,6 +168,9 @@
     "volume": "Lautstärke",
     "speakingSpeed": "Sprechgeschwindigkeit",
     "close": "Schließen",
-    "language": "Sprache"
+    "language": "Sprache",
+    "User": "Benutzer wechseln",
+    "loading": "Benutzer werden geladen..."
+
   }
 }

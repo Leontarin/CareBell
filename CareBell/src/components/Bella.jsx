@@ -4,21 +4,22 @@ import React, { useEffect, useState, useRef, useContext } from 'react';
 import Vapi from '@vapi-ai/web';
 import { FaPhone, FaPhoneSlash } from 'react-icons/fa';
 import bella_img from '../resources/Grafik3a.png';
-import { useTranslation } from 'react-i18next';                // ← import hook
+import { useTranslation } from 'react-i18next';
 import { AppContext } from '../AppContext';
 import { API } from '../config';
 
 export default function Bella() {
-  const { t } = useTranslation();                              // ← get t()
+  const { t } = useTranslation();
   const { user } = useContext(AppContext);
-  const [callStatus, setCallStatus] = useState('ready');      // 'ready' | 'calling' | 'in-call'
+
+  const [callStatus, setCallStatus] = useState('ready'); // 'ready' | 'calling' | 'in-call'
   const [messages, setMessages] = useState([]);
   const [isChatOpen, setIsChatOpen] = useState(false);
 
   const vapiRef = useRef(null);
   const chatRef = useRef(null);
 
-  // Load/persist chat…
+  // ——— persist chat history ———
   useEffect(() => {
     const saved = localStorage.getItem('bella_chat');
     if (saved) {
@@ -35,7 +36,7 @@ export default function Bella() {
     }
   }, [messages, isChatOpen]);
 
-  // Init Vapi
+  // ——— Init Vapi & load reminders on call-start ———
   useEffect(() => {
     const vapi = (vapiRef.current = new Vapi(import.meta.env.VITE_VAPI_PUBLIC_KEY));
 
@@ -129,7 +130,7 @@ export default function Bella() {
     return () => vapi.removeAllListeners();
   }, [user, t]);
 
-  // call controls
+  // ——— call controls ———
   const startCall = () => {
     setCallStatus('calling');
     vapiRef.current.start(import.meta.env.VITE_VAPI_ASSISTANT_ID, {
@@ -140,7 +141,7 @@ export default function Bella() {
   const toggleCall = () =>
     callStatus === 'ready' ? startCall() : endCall();
 
-  // labels
+  // ——— labels & classes ———
   const Icon = callStatus === 'ready' ? FaPhone : FaPhoneSlash;
   const callLabel =
     callStatus === 'ready'
@@ -151,6 +152,7 @@ export default function Bella() {
 
   const btnClass = `
     inline-flex items-center justify-center
+    text-base                          /* <-- scales 1rem with root font-size */
     border-2 border-blue-900 rounded-xl
     py-2 px-4 bg-blue-900 text-white
     font-semibold hover:bg-blue-800
@@ -161,8 +163,9 @@ export default function Bella() {
   const chatBtnClass = `
     inline-flex items-center justify-center
     border-2 border-blue-700 rounded-full
-    py-1 px-4 text-sm bg-blue-700
-    text-white font-semibold hover:bg-blue-600
+    py-1 px-4 text-sm                 /* already rem-based */
+    bg-blue-700 text-white font-semibold
+    hover:bg-blue-600
     focus:outline-none focus:ring-2 focus:ring-blue-300
     transition mb-4
   `;
@@ -205,8 +208,7 @@ export default function Bella() {
                     m.speaker === 'assistant'
                       ? 'bg-blue-900 text-white'
                       : 'bg-gray-300 text-black'
-                  }`}
-                  style={{ fontSize: '18px', lineHeight: '1.4' }}
+                  } text-lg leading-snug`}
                 >
                   {m.text}
                 </div>

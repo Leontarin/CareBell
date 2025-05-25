@@ -1,30 +1,58 @@
-import React, { useEffect, useState } from "react";
-import { FaVolumeMute, FaVolumeUp, FaRunning, FaTachometerAlt } from "react-icons/fa";
+import React, { useEffect, useState, useContext } from "react";
+import {
+  FaVolumeMute,
+  FaVolumeUp,
+  FaRunning,
+  FaTachometerAlt
+} from "react-icons/fa";
 import { useTranslation } from "react-i18next";
+import { AppContext } from "../AppContext";
+import { API } from "../config";
 
 export default function SettingsModal({ onClose }) {
   const { t, i18n } = useTranslation();
+  const { user, setUser } = useContext(AppContext);
 
   const [scale, setScale] = useState(
     parseFloat(localStorage.getItem("fontScale")) || 1
   );
-  const [showLanguage, setShowLanguage] = useState(true);
+  const [users, setUsers] = useState([]);
+  const [loadingUsers, setLoadingUsers] = useState(true);
 
+  // 1. Load and persist font scale
   useEffect(() => {
     document.documentElement.style.fontSize = `${16 * scale}px`;
     localStorage.setItem("fontScale", scale);
   }, [scale]);
 
+  // 2. Load all users for the combobox
+  useEffect(() => {
+    fetch(`${API}/users/`)
+      .then(res => {
+        if (!res.ok) throw new Error(`Status ${res.status}`);
+        return res.json();
+      })
+      .then(data => setUsers(data))
+      .catch(err => console.error("Error loading users:", err))
+      .finally(() => setLoadingUsers(false));
+  }, []);
+
+  // 3. Change language
   const changeLanguage = (lng) => {
     i18n.changeLanguage(lng);
     localStorage.setItem("i18nextLng", lng);
   };
 
+  // 4. Change current user
+  const changeUser = (e) => {
+    const selectedId = e.target.value;
+    const selected = users.find(u => String(u.id) === selectedId);
+    if (selected) setUser(selected);
+  };
+
   return (
     <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
-      {/* panel */}
       <div className="w-[95%] max-w-md bg-white rounded-3xl shadow-xl p-8 relative">
-        {/* close X */}
         <button
           onClick={onClose}
           className="absolute top-4 left-4 text-2xl text-gray-600 hover:text-gray-800"
@@ -32,12 +60,11 @@ export default function SettingsModal({ onClose }) {
           ×
         </button>
 
-        {/* Title */}
         <h2 className="text-3xl font-bold text-blue-800 mb-8">
           {t("SettingsModal.title")}
         </h2>
 
-        {/* -------- TEXT SIZE -------- */}
+        {/* TEXT SIZE */}
         <section className="mb-8">
           <h3 className="text-xl font-semibold mb-3">
             {t("SettingsModal.textSize")}
@@ -57,7 +84,7 @@ export default function SettingsModal({ onClose }) {
           </div>
         </section>
 
-        {/* -------- VOLUME -------- */}
+        {/* VOLUME */}
         <section className="mb-8">
           <h3 className="text-xl font-semibold mb-3">
             {t("SettingsModal.volume")}
@@ -70,13 +97,13 @@ export default function SettingsModal({ onClose }) {
               max={100}
               defaultValue={70}
               className="flex-1 accent-blue-600 h-2 rounded-lg bg-gray-300"
-              disabled /* only for UI */
+              disabled
             />
             <FaVolumeUp className="text-2xl" />
           </div>
         </section>
 
-        {/* -------- SPEAKING SPEED -------- */}
+        {/* SPEAKING SPEED */}
         <section className="mb-8">
           <h3 className="text-xl font-semibold mb-3">
             {t("SettingsModal.speakingSpeed")}
@@ -90,13 +117,13 @@ export default function SettingsModal({ onClose }) {
               step={0.1}
               defaultValue={1}
               className="flex-1 accent-blue-600 h-2 rounded-lg bg-gray-300"
-              disabled /* for the future */
+              disabled
             />
             <FaRunning className="text-2xl" />
           </div>
         </section>
 
-       {/* -------- SETTINGS SELECTORS -------- */}
+        {/* LANGUAGE & USER SELECTORS */}
         <section className="mb-8">
           <div className="flex items-start gap-12">
             {/* Language Switcher */}
@@ -116,20 +143,30 @@ export default function SettingsModal({ onClose }) {
               </select>
             </div>
 
-            {/* User Combobox (Debug) */}
+            {/* User Combobox */}
             <div>
               <h3 className="text-xl font-semibold mb-2">
                 {t("SettingsModal.User")}
               </h3>
-              <select className="border rounded px-2 py-1">
-                <option value="user0">Alison</option>
-                <option value="user1">Bob</option>
-              </select>
+
+              {loadingUsers ? (
+                <p className="text-gray-600">{t("SettingsModal.loading")}</p>
+              ) : (
+                <select
+                  value={user?.id || ""}
+                  onChange={changeUser}
+                  className="border rounded px-2 py-1"
+                >
+                  {users.map(u => (
+                    <option key={u.id} value={u.id}>
+                      {u.name || u.fullName || u.id}
+                    </option>
+                  ))}
+                </select>
+              )}
             </div>
           </div>
         </section>
-
-
 
         {/* Close Button */}
         <button
