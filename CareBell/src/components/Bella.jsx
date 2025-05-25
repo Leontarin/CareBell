@@ -65,7 +65,7 @@ export default function Bella() {
           await vapi.send({
             type: 'add-message',
             message: {
-              role: "user",
+              role: "system",
               content: `Remember this about the user: ${r.description}`,
             },
           });
