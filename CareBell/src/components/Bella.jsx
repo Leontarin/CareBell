@@ -9,7 +9,7 @@ import { AppContext } from '../AppContext';
 import { API } from '../config';
 
 export default function Bella() {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const { user } = useContext(AppContext);
 
   const [callStatus, setCallStatus] = useState('ready'); // 'ready' | 'calling' | 'in-call'
@@ -18,6 +18,18 @@ export default function Bella() {
 
   const vapiRef = useRef(null);
   const chatRef = useRef(null);
+
+  // map locales → env var names
+  const assistantIdMap = {
+    en: import.meta.env.VITE_VAPI_ASSISTANT_ID_EN,
+    de: import.meta.env.VITE_VAPI_ASSISTANT_ID_DE,
+    he: import.meta.env.VITE_VAPI_ASSISTANT_ID_HE,
+  };
+  // pick the right one, fallback to English
+  const getAssistantId = () => {
+    const lang = i18n.language.split('-')[0];
+    return assistantIdMap[lang] || assistantIdMap.en;
+  };
 
   // ——— persist chat history ———
   useEffect(() => {
@@ -49,9 +61,13 @@ export default function Bella() {
         if (!res.ok) throw new Error(`Status ${res.status}`);
         const reminders = await res.json();
         for (let r of reminders) {
+          console.log(r)
           await vapi.send({
-            type: 'text',
-            text: `${t('Bella.greeting')} REMINDER: ${r.title} — ${r.description}`
+            type: 'add-message',
+            message: {
+              role: "user",
+              content: `Remember this about the user: ${r.description}`,
+            },
           });
         }
       } catch (err) {
@@ -133,7 +149,8 @@ export default function Bella() {
   // ——— call controls ———
   const startCall = () => {
     setCallStatus('calling');
-    vapiRef.current.start(import.meta.env.VITE_VAPI_ASSISTANT_ID, {
+    const assistantId = getAssistantId();
+    vapiRef.current.start(assistantId, {
       clientMessages: ['transcript']
     });
   };
@@ -152,7 +169,7 @@ export default function Bella() {
 
   const btnClass = `
     inline-flex items-center justify-center
-    text-base                          /* <-- scales 1rem with root font-size */
+    text-base
     border-2 border-blue-900 rounded-xl
     py-2 px-4 bg-blue-900 text-white
     font-semibold hover:bg-blue-800
@@ -163,7 +180,7 @@ export default function Bella() {
   const chatBtnClass = `
     inline-flex items-center justify-center
     border-2 border-blue-700 rounded-full
-    py-1 px-4 text-sm                 /* already rem-based */
+    py-1 px-4 text-sm
     bg-blue-700 text-white font-semibold
     hover:bg-blue-600
     focus:outline-none focus:ring-2 focus:ring-blue-300
