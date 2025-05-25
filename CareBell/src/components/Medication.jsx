@@ -122,9 +122,9 @@ export default function Medication() {
       {isAdding && (
         <div className="max-w-md mx-auto bg-white rounded-2xl shadow-md p-6 mb-6 space-y-6">
           {[
-            { lbl: "Medication Name *", name: "name",        placeholder: "Aspirin" },
-            { lbl: "Dosage *",          name: "dosage",      placeholder: "100 mg" },
-            { lbl: "Frequency (hours)", name: "frequency",   placeholder: "8" },
+            { lbl: t("Medication.MedicationName"), name: "name",        placeholder: "Aspirin" },
+            { lbl: t("Medication.dosage"),          name: "dosage",      placeholder: "100 mg" },
+            { lbl: t("Medication.frequencyHours"), name: "frequency",   placeholder: "8" },
           ].map((f) => (
             <div key={f.name}>
               <label className="block text-lg font-semibold text-gray-700">{f.lbl}</label>

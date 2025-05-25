@@ -129,6 +129,8 @@
     "mealTime": "שעת ארוחה"
   },
   "Medication": {
+    "frequencyHours": "תדירות (בשעות)",
+    "MedicationName": "שם התרופה",
     "taken": "נלקח",
     "MarkAsTaken": "סמן כנלקח",
     "deleteLabel": "מחק",

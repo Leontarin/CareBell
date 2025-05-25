@@ -127,6 +127,8 @@
     "mealTime": "Ateria-aika"
   },
   "Medication": {
+    "frequencyHours": "Tiheys (tuntia)",
+    "MedicationName": "Lääkkeen nimi",
     "taken": "Otettu",
     "MarkAsTaken": "Merkitse varatuksi",
     "deleteLabel": "Poistaa",

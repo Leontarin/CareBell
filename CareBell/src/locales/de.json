@@ -126,6 +126,8 @@
     "mealTime": "Essenszeit"
   },
   "Medication": {
+    "frequencyHours": "Frequenz (Stunden)",
+    "MedicationName": "Medikamentenname",
     "taken": "Genommen",
     "MarkAsTaken": "Als vergeben markieren",
     "deleteLabel": "Löschen",

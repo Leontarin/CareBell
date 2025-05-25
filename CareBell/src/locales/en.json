@@ -129,6 +129,8 @@
     "mealTime": "Meal Time"
   },
   "Medication": {
+    "frequencyHours": "Frequecy (hours)",
+    "MedicationName": "Medication Name",
     "taken": "Taken",
     "MarkAsTaken": "Mark as Taken",
     "deleteLabel": "Delete",
