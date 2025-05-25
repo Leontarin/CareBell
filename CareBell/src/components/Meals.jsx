@@ -1,7 +1,11 @@
 import React, { useState, useEffect } from "react";
 import BarcodeScannerComponent from "react-qr-barcode-scanner";
 import { API } from "../config";
+import { useTranslation } from "react-i18next";
+
 function Meals() {
+  /* ---- Translation ---- */
+    const { t } = useTranslation();
   // Main state variables
   const [activeTab, setActiveTab] = useState('list'); // 'list' or 'scanner'
   const [allMeals, setAllMeals] = useState([]);
@@ -245,7 +249,7 @@ function Meals() {
         // Fetch food data from API
         console.log(`Fetching data for barcode: ${scannedCode}`);
         // Using HTTPS as requested
-        const res = await fetch(`https://localhost:4000/foods/${scannedCode}`);
+        const res = await fetch(`${API}/${scannedCode}`);
         setLoading(false);
         
         if (!res.ok) {
@@ -305,7 +309,7 @@ function Meals() {
 
   return (
     <div className="p-4 max-w-4xl mx-auto bg-white shadow-lg rounded-lg">
-      <h1 className="text-4xl font-bold mb-8 text-center text-blue-800">Food Information</h1>
+      <h1 className="text-4xl font-bold mb-8 text-center text-blue-800">{t("Meals.FoodInfo")}</h1>
       
       {/* Main Tab Navigation - Large, easy to press buttons */}
       <div className="flex mb-8">
@@ -317,7 +321,7 @@ function Meals() {
               : 'bg-gray-200 text-gray-700'
           }`}
         >
-          Food List
+          {t("Meals.FoodList")}
         </button>
         <button
           onClick={() => setActiveTab('scanner')}
@@ -327,7 +331,7 @@ function Meals() {
               : 'bg-gray-200 text-gray-700'
           }`}
         >
-          Scan Barcode
+          {t("Meals.scanBarcode")}
         </button>
       </div>
       
@@ -364,7 +368,7 @@ function Meals() {
                 </div>
               </div>
               <p className="text-center text-xl mt-4 text-gray-600 font-medium">
-                Position barcode within the red frame
+                {t("Meals.positionLabel")}
               </p>
             </div>
           )}
@@ -391,7 +395,7 @@ function Meals() {
             </div>
           </div>
           
-          <h2 className="text-3xl font-bold mb-6 text-gray-800">Available Foods</h2>
+          <h2 className="text-3xl font-bold mb-6 text-gray-800">{t("Meals.availableFoodsLabel")}</h2>
           
           {loading ? (
             <div className="flex justify-center py-8">
@@ -425,7 +429,7 @@ function Meals() {
                     <div className="md:col-span-2 p-5">
                       <div className="bg-gray-50 p-4 rounded-t-md -mx-5 -mt-5">
                         <h3 className="text-2xl font-bold text-gray-800">{food.name}</h3>
-                        <p className="text-gray-500 mt-1">Barcode: {food.barcode}</p>
+                        <p className="text-gray-500 mt-1">{t("Meals.barcodeLabel")} {food.barcode}</p>
                       </div>
                       
                       <div className="mt-4">
@@ -436,7 +440,7 @@ function Meals() {
                             onClick={() => selectMeal(food)}
                             className="w-full sm:w-15 px-3 py-1 bg-blue-600 text-white text-lg font-semibold rounded-lg hover:bg-blue-700 transition-colors"
                           >
-                            View Details
+                            {t("Exercise.viewDetails")}
                           </button>
                           
                           {speaking ? (
@@ -446,7 +450,7 @@ function Meals() {
                               aria-label="Stop the speech"
                             >
                               <span className="mr-2 text-xl">🔇</span>
-                              Speaking... (Tap to Stop)
+                              {t("Meals.SpeakingLabel")}
                             </button>
                           ) : (
                             <button
@@ -454,7 +458,7 @@ function Meals() {
                               className="w-full sm:w-15 flex items-center justify-center px-3 py-1 rounded-lg text-lg font-semibold bg-green-600 text-white"
                             >
                               <span className="mr-2 text-xl">🔊</span>
-                              Read Aloud
+                              {t("Exercise.read")}
                             </button>
                           )}
                         </div>
@@ -472,7 +476,7 @@ function Meals() {
       {loading && (
         <div className="flex flex-col items-center justify-center my-8 py-6">
           <div className="animate-spin rounded-full h-16 w-16 border-b-4 border-blue-500 mb-4"></div>
-          <p className="text-2xl text-gray-600">Loading...</p>
+          <p className="text-2xl text-gray-600">{t("Meals.loadingLabel")}</p>
         </div>
       )}
       
@@ -504,7 +508,7 @@ function Meals() {
           <div className="flex justify-between items-start">
             <div className="flex-1">
               <h2 className="text-3xl font-bold text-gray-800 mb-2">{meal.name}</h2>
-              <p className="text-gray-600 text-xl mb-4">Barcode: {meal.barcode}</p>
+              <p className="text-gray-600 text-xl mb-4">{t("Meals.barcodeLabel")} {meal.barcode}</p>
             </div>
             
             {speaking ? (
@@ -514,7 +518,7 @@ function Meals() {
                 aria-label="Stop the speech"
               >
                 <span className="mr-2 text-2xl">🔇</span>
-                Speaking... (Tap to Stop)
+                {t("Meals.SpeakingLabel")}
               </button>
             ) : (
               <button
@@ -522,18 +526,18 @@ function Meals() {
                 className="flex items-center px-5 py-3 rounded-lg text-xl font-semibold bg-green-600 text-white"
               >
                 <span className="mr-2 text-2xl">🔊</span>
-                Read Aloud
+                {t("Exercise.read")}
               </button>
             )}
           </div>
           
           <div className="my-6">
-            <h3 className="text-2xl font-semibold text-gray-800 mb-3">Description:</h3>
+            <h3 className="text-2xl font-semibold text-gray-800 mb-3">{t("Exercise.descriptionLabel")}</h3>
             <p className="text-xl text-gray-700 leading-relaxed">{meal.description}</p>
           </div>
           
           <div className="mt-6">
-            <h3 className="text-2xl font-semibold text-gray-800 mb-3">Ingredients:</h3>
+            <h3 className="text-2xl font-semibold text-gray-800 mb-3">{t("Meals.ingredientsLabel")}</h3>
             <ul className="bg-white rounded-lg p-5 border border-gray-100 shadow-sm">
               {meal.ingredients.map((item, idx) => (
                 <li key={idx} className="py-3 text-xl border-b border-gray-100 last:border-0 flex items-center">
@@ -549,7 +553,7 @@ function Meals() {
               onClick={backToList}
               className="px-6 py-3 bg-blue-600 text-white text-xl font-semibold rounded-lg hover:bg-blue-700 transition-colors"
             >
-              Back to List
+              {t("Meals.backToList")}
             </button>
           </div>
         </div>

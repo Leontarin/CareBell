@@ -1,16 +1,24 @@
 import React, { useEffect, useState } from "react";
 import { FaVolumeMute, FaVolumeUp, FaRunning, FaTachometerAlt } from "react-icons/fa";
+import { useTranslation } from "react-i18next";
 
 export default function SettingsModal({ onClose }) {
-  /* ------------- text size (scale) ------------- */
+  const { t, i18n } = useTranslation();
+
   const [scale, setScale] = useState(
     parseFloat(localStorage.getItem("fontScale")) || 1
   );
+  const [showLanguage, setShowLanguage] = useState(true);
 
   useEffect(() => {
     document.documentElement.style.fontSize = `${16 * scale}px`;
     localStorage.setItem("fontScale", scale);
   }, [scale]);
+
+  const changeLanguage = (lng) => {
+    i18n.changeLanguage(lng);
+    localStorage.setItem("i18nextLng", lng);
+  };
 
   return (
     <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
@@ -24,11 +32,16 @@ export default function SettingsModal({ onClose }) {
           ×
         </button>
 
-        <h2 className="text-3xl font-bold text-blue-800 mb-8">Settings</h2>
+        {/* Title */}
+        <h2 className="text-3xl font-bold text-blue-800 mb-8">
+          {t("SettingsModal.title")}
+        </h2>
 
         {/* -------- TEXT SIZE -------- */}
         <section className="mb-8">
-          <h3 className="text-xl font-semibold mb-3">Text Size</h3>
+          <h3 className="text-xl font-semibold mb-3">
+            {t("SettingsModal.textSize")}
+          </h3>
           <div className="flex items-center gap-4">
             <span className="text-3xl font-bold">A</span>
             <input
@@ -44,9 +57,11 @@ export default function SettingsModal({ onClose }) {
           </div>
         </section>
 
-        {/* -------- Volume (UI-only) -------- */}
+        {/* -------- VOLUME -------- */}
         <section className="mb-8">
-          <h3 className="text-xl font-semibold mb-3">Volume</h3>
+          <h3 className="text-xl font-semibold mb-3">
+            {t("SettingsModal.volume")}
+          </h3>
           <div className="flex items-center gap-4">
             <FaVolumeMute className="text-2xl" />
             <input
@@ -55,15 +70,17 @@ export default function SettingsModal({ onClose }) {
               max={100}
               defaultValue={70}
               className="flex-1 accent-blue-600 h-2 rounded-lg bg-gray-300"
-              disabled      /* only for UI. in the future it will be implemented*/
+              disabled /* only for UI */
             />
             <FaVolumeUp className="text-2xl" />
           </div>
         </section>
 
-        {/* -------- Speaking Speed (UI-only) -------- */}
-        <section>
-          <h3 className="text-xl font-semibold mb-3">Speaking Speed</h3>
+        {/* -------- SPEAKING SPEED -------- */}
+        <section className="mb-8">
+          <h3 className="text-xl font-semibold mb-3">
+            {t("SettingsModal.speakingSpeed")}
+          </h3>
           <div className="flex items-center gap-4">
             <FaTachometerAlt className="text-2xl" />
             <input
@@ -73,11 +90,54 @@ export default function SettingsModal({ onClose }) {
               step={0.1}
               defaultValue={1}
               className="flex-1 accent-blue-600 h-2 rounded-lg bg-gray-300"
-              disabled      /* for the future */
+              disabled /* for the future */
             />
             <FaRunning className="text-2xl" />
           </div>
         </section>
+
+       {/* -------- SETTINGS SELECTORS -------- */}
+        <section className="mb-8">
+          <div className="flex items-start gap-12">
+            {/* Language Switcher */}
+            <div>
+              <h3 className="text-xl font-semibold mb-2">
+                {t("SettingsModal.language")}
+              </h3>
+              <select
+                value={i18n.language}
+                onChange={(e) => changeLanguage(e.target.value)}
+                className="border rounded px-2 py-1"
+              >
+                <option value="en">English</option>
+                <option value="he">עברית</option>
+                <option value="de">Deutsch</option>
+                <option value="fi">Suomi</option>
+              </select>
+            </div>
+
+            {/* User Combobox (Debug) */}
+            <div>
+              <h3 className="text-xl font-semibold mb-2">
+                {t("SettingsModal.User")}
+              </h3>
+              <select className="border rounded px-2 py-1">
+                <option value="user0">Alison</option>
+                <option value="user1">Bob</option>
+              </select>
+            </div>
+          </div>
+        </section>
+
+
+
+        {/* Close Button */}
+        <button
+          onClick={onClose}
+          className="mt-4 bg-blue-600 text-white px-4 py-2 rounded"
+        >
+          {t("SettingsModal.close")}
+        </button>
       </div>
     </div>
   );

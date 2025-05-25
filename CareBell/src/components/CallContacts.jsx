@@ -1,9 +1,11 @@
 import React, { useEffect, useState, useMemo, useContext } from "react";
 import axios from "axios";
+import { useTranslation } from "react-i18next";
 import { AppContext } from "../AppContext";
 import { API } from "../config";
 
 export default function CallContacts() {
+  const { t } = useTranslation();
   const { user } = useContext(AppContext);
   const userId = user?.id;
 
@@ -34,7 +36,9 @@ export default function CallContacts() {
         c.phoneNumber.includes(q) ||
         c.relationship?.toLowerCase().includes(q)
       )
-      .sort((a, b) => a.fullName.localeCompare(b.fullName, undefined, { sensitivity: "base" }));
+      .sort((a, b) =>
+        a.fullName.localeCompare(b.fullName, undefined, { sensitivity: "base" })
+      );
   }, [contacts, query]);
 
   const toggleSelect = id => {
@@ -48,21 +52,29 @@ export default function CallContacts() {
   const handleBulkDelete = () => {
     if (selectedIds.size === 0) return;
     setMenuOpen(false);
-    if (!window.confirm(`Delete ${selectedIds.size} contact(s)?`)) return;
+    // uses translation with interpolation for count
+    if (!window.confirm(t("CallContacts.confirmBulkDelete", { count: selectedIds.size })))
+      return;
     Promise.all(
-      Array.from(selectedIds).map(id => axios.delete(`${API}/contacts/deleteContact/${id}`))
+      Array.from(selectedIds).map(id =>
+        axios.delete(`${API}/contacts/deleteContact/${id}`)
+      )
     )
       .then(() => {
         setContacts(prev => prev.filter(c => !selectedIds.has(c._id)));
         setSelectedIds(new Set());
       })
-      .catch(err => alert(err.response?.data?.message || err.message));
+      .catch(err =>
+        alert(err.response?.data?.message || err.message)
+      );
   };
 
-  const handleChange = e => setForm({ ...form, [e.target.name]: e.target.value });
+  const handleChange = e =>
+    setForm({ ...form, [e.target.name]: e.target.value });
+
   const handleSave = () => {
     if (!form.fullName || !form.phoneNumber) {
-      alert("Please fill all fields");
+      alert(t("CallContacts.fillAllFields"));
       return;
     }
     setSaving(true);
@@ -77,8 +89,14 @@ export default function CallContacts() {
       .finally(() => setSaving(false));
   };
 
-  if (loading) return <p className="text-center py-8">Loading…</p>;
-  if (error) return <p className="text-center text-red-600 py-8">{error}</p>;
+  if (loading)
+    return <p className="text-center py-8">{t("CallContacts.loading")}</p>;
+  if (error)
+    return (
+      <p className="text-center text-red-600 py-8">
+        {t("CallContacts.error", { message: error })}
+      </p>
+    );
 
   return (
     <div className="h-full flex flex-col bg-slate-400 p-4 overflow-y-auto">
@@ -88,7 +106,7 @@ export default function CallContacts() {
           type="text"
           value={query}
           onChange={e => setQuery(e.target.value)}
-          placeholder="Search contacts…"
+          placeholder={t("CallContacts.searchPlaceholder")}
           className="flex-1 rounded-md border-2 border-blue-900 focus:border-blue-700 focus:ring-blue-700 text-base px-4 py-2"
         />
         {!isAdding && (
@@ -96,26 +114,26 @@ export default function CallContacts() {
             onClick={() => setIsAdding(true)}
             className="ml-3 bg-blue-900 hover:bg-blue-700 text-white font-semibold text-sm rounded-lg px-4 py-2 transition"
           >
-            Add Contact
+            {t("CallContacts.addContact")}
           </button>
         )}
         {/* Bulk menu trigger */}
         <button
           onClick={() => setMenuOpen(o => !o)}
-          className="ml-auto ml-4  text-blue-900 p-5 font-semibold focus:outline-none"
+          className="ml-auto ml-4 text-blue-900 p-5 font-semibold focus:outline-none"
         >
           <span className="text-xl">🗑️</span>
         </button>
         {menuOpen && (
-          <div className=" absolute mt-20 right-96 transform translate-x-4/5 bg-white border border-gray-200 rounded-md shadow-lg z-10">
+          <div className="absolute mt-20 right-96 transform translate-x-4/5 bg-white border border-gray-200 rounded-md shadow-lg z-10">
             <ul className="py-1">
               <li>
                 <button
                   onClick={handleBulkDelete}
                   disabled={selectedIds.size === 0}
-                  className=" text-left px-4 py-2 text-sm text-gray-900 font-semibold hover:bg-red-300 "
+                  className="text-left px-4 py-2 text-sm text-gray-900 font-semibold hover:bg-red-300"
                 >
-                  Delete Selected
+                  {t("CallContacts.deleteSelected")}
                 </button>
               </li>
             </ul>
@@ -126,11 +144,27 @@ export default function CallContacts() {
       {/* Add form */}
       {isAdding && (
         <div className="mb-6 max-w-md mx-auto bg-white rounded-2xl shadow-md p-3 space-y-1">
-          {[{ lbl: "Full Name", name: "fullName", placeholder: "Michael Cohen" },
-            { lbl: "Phone Number", name: "phoneNumber", placeholder: "050-1234567" },
-            { lbl: "Relationship", name: "relationship", placeholder: "Son / Friend…" }].map(f => (
+          {[
+            {
+              lbl: t("CallContacts.fullNameLabel"),
+              name: "fullName",
+              placeholder: t("CallContacts.fullNamePlaceholder")
+            },
+            {
+              lbl: t("CallContacts.phoneNumberLabel"),
+              name: "phoneNumber",
+              placeholder: t("CallContacts.phoneNumberPlaceholder")
+            },
+            {
+              lbl: t("CallContacts.relationshipLabel"),
+              name: "relationship",
+              placeholder: t("CallContacts.relationshipPlaceholder")
+            }
+          ].map(f => (
             <div key={f.name}>
-              <label className="block text-base font-semibold text-gray-700">{f.lbl}</label>
+              <label className="block text-base font-semibold text-gray-700">
+                {f.lbl}
+              </label>
               <input
                 name={f.name}
                 value={form[f.name]}
@@ -142,17 +176,20 @@ export default function CallContacts() {
           ))}
           <div className="flex justify-end gap-3">
             <button
-              onClick={() => { setIsAdding(false); setForm({ fullName: "", phoneNumber: "", relationship: "" }); }}
+              onClick={() => {
+                setIsAdding(false);
+                setForm({ fullName: "", phoneNumber: "", relationship: "" });
+              }}
               className="px-4 py-2 rounded-lg bg-gray-300 hover:bg-gray-400 text-sm transition"
             >
-              Cancel
+              {t("CallContacts.cancel")}
             </button>
             <button
               onClick={handleSave}
               disabled={saving}
               className="px-4 py-2 rounded-lg bg-blue-900 hover:bg-blue-700 text-white text-sm font-semibold disabled:opacity-60 transition"
             >
-              {saving ? "Saving…" : "Save"}
+              {saving ? t("CallContacts.saving") : t("CallContacts.save")}
             </button>
           </div>
         </div>
@@ -173,7 +210,7 @@ export default function CallContacts() {
                 className="h-5 w-5"
               />
             )}
-            <div className={`${menuOpen ? 'ml-2 flex-1' : 'flex-1'}`}>              
+            <div className={`${menuOpen ? "ml-2 flex-1" : "flex-1"}`}>
               <div className="text-lg font-medium text-gray-900">
                 {c.fullName} {c.relationship && `(${c.relationship})`}
               </div>
@@ -181,14 +218,16 @@ export default function CallContacts() {
                 href={`tel:${c.phoneNumber}`}
                 className="mt-2 inline-block text-sm font-semibold text-white bg-blue-900 hover:bg-blue-700 rounded-lg py-2 px-4 transition"
               >
-                Call
+                {t("CallContacts.call")}
               </a>
             </div>
           </label>
         ))}
 
         {visibleContacts.length === 0 && (
-          <p className="text-center text-gray-700">No contacts match your search.</p>
+          <p className="text-center text-gray-700">
+            {t("CallContacts.noMatch")}
+          </p>
         )}
       </div>
     </div>

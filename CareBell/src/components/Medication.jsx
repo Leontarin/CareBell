@@ -2,7 +2,11 @@ import React, { useEffect, useState, useContext } from "react";
 import axios from "axios";
 import { API } from "../config";
 import { AppContext } from "../AppContext";
+import { useTranslation } from "react-i18next";
+
 export default function Medication() {
+  /* ---- Translation ---- */
+  const { t } = useTranslation();
   /* ===== CONFIG ===== */
   const { user } = useContext(AppContext);
   const userId = user?.id;
@@ -96,7 +100,7 @@ export default function Medication() {
   };
 
   /* ===== RENDER ===== */
-  if (loading) return <p className="text-center">Loading…</p>;
+  if (loading) return <p className="text-center">{t("Meals.loadingLabel")}</p>;
   if (error)   return <p className="text-center text-red-600">{error}</p>;
 
   return (
@@ -109,7 +113,7 @@ export default function Medication() {
             onClick={() => setIsAdding(true)}
             className=" bg-blue-900 hover:bg-blue-700 text-white font-semibold py-2 px-6 rounded-xl transition"
           >
-            Add Medication
+            {t("Medication.addMedication")}
           </button>
         )}
       </div>
@@ -137,7 +141,7 @@ export default function Medication() {
 
           <div className="flex justify-end gap-4">
             <button onClick={() => setIsAdding(false)} className="px-5 py-2 rounded-xl bg-gray-300 hover:bg-gray-400 transition text-lg">
-              Cancel
+              {t("Medication.cancel")}
             </button>
             <button
               onClick={saveMedication}
@@ -158,14 +162,14 @@ export default function Medication() {
           return (
             <div key={m._id} className="bg-white rounded-2xl shadow-md p-6 flex flex-col gap-3">
               <div className="text-xl font-semibold text-gray-900">{m.name}</div>
-              <div className="text-gray-700 text-sm">Dosage: {m.dosage}</div>
-              {m.frequency && <div className="text-gray-700 text-sm">Frequency: every {m.frequency}h</div>}
+              <div className="text-gray-700 text-sm">{t("Medication.dosage")} {m.dosage}</div>
+              {m.frequency && <div className="text-gray-700 text-sm">{t("Medication.frequency")} {m.frequency} {t("Medication.hours")}</div>}
               <div className="text-gray-900 text-sm font-semibold">
-                Last taken:&nbsp;{m.lastTaken ? new Date(m.lastTaken).toLocaleString() : "Never"}
+                {t("Medication.lastTaken")}&nbsp;{m.lastTaken ? new Date(m.lastTaken).toLocaleString() : "Never"}
               </div>
               {m.nextDue && (
                 <div className="text-gray-900 text-sm font-semibold">
-                  Next due:&nbsp;{new Date(m.nextDue).toLocaleString()}
+                  {t("Medication.nextDue")}&nbsp;{new Date(m.nextDue).toLocaleString()}
                 </div>
               )}
 
@@ -173,20 +177,20 @@ export default function Medication() {
               {confirmDeleteId === m._id ? (
                 /* delete confirm */
                 <div className="flex flex-col gap-3">
-                  <span className="text-gray-800">Delete <b>{m.name}</b>?</span>
+                  <span className="text-gray-800">{t("Medication.deleteLabel")} <b>{m.name}</b>?</span>
                   <div className="flex gap-4">
                     <button onClick={() => confirmDelete(m._id)} className="flex-1 bg-gray-600 hover:bg-red-500 text-white py-2 rounded-lg text-lg">
-                      Yes, delete
+                      {t("Medication.yesDelete")}
                     </button>
                     <button onClick={cancelDelete} className="flex-1 bg-gray-300 hover:bg-gray-400 py-2 rounded-lg text-lg">
-                      No, keep
+                      {t("Medication.noKeep")}
                     </button>
                   </div>
                 </div>
               ) : confirmTakeId === m._id ? (
                 /* take confirm */
                 <div className="flex flex-col gap-3">
-                  <span className="text-gray-800">Confirm you just took <b>{m.name}</b>?</span>
+                  <span className="text-gray-800">{t("Medication.Confirmation")} <b>{m.name}</b>?</span>
                   <div className="flex gap-4">
                     <button
                       onClick={() => {
@@ -195,13 +199,13 @@ export default function Medication() {
                       }}
                       className="flex-1 bg-blue-900 hover:bg-blue-700 text-white py-2 rounded-lg text-lg"
                     >
-                      Yes, taken
+                      {t("Medication.yesTaken")}
                     </button>
                     <button
                       onClick={() => setConfirmTakeId(null)}
                       className="flex-1 bg-gray-300 hover:bg-gray-400 py-2 rounded-lg text-lg"
                     >
-                      No, cancel
+                      {t("Medication.noCancel")}
                     </button>
                   </div>
                 </div>
@@ -218,7 +222,7 @@ export default function Medication() {
                         : "bg-gray-400 cursor-not-allowed border-2 border-gray-500"
                     }`}
                   >
-                    {m.taken ? "Taken" : "Mark as Taken"}
+                    {m.taken ? t("Medication.taken") : t("Medication.MarkAsTaken")}
                   </button>
 
                   {/* Delete button style*/}
@@ -228,7 +232,7 @@ export default function Medication() {
                                border border-gray-900 rounded-md
                                hover:bg-red-100 transition"
                   >
-                    Delete
+                    {t("Medication.deleteLabel")}
                   </button>
                 </div>
               )}

@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback, useContext } from "react";
 import axios from "axios";
+import { useTranslation } from "react-i18next";
 import { AppContext } from "../AppContext";
 import { API } from "../config";
 
@@ -15,6 +16,7 @@ const formatDateLocal = date => {
 };
 
 export default function Calendar({ onClose }) {
+  const { t } = useTranslation();
   const { user } = useContext(AppContext);
   const userId    = user?.id;
 
@@ -156,43 +158,53 @@ export default function Calendar({ onClose }) {
             {currentDate.toLocaleDateString(undefined, { month: "long", year: "numeric" })}
           </h2>
           <div className="flex space-x-2">
-            <button onClick={prevMonth} className="px-3 py-1 bg-blue-600 text-white rounded">《Prev</button>
+            <button onClick={prevMonth} className="px-3 py-1 bg-blue-600 text-white rounded">
+              {t("Calendar.prev")}
+            </button>
             <input
               type="month"
               value={`${y}-${String(mo+1).padStart(2,"0")}`}
               onChange={jumpToMonth}
               className="border px-2 py-1 rounded"
             />
-            <button onClick={nextMonth} className="px-3 py-1 bg-blue-600 text-white rounded">Next〉</button>
-            <button onClick={onClose} className="px-3 py-1 bg-red-600 text-white rounded">Close</button>
+            <button onClick={nextMonth} className="px-3 py-1 bg-blue-600 text-white rounded">
+              {t("Calendar.next")}
+            </button>
+            <button onClick={onClose} className="px-3 py-1 bg-red-600 text-white rounded">
+              {t("Calendar.close")}
+            </button>
           </div>
         </div>
 
         {/* Upcoming events */}
         <div className="flex-none h-24 p-3 border-b border-blue-300 bg-blue-50">
-          <strong className="text-blue-700">Upcoming (7 days):</strong>
+          <strong className="text-blue-700">
+            {t("Calendar.upcoming")}
+          </strong>
           <div className="mt-2 flex space-x-2 overflow-x-auto">
             {upcomingEvents.length > 0 ? upcomingEvents.map(e => {
               const d = e.dateObj;
-              const t = d.toLocaleTimeString(undefined, { hour:"2-digit", minute:"2-digit" });
+              const tStr = d.toLocaleTimeString(undefined, { hour:"2-digit", minute:"2-digit" });
               return (
                 <button
                   key={e._id}
                   onClick={() => openDayView(d)}
                   className="px-2 py-1 bg-blue-100 border border-blue-400 rounded text-sm hover:bg-blue-200"
                 >
-                  {d.getDate()}/{d.getMonth()+1} {t} — {e.title}
+                  {d.getDate()}/{d.getMonth()+1} {tStr} — {e.title}
                 </button>
               );
             }) : (
-              <span className="text-blue-500">No events</span>
+              <span className="text-blue-500">
+                {t("Calendar.noEvents")}
+              </span>
             )}
           </div>
         </div>
 
         {/* Month grid */}
         <div className="flex-1 overflow-auto grid grid-cols-7 grid-rows-7 divide-y divide-x divide-gray-300">
-          {["Mon","Tue","Wed","Thu","Fri","Sat","Sun"].map(w => (
+          {[t("Calendar.Mon"),t("Calendar.Tue"),t("Calendar.Wed"),t("Calendar.Thu"),t("Calendar.Fri"),t("Calendar.Sat"),t("Calendar.Sun")].map(w => (
             <div key={w} className="p-2 bg-blue-300 text-white font-semibold text-center">{w}</div>
           ))}
           {grid.map((day, idx) =>
@@ -243,7 +255,7 @@ export default function Calendar({ onClose }) {
                   onClick={ev => { ev.stopPropagation(); openNew(day); }}
                   className="absolute bottom-1 right-1 text-green-600 font-bold"
                 >
-                  + Add
+                  {t("Calendar.add")}
                 </button>
               </div>
             ) : (
@@ -257,15 +269,17 @@ export default function Calendar({ onClose }) {
       {modalOpen && (
         <div className="fixed inset-0 bg-black bg-opacity-30 flex items-center justify-center z-50">
           <div className="bg-white rounded-lg p-4 w-80">
-            <h3 className="text-lg font-bold mb-2">{editing._id ? "Edit Event" : "New Event"}</h3>
-            <label className="block font-medium">Date</label>
+            <h3 className="text-lg font-bold mb-2">
+              {editing._id ? t("Calendar.editEvent") : t("Calendar.newEvent")}
+            </h3>
+            <label className="block font-medium">{t("Calendar.date")}</label>
             <input
               type="date"
               className="w-full mb-2 border p-1"
               value={editing.date}
               onChange={e => setEditing({ ...editing, date: e.target.value })}
             />
-            <label className="block font-medium">Time</label>
+            <label className="block font-medium">{t("Calendar.time")}</label>
             <input
               type="time"
               className="w-full mb-2 border p-1"
@@ -274,13 +288,13 @@ export default function Calendar({ onClose }) {
             />
             <input
               type="text"
-              placeholder="Title"
+              placeholder={t("Calendar.title")}
               className="w-full mb-2 border p-1"
               value={editing.title}
               onChange={e => setEditing({ ...editing, title: e.target.value })}
             />
             <textarea
-              placeholder="Details"
+              placeholder={t("Calendar.details")}
               className="w-full mb-2 border p-1"
               value={editing.content}
               onChange={e => setEditing({ ...editing, content: e.target.value })}
@@ -292,12 +306,12 @@ export default function Calendar({ onClose }) {
                 className="text-red-600 mb-2"
                 onClick={() => setShowConfirmDelete(true)}
               >
-                Delete
+                {t("Calendar.delete")}
               </button>
             )}
             {showConfirmDelete && (
               <div className="mb-2 p-2 border rounded bg-red-50">
-                <p className="mb-2 font-medium">Are you sure you want to delete this event?</p>
+                <p className="mb-2 font-medium">{t("Calendar.confirmDelete")}</p>
                 <div className="flex justify-end space-x-2">
                   <button
                     className="px-2 py-1 border rounded"
@@ -318,13 +332,20 @@ export default function Calendar({ onClose }) {
               </div>
             )}
 
-              <button onClick={() => setModalOpen(false)}>Cancel</button>
-              <button onClick={saveEvent} className="bg-blue-600 text-white px-3 py-1 rounded">
-                Save
+            {/* Actions */}
+            <div className="mt-4 flex justify-end space-x-2">
+              <button onClick={() => setModalOpen(false)}>
+                {t("Calendar.cancel")}
+              </button>
+              <button
+                onClick={saveEvent}
+                className="bg-blue-600 text-white px-3 py-1 rounded"
+              >
+                {t("Calendar.save")}
               </button>
             </div>
           </div>
-      
+        </div>
       )}
 
       {/* Day-detail View */}

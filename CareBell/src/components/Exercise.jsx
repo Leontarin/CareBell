@@ -1,7 +1,9 @@
 import React, { useState, useEffect } from "react";
 import { API } from "../config";
+import { useTranslation } from "react-i18next";
 
 function Exercise() {
+  const { t } = useTranslation();
   const [exercises, setExercises] = useState([]);
   const [filteredExercises, setFilteredExercises] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -244,20 +246,22 @@ function Exercise() {
 
   return (
     <div className="p-4 max-w-6xl mx-auto bg-white shadow-lg rounded-lg">
-      <h1 className="text-4xl font-bold mb-8 text-center text-blue-800">Exercise Library</h1>
+      <h1 className="text-4xl font-bold mb-8 text-center text-blue-800">
+        {t("Exercise.Library")}
+      </h1>
       
       {/* Add exercises button if database is empty */}
       {exercises.length === 0 && !loading && (
         <div className="mb-8 p-6 bg-yellow-50 border border-yellow-200 rounded-lg">
-          <h2 className="text-xl font-bold mb-4 text-yellow-800">No Exercises Found</h2>
+          <h2 className="text-xl font-bold mb-4 text-yellow-800">{t("Exercise.no_exercises_label")}</h2>
           <p className="text-yellow-700 mb-4">
-            It looks like your database is empty. Would you like to add some sample exercises?
+            {t("Exercise.no_exercises")}
           </p>
           <button
             onClick={populateDatabase}
             className="px-6 py-3 bg-green-600 text-white text-lg font-semibold rounded-lg hover:bg-green-700 transition-colors"
           >
-            Add Sample Exercises to Database
+            {t("Exercise.add_exercises")}
           </button>
         </div>
       )}
@@ -265,7 +269,7 @@ function Exercise() {
       {/* Filters */}
       <div className="mb-6 grid grid-cols-1 md:grid-cols-2 gap-4">
         <div>
-          <label className="block text-xl font-semibold mb-2">Category:</label>
+          <label className="block text-xl font-semibold mb-2">{t("Exercise.Category")} </label>
           <select
             value={selectedCategory}
             onChange={(e) => setSelectedCategory(e.target.value)}
@@ -278,7 +282,7 @@ function Exercise() {
         </div>
         
         <div>
-          <label className="block text-xl font-semibold mb-2">Difficulty:</label>
+          <label className="block text-xl font-semibold mb-2">{t("Exercise.difficulty")}</label>
           <select
             value={selectedDifficulty}
             onChange={(e) => setSelectedDifficulty(e.target.value)}
@@ -297,30 +301,30 @@ function Exercise() {
         </div>
       ) : error ? (
         <div className="bg-red-100 border-l-8 border-red-600 text-red-700 p-6 rounded-lg mb-6 text-xl">
-          <h3 className="font-bold text-2xl mb-2">Error</h3>
+          <h3 className="font-bold text-2xl mb-2">{t("Exercise.Error")}</h3>
           <p>{error}</p>
           <button 
             onClick={fetchExercises}
             className="mt-4 px-5 py-3 bg-blue-600 text-white text-lg font-semibold rounded-lg hover:bg-blue-700 transition-colors"
           >
-            Try Again
+            {t("Exercise.Try_Again")}
           </button>
         </div>
       ) : filteredExercises.length === 0 ? (
         <div className="text-center py-8">
           <p className="text-xl text-gray-600 mb-4">
-            No exercises found matching your criteria.
+            {t("Exercise.no_exercises_criteria")}
           </p>
           {selectedDifficulty === 'Hard' && (
             <div className="bg-blue-50 border border-blue-200 rounded-lg p-6 mt-4 max-w-md mx-auto">
               <p className="text-lg text-blue-800 mb-3">
-                Our exercise library focuses on "Easy" and "Medium" difficulty exercises that are safe and appropriate for elderly users.
+                {t("Exercise.Hard_label")}
               </p>
               <button
                 onClick={() => setSelectedDifficulty('Medium')}
                 className="mt-4 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
               >
-                Show Medium Difficulty Exercises
+                {t("Exercise.showMedium")}
               </button>
             </div>
           )}
@@ -361,13 +365,13 @@ function Exercise() {
                 <div className="p-5">
                   <h3 className="text-2xl font-bold text-gray-800 mb-2">{exercise.name}</h3>
                   <p className="text-lg text-gray-600 mb-3">
-                    <span className="font-medium">Category:</span> {exercise.category} | 
-                    <span className="font-medium"> Duration:</span> {exercise.duration} min
+                    <span className="font-medium">{t("Exercise.Category")}</span> {exercise.category} | 
+                    <span className="font-medium"> {t("Exercise.duration")}</span> {exercise.duration} min
                   </p>
                   <p className="text-lg text-gray-700 mb-4 line-clamp-2">{exercise.description}</p>
                   
                   <div className="mb-4">
-                    <span className="text-sm text-gray-600">Target Areas: </span>
+                    <span className="text-sm text-gray-600">{t("Exercise.target_areas")} </span>
                     <div className="flex flex-wrap gap-2 mt-1">
                       {exercise.targetAreas.map((area, idx) => (
                         <span key={idx} className="text-sm bg-blue-100 text-blue-800 px-2 py-1 rounded">
@@ -382,7 +386,7 @@ function Exercise() {
                       onClick={() => setSelectedExercise(exercise)}
                       className="flex-1 px-2 py-0.5 bg-blue-600 text-white text-lg font-semibold rounded-lg hover:bg-blue-700 transition-colors"
                     >
-                      View Details
+                      {t("Exercise.view_details")}
                     </button>
                     
                     {currentSpeakingId === exercise._id && speaking ? (
@@ -390,14 +394,14 @@ function Exercise() {
                         onClick={stopSpeaking}
                         className="flex-1 sm:flex-none sm:w-auto px-4 py-3 bg-yellow-500 text-white text-lg font-semibold rounded-lg"
                       >
-                        <span className="mr-2">🔇</span>Stop
+                        <span className="mr-2">🔇</span>{t("Exercise.stop")}
                       </button>
                     ) : (
                       <button
                         onClick={() => speakText(createExerciseDescription(exercise), exercise._id)}
                         className="flex-1 sm:flex-1 sm:w-15 px-3 py-0.5 bg-green-600 text-white text-lg font-semibold rounded-lg"
                       >
-                        <span className="mr-2">🔊</span>Read
+                        <span className="mr-2">🔊</span>{t("Exercise.read")}
                       </button>
                     )}
                   </div>
@@ -447,18 +451,18 @@ function Exercise() {
               
               <div className="space-y-4">
                 <div>
-                  <h3 className="text-xl font-bold mb-2">Description:</h3>
+                  <h3 className="text-xl font-bold mb-2">{t("Exercise.descriptionLabel")}</h3>
                   <p className="text-lg text-gray-700">{selectedExercise.description}</p>
                 </div>
                 
                 <div>
-                  <h3 className="text-xl font-bold mb-2">Instructions:</h3>
+                  <h3 className="text-xl font-bold mb-2">{t("Exercise.instructionsLabel")}</h3>
                   <div className="text-lg text-gray-700 whitespace-pre-line">{selectedExercise.instructions}</div>
                 </div>
                 
                 {selectedExercise.benefits && selectedExercise.benefits.length > 0 && (
                   <div>
-                    <h3 className="text-xl font-bold mb-2">Benefits:</h3>
+                    <h3 className="text-xl font-bold mb-2">{t("Exercise.benefitsLabel")}</h3>
                     <ul className="list-disc list-inside text-lg text-gray-700">
                       {selectedExercise.benefits.map((benefit, idx) => (
                         <li key={idx}>{benefit}</li>
@@ -469,7 +473,7 @@ function Exercise() {
                 
                 {selectedExercise.precautions && selectedExercise.precautions.length > 0 && (
                   <div>
-                    <h3 className="text-xl font-bold mb-2 text-red-600">Precautions:</h3>
+                    <h3 className="text-xl font-bold mb-2 text-red-600">{t("Exercise.precautionsLabel")}</h3>
                     <ul className="list-disc list-inside text-lg text-red-700">
                       {selectedExercise.precautions.map((precaution, idx) => (
                         <li key={idx}>{precaution}</li>
@@ -480,7 +484,7 @@ function Exercise() {
                 
                 {selectedExercise.modifications && selectedExercise.modifications.length > 0 && (
                   <div>
-                    <h3 className="text-xl font-bold mb-2 text-green-600">Modifications:</h3>
+                    <h3 className="text-xl font-bold mb-2 text-green-600">{t("Exercise.modificationsLabel")}</h3>
                     <ul className="list-disc list-inside text-lg text-green-700">
                       {selectedExercise.modifications.map((modification, idx) => (
                         <li key={idx}>{modification}</li>
@@ -494,7 +498,7 @@ function Exercise() {
                     onClick={() => speakText(createExerciseDescription(selectedExercise), selectedExercise._id)}
                     className="px-6 py-3 bg-blue-600 text-white text-lg font-semibold rounded-lg hover:bg-blue-700 transition-colors"
                   >
-                    <span className="mr-2">🔊</span>Read Instructions
+                    <span className="mr-2">🔊</span>{t("Exercise.readInstructions")}
                   </button>
                   
                   {selectedExercise.videoUrl && (
@@ -504,7 +508,7 @@ function Exercise() {
                       rel="noopener noreferrer"
                       className="px-6 py-3 bg-gray-600 text-white text-lg font-semibold rounded-lg hover:bg-gray-700 transition-colors"
                     >
-                      <span className="mr-2">▶️</span>Watch Video
+                      <span className="mr-2">▶️</span>{t("Exercise.watchVideo")}
                     </a>
                   )}
                 </div>

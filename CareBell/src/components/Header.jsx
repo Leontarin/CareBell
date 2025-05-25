@@ -5,11 +5,15 @@ import SettingsModal from "./SettingsModal";
 import Calendar from "./Calendar";        // import your new Calendar component
 import axios from "axios";
 import { AppContext } from "../AppContext";
+import { useTranslation } from "react-i18next";
 
 const OPENWEATHER_KEY = "6d3ad80f32ae07a071aeb542a0049d46";
 const WEATHER_API = "https://api.openweathermap.org/data/2.5/weather";
 
+
 export default function Header() {
+  /* ---- Translation ---- */
+  const { t } = useTranslation();
   /* ---- Date / Time ---- */
   const [dateStr, setDateStr] = useState("");
   const [timeStr, setTimeStr] = useState("");
@@ -123,7 +127,7 @@ export default function Header() {
             ⚙️
           </button>
           <button className="bg-red-500 text-white py-2 px-4 rounded-xl">
-            Emergency
+            {t("Header.Emergency")}
           </button>
         </div>
       </header>

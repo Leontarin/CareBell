@@ -1,0 +1,171 @@
+{
+  "Bella": {
+    "greeting": "Hello, Bella!",
+    "inputPlaceholder": "Type your message..."
+  },
+  "Calendar": {
+    "Mon": "Mon",
+    "Sun": "Sun",
+    "Tue": "Tue",
+    "Wed": "Wed",
+    "Thu": "Thu",
+    "Fri": "Fri",
+    "Sat": "Sat",
+    "prev": "Prev",
+    "next": "Next",
+    "close": "Close",
+    "upcoming": "Upcoming (7 days):",
+    "noEvents": "No events",
+    "add": "+ Add",
+    "newEvent": "New Event",
+    "editEvent": "Edit Event",
+    "date": "Date",
+    "time": "Time",
+    "title": "Title",
+    "details": "Details",
+    "cancel": "Cancel",
+    "save": "Save",
+    "delete": "Delete",
+    "confirmDelete": "Are you sure you want to delete this event?"
+  },
+  "CallContacts": {
+    "addContact": "Add Contact",
+    "searchPlaceholder": "Search contacts...",
+    "confirmBulkDelete": "Delete {{count}} selected contacts?",
+    "deleteSelected": "Delete Selected",
+    "cancel": "Cancel",
+    "saving": "Saving...",
+    "save": "Save",
+    "loading": "Loading contacts...",
+    "error": "Error: {{message}}",
+    "call": "Call",
+    "noMatch": "No contacts match your search",
+    "fullNameLabel": "Full Name",
+    "fullNamePlaceholder": "Enter full name",
+    "phoneNumberLabel": "Phone Number",
+    "phoneNumberPlaceholder": "Enter phone number",
+    "relationshipLabel": "Relationship",
+    "relationshipPlaceholder": "Enter relationship"
+  },
+  "Exercise": {
+    "showMedium": "Show Medium Difficulty Exercises",
+    "Hard_label": "Our exercise library focuses on 'Easy' and 'Medium' difficulty exercises that are safe and appropriate for elderly users.",
+    "no_exercises_criteria": "No exercises found matching your criteria.",
+    "Try_Again": "Try Again",
+    "Error":"Error",
+    "Library": "Exercise Library",
+    "add_exercises": "Add Sample Exercises to Database",
+    "no_exercises_label": "No Exercises Found",
+    "no_exercises": "It looks like your database is empty. Would you like to add some sample exercises?",
+    "Easy": "Easy",
+    "target_areas": "Target Areas:",
+    "view_details": "View Details",
+    "Read":"Read",
+
+    "noDataInfo": "There are currently no exercises available. Would you like to add some sample data?",
+    
+    "Category": "Category:",
+    "difficulty": "Difficulty:",
+    "all": "All",
+    "minutes": "minutes",
+    "min": "min",
+    "errorTitle": "Failed to Load Exercises",
+    "retry": "Retry",
+    "noMatch": "No exercises match your selection",
+    "hardNote": "These exercises are marked Hard — try Medium for a more moderate challenge.",
+    
+    "viewDetails": "View Details",
+    "stop": "Stop",
+    "read": "Read",
+    "readInstructions": "Read Instructions",
+    "watchVideo": "Watch Video",
+    "descriptionLabel": "Description:",
+    "instructionsLabel": "Instructions:",
+    "benefitsLabel": "Benefits:",
+    "precautionsLabel": "Precautions:",
+    "modificationsLabel": "Modifications:",
+    "descriptionIntro": "Here is an overview of {{name}}",
+    "difficultyIntro": "This exercise is rated {{level}} difficulty",
+    "duration": "It lasts for: ",
+    "benefitsIntro": "Key benefits include",
+    "fetchError": "Error fetching exercises: {{message}}",
+    "targets": "Targets"
+  },
+  "Header": {
+    "Emergency": "Emergency",
+
+    "settings": "Settings",
+    "logout": "Logout"
+  },
+  "LeftSide": {
+    "home": "Home",
+    "meals": "Meals",
+    "medication": "Medication",
+    "exercise": "Exercise",
+    "calendar": "Calendar",
+    "news": "News",
+    "friends": "Meet with friends"
+  },
+  "Meals": {
+    "backToList": "Back to List",
+    "ingredientsLabel": "Ingredients:",
+    "loadingLabel": "Loading...",
+    "SpeakingLabel": "Speaking... (Tap to Stop)",
+    "barcodeLabel": "Barcode:",
+    "availableFoodsLabel": "Available Foods",
+    "positionLabel": "Position barcode within the red frame",
+    "scanBarcode": "Scan Barcode",
+    "FoodList": "Food List",
+    "FoodInfo": "Food Information",
+
+    "addMeal": "Add Meal",
+    "mealTime": "Meal Time"
+  },
+  "Medication": {
+    "taken": "Taken",
+    "MarkAsTaken": "Mark as Taken",
+    "deleteLabel": "Delete",
+    "noCancel": "No, Cancel",
+    "yesTaken": "Yes, taken",
+    "Confirmation": "Confirm you just took",
+    "noKeep": "No, keep",
+    "yesDelete": "Yes, delete",
+    "nextDue": "Next due:",
+    "lastTaken": "Last taken: ",
+    "hours": "hours",
+    "frequency": "Frequency: every",
+    "cancel": "Cancel",
+
+    "addMedication": "Add Medication",
+    "dosage": "Dosage"
+    
+  },
+  "MeetWithFriends": {
+    "invite": "Invite Friends",
+    "location": "Location",
+    "time": "Time"
+  },
+  "News": {
+    "latestNews": "Latest News",
+    "readMore": "Read more"
+  },
+  "RightSide": {
+    "callContacts":     "Call Contacts",
+    "meetWithFriends":  "Meet With Friends",
+    "medicine":         "Medicine",
+    "meals":            "Meals",
+    "news":             "News",
+    "exercise":         "Exercise",
+    "back":             "Back",
+    "loadingUser":      "Loading user…"
+  },
+  "SettingsModal": {
+    "title": "Settings",
+    "textSize": "Text Size",
+    "volume": "Volume",
+    "speakingSpeed": "Speaking Speed",
+    "close": "Close",
+    "language": "Language",
+    "User": "Change User"
+  }
+}
