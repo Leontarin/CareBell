@@ -1,22 +1,14 @@
-// routes/bellaReminder.js
-
+// routes/bellaReminders.js
 require('dotenv').config();
 const express       = require('express');
 const axios         = require('axios');
 const router        = express.Router();
-const mongoose      = require('mongoose');
 const BellaReminder = require('../models/bellaReminder');
-
-console.log(
-  '🐘 Mongoose is using collection:',
-  mongoose.model('BellaReminder').collection.collectionName
-);
 
 const HF_API_URL = 'https://api-inference.huggingface.co/models/joeddav/xlm-roberta-large-xnli';
 const HF_TOKEN   = process.env.HF_API_TOKEN;
-const DEBUG      = process.env.DEBUG_HF === 'true';
 
-// Create a new reminder manually
+// 1) Manually add a reminder
 router.post('/addReminder', async (req, res) => {
   try {
     const { userId, title, description, reminderTime, isImportant } = req.body;
@@ -28,11 +20,10 @@ router.post('/addReminder', async (req, res) => {
   }
 });
 
-// List all reminders for a given user
+// 2) List all reminders for a user
 router.get('/user/:userId', async (req, res) => {
   try {
-    const { userId } = req.params;
-    const reminders = await BellaReminder.find({ userId });
+    const reminders = await BellaReminder.find({ userId: req.params.userId });
     if (!reminders.length) {
       return res.status(404).json({ message: 'No reminders found for this user' });
     }
@@ -42,78 +33,56 @@ router.get('/user/:userId', async (req, res) => {
   }
 });
 
-// Analyze incoming text and auto-save if it's a personal fact (or label question)
+// 3) Analyze incoming text and auto-save if the model’s top label is 'personal fact'
 router.post('/analyze', async (req, res) => {
   const { userId, text } = req.body;
-  console.log('🔎 /analyze called with:', { userId, text });
   if (!userId || !text) {
     return res.status(400).json({ error: 'userId and text are required' });
   }
 
   try {
-    // 1) Zero-shot classify with HF (including "question")
+    // Zero-shot classify with HF (includes 'question' but single-label softmax)
     const hfResponse = await axios.post(
       HF_API_URL,
       {
         inputs: text,
         parameters: {
-          candidate_labels: [
-            'personal fact',
-            'not personal fact',
-            'question'
-          ]
+          candidate_labels: ['personal fact', 'question', 'not personal fact']
         }
       },
       {
         headers: {
           Authorization: `Bearer ${HF_TOKEN}`,
-          'Content-Type':  'application/json',
-          Accept:          'application/json'
+          'Content-Type': 'application/json'
         }
       }
     );
 
     const { labels, scores } = hfResponse.data;
-    if (DEBUG) console.log('🛠️ DEBUG HF response:', JSON.stringify(hfResponse.data, null, 2));
-
-    // 2) Extract top label and score
     const topLabel = labels[0];
-    const topScore = scores[0];
-    console.log('→ topLabel:', topLabel, 'topScore:', topScore);
+    console.log(`→ topLabel: ${topLabel} (score ${scores[0].toFixed(3)})`);
 
-    let saved = false;
-    let reminder = null;
-
-    // 3) Save only personal-fact
-    if (topLabel === 'personal fact' && topScore > 0.70) {
-      // a) derive a meaningful title (first two clauses)
-      const title = text.split(/,|\./).slice(0, 2).join('.').trim();
-      console.log('→ derived title:', title);
-
-      // b) duplicate-check on full description
-      const exists = await BellaReminder.findOne({ userId, description: text });
-      console.log('→ duplicate exists by description?', !!exists);
-
+    // Only save if top label is 'personal fact'
+    if (topLabel === 'personal fact') {
+      const title = text.split(/,|\./)[0].trim();
+      const exists = await BellaReminder.findOne({ userId, title });
       if (!exists) {
-        reminder = await BellaReminder.create({
+        const reminder = await BellaReminder.create({
           userId,
           title,
           description: text,
           reminderTime: new Date(),
           isImportant: true
         });
-        saved = true;
-        if (DEBUG) console.log('🛠️ saved new reminder:', reminder);
+        return res.status(201).json({ saved: true, reminder });
       }
     }
 
-    // 4) Return saved, reminder, and label for front-end logic
-    return res.json({ saved, reminder, label: topLabel });
+    // Otherwise, nothing to save
+    return res.json({ saved: false });
   } catch (err) {
     console.error('Analysis error:', err.response?.data || err.message);
-    return res.status(500).json({
-      error: err.response?.data?.error || err.message
-    });
+    return res.status(500).json({ error: err.message });
   }
 });
 
