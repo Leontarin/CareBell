@@ -33,14 +33,37 @@ class WebRTCManager {
         this.peerConnection.addTrack(track, this.localStream);
       });
 
-      // Handle remote stream
+      // Handle remote stream with enhanced track handling
       this.peerConnection.ontrack = (event) => {
         const [remoteStream] = event.streams;
+        console.log('Got remote track', event.track.kind, 'from remote peer');
+        
+        // We need to ensure the ref exists and attach the stream
         if (this.remoteVideoRef.current) {
-          this.remoteVideoRef.current.srcObject = remoteStream;
-          console.log('Set remote video for user', this.userId);
+          // If there's already a stream, we'll add this track to it
+          if (this.remoteVideoRef.current.srcObject instanceof MediaStream) {
+            // Don't add duplicate tracks
+            const existingTracks = this.remoteVideoRef.current.srcObject.getTracks();
+            const trackExists = existingTracks.some(t => 
+              t.id === event.track.id || (t.kind === event.track.kind && t.label === event.track.label)
+            );
+            
+            if (!trackExists) {
+              this.remoteVideoRef.current.srcObject.addTrack(event.track);
+            }
+          } else {
+            // If no stream yet, use the one from the event
+            this.remoteVideoRef.current.srcObject = remoteStream;
+          }
+          
+          console.log('Set remote video for remote peer, track type:', event.track.kind);
+          
+          // Ensure video plays
+          this.remoteVideoRef.current.play().catch(err => {
+            console.warn('Auto-play prevented for remote video:', err);
+          });
         } else {
-          console.log('remoteVideoRef.current is null for user', this.userId);
+          console.error('remoteVideoRef.current is null - cannot set remote stream');
         }
       };
 

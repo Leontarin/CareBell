@@ -55,23 +55,47 @@ function MeetWithFriends() {
     });
     socketRef.current.emit("register", user.id);
 
-    // Listen for participants update
-    socketRef.current.on("room-participants", (userIds) => {
+    // Listen for participants update    socketRef.current.on("room-participants", (userIds) => {
+      console.log('room-participants update:', userIds);
       setParticipants(userIds);
     });
-
-    // Listen for WebRTC signals
+    // Listen for WebRTC signals with enhanced handling
     socketRef.current.on("signal", async ({ userId: remoteUserId, signal }) => {
-      if (remoteUserId === user.id) return;
+      console.log(`Received signal of type ${signal.type} from user ${remoteUserId}`);
+      
+      if (remoteUserId === user.id) {
+        console.log('Ignoring signal from self');
+        return;
+      }
+      
+      // Check if we have an active peer for this user
       if (videoPeers[remoteUserId] && videoPeers[remoteUserId].handleSignal) {
-        videoPeers[remoteUserId].handleSignal({ signal });
+        console.log(`Processing signal of type ${signal.type} for existing peer ${remoteUserId}`);
+        const success = await videoPeers[remoteUserId].handleSignal({ signal });
+        if (!success) {
+          console.warn(`Failed to handle signal for user ${remoteUserId}, will recreate peer connection`);
+          // Force creating a new peer on next participants update
+          setVideoPeers(prev => {
+            const copy = { ...prev };
+            delete copy[remoteUserId];
+            return copy;
+          });
+          
+          // Queue the signal
+          setPendingSignals(prev => ({
+            ...prev,
+            [remoteUserId]: [...(prev[remoteUserId] || []), signal]
+          }));
+        }
       } else {
         // Queue the signal for later processing
+        console.log(`Queueing signal of type ${signal.type} for user ${remoteUserId} - no peer yet`);
         setPendingSignals(prev => ({
           ...prev,
           [remoteUserId]: [...(prev[remoteUserId] || []), signal]
         }));
-        console.log('Queued signal for user', remoteUserId);
+          // Do NOT manually add to participants here. Only trust backend updates.
+        // If the peer is never created, check backend emits correct participant list.
       }
     });
 
