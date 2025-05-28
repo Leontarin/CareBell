@@ -1,0 +1,12 @@
+- name: SSH & deploy to server
+  uses: appleboy/ssh-action@v0.1.8
+  with:
+    host: ${{ secrets.DEPLOY_HOST }}     # just the host/IP
+    username: ${{ secrets.DEPLOY_USER }}
+    key: ${{ secrets.DEPLOY_KEY }}
+    port: 6922                           # your custom SSH port
+    script: |
+      cd /home/bella/CareBell/backend
+      git pull origin main
+      npm install
+      sudo systemctl restart carebell.service
