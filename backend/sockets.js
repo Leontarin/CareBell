@@ -89,7 +89,7 @@ module.exports = function (io) {
       io.to(callerSocketId).emit('call-accepted', { roomId });
       socket.emit('call-connected', { roomId });
       // Initiate WebRTC connection
-      io.to(callerSocketId).emit('initiate-peer');
+      io.to(callerSocketId).emit('initiate-peer', { roomId });
       // Remove from pending calls
       pendingCalls.delete(targetUserId);
     });

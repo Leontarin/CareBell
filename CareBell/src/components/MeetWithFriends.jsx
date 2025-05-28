@@ -85,10 +85,11 @@ function MeetWithFriends() {
         createPeer(false, roomId);
       }
     });// Initiate WebRTC peer connection (caller side)
-    socketRef.current.on("initiate-peer", () => {
-      console.log("Initiate peer called, roomId:", roomId);
-      if (localStreamRef.current && roomId) {
-        createPeer(true, roomId);
+    socketRef.current.on("initiate-peer", ({ roomId: peerRoomId }) => {
+      console.log("Initiate peer called, roomId:", peerRoomId);
+      setRoomId(peerRoomId);
+      if (localStreamRef.current && peerRoomId) {
+        createPeer(true, peerRoomId);
       } else {
         console.error("Cannot create peer - missing stream or roomId");
       }
