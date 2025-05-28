@@ -183,12 +183,14 @@ function MeetWithFriends() {
               remoteVideoRef = React.createRef();
               setRemoteVideoRefs(prev => ({ ...prev, [remoteUserId]: remoteVideoRef }));
             }
+            const polite = user.id > remoteUserId; // true if my id is higher
             const manager = new WebRTCManager(
               localVideoRef,
               remoteVideoRef,
               socketRef.current,
               joinedRoom,
-              user.id
+              user.id,
+              polite // pass polite flag per peer
             );
             manager.onConnectionFailed = () => {
               setConnectionRetries(prev => ({
