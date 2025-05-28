@@ -247,19 +247,9 @@ function MeetWithFriends() {
     setOtherUserId(null);
     setIncomingCall(null);
   };
-  // If no user is available, show a message
-  if (!user?.id) {
-    return (
-      <div className="w-[800px] h-[900px] bg-black relative">
-        <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 z-20 bg-black/60 p-6 rounded-lg">
-          <h2 className="text-white text-xl mb-4">Please log in to use video calling</h2>
-        </div>
-      </div>
-    );
-  }
-
+  
   return (
-    <div className="w-[800px] h-[900px] bg-black relative">
+    <div className="w-full h-full bg-black relative">
       {!inCall && callStatus === 'idle' && (
         <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 z-20 bg-black/60 p-6 rounded-lg">
           <h2 className="text-white text-xl mb-4">
