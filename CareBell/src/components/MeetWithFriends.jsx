@@ -193,28 +193,8 @@ function MeetWithFriends() {
               polite // pass polite flag per peer
             );
             manager.onConnectionFailed = () => {
-              setConnectionRetries(prev => ({
-                ...prev,
-                [remoteUserId]: (prev[remoteUserId] || 0) + 1
-              }));
-              // Clean up all state for this peer
-              setVideoPeers(prev => {
-                const copy = { ...prev };
-                delete copy[remoteUserId];
-                return copy;
-              });
-              setRemoteVideoRefs(prev => {
-                const copy = { ...prev };
-                delete copy[remoteUserId];
-                return copy;
-              });
-              setPendingSignals(prev => {
-                const copy = { ...prev };
-                delete copy[remoteUserId];
-                return copy;
-              });
-              videoPeersRef.current = { ...videoPeersRef.current };
-              delete videoPeersRef.current[remoteUserId];
+              // Robust: immediately recreate and drain signals
+              recreatePeer(remoteUserId);
             };
             videoPeersRef.current = { ...videoPeersRef.current, [remoteUserId]: manager };
             setVideoPeers(prev => ({ ...prev, [remoteUserId]: manager }));
@@ -328,32 +308,71 @@ function MeetWithFriends() {
     videoPeersRef.current = {};
   };
 
-  // Manual peer recreation for debugging
-  const recreatePeer = (userId) => {
-    console.log(`Manually recreating peer for user ${userId}`);
-    
+  // Helper to drain and process all pending signals for a peer
+const drainPendingSignalsForPeer = async (remoteUserId, manager) => {
+  if (pendingSignals[remoteUserId] && pendingSignals[remoteUserId].length > 0) {
+    console.log(`[drainPendingSignalsForPeer] Draining ${pendingSignals[remoteUserId].length} signals for user ${remoteUserId}`);
+    for (const signal of pendingSignals[remoteUserId]) {
+      try {
+        await manager.handleSignal({ signal });
+        await new Promise(resolve => setTimeout(resolve, 50));
+      } catch (error) {
+        console.error(`[drainPendingSignalsForPeer] Error processing pending ${signal.type} signal for user ${remoteUserId}:`, error);
+      }
+    }
+    setPendingSignals(prev => {
+      const copy = { ...prev };
+      delete copy[remoteUserId];
+      return copy;
+    });
+  }
+};
+
+  // Refactored peer recreation: destroy, recreate, and drain signals
+  const recreatePeer = async (userId) => {
+    console.log(`[recreatePeer] Recreating peer for user ${userId}`);
     // Clean up existing peer
     if (videoPeers[userId]) {
       videoPeers[userId].destroy();
     }
-    
-    // Remove from state to trigger recreation
     setVideoPeers(prev => {
       const copy = { ...prev };
       delete copy[userId];
       return copy;
     });
-    
-    // Reset retry count
     setConnectionRetries(prev => {
       const copy = { ...prev };
       delete copy[userId];
       return copy;
     });
-    
-    // Update ref
     videoPeersRef.current = { ...videoPeersRef.current };
     delete videoPeersRef.current[userId];
+    // Recreate peer immediately if user is still a participant
+    if (participants.includes(userId) && localStreamRef.current) {
+      let remoteVideoRef = remoteVideoRefs[userId];
+      if (!remoteVideoRef) {
+        remoteVideoRef = React.createRef();
+        setRemoteVideoRefs(prev => ({ ...prev, [userId]: remoteVideoRef }));
+      }
+      const polite = user.id > userId;
+      const manager = new WebRTCManager(
+        localVideoRef,
+        remoteVideoRef,
+        socketRef.current,
+        joinedRoom,
+        user.id,
+        polite
+      );
+      manager.onConnectionFailed = () => {
+        // Call recreatePeer recursively on failure
+        recreatePeer(userId);
+      };
+      videoPeersRef.current = { ...videoPeersRef.current, [userId]: manager };
+      setVideoPeers(prev => ({ ...prev, [userId]: manager }));
+      const shouldCreateOffer = user.id.localeCompare(userId) < 0;
+      await manager.initialize(localStreamRef.current, shouldCreateOffer);
+      await drainPendingSignalsForPeer(userId, manager);
+    }
   };
 
   if (!user?.id) {
