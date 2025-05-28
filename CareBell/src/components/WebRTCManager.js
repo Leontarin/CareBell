@@ -216,6 +216,30 @@ class WebRTCManager {
     }
   }
 
+  async handleSignal(signalData) {
+    const { signal } = signalData;
+    if (!this.peerConnection) {
+      console.warn('handleSignal called but peerConnection is null');
+      return false;
+    }
+    try {
+      switch (signal.type) {
+        case 'offer':
+          return await this.handleOffer(signal.sdp);
+        case 'answer':
+          return await this.handleAnswer(signal.sdp);
+        case 'ice-candidate':
+          return await this.handleIceCandidate(signal.candidate);
+        default:
+          console.log('Unknown signal type:', signal.type);
+          return false;
+      }
+    } catch (error) {
+      console.error('Error handling signal:', error);
+      return false;
+    }
+  }
+
   async handleOffer(offer) {
     try {
       const offerDesc = typeof offer.sdp === 'string' ? offer : { type: 'offer', sdp: offer };
@@ -296,34 +320,6 @@ class WebRTCManager {
       } catch (e) {
         console.error('Error adding queued ICE candidate:', e);
       }
-    }
-  }
-
-  async handleSignal(signalData) {
-    const { signal } = signalData;
-
-    // Defensive: If peerConnection is null, return false so the signal is queued for retry
-    if (!this.peerConnection) {
-      console.warn('handleSignal called but peerConnection is null');
-      return false;
-    }
-
-    try {
-      console.log(`Processing signal type: ${signal.type}, current state: ${this.peerConnection.signalingState}`);
-      switch (signal.type) {
-        case 'offer':
-          return await this.handleOffer(signal.sdp);
-        case 'answer':
-          return await this.handleAnswer(signal.sdp);
-        case 'ice-candidate':
-          return await this.handleIceCandidate(signal.candidate);
-        default:
-          console.log('Unknown signal type:', signal.type);
-          return false;
-      }
-    } catch (error) {
-      console.error('Error handling signal:', error);
-      return false;
     }
   }
 
