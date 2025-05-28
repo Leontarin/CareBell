@@ -46,46 +46,61 @@ module.exports = function (io) {
 
     // User joins a video room
     socket.on('join-room', ({ roomId, userId }) => {
+      console.log(`User ${userId} joining room ${roomId}`);
       socket.join(roomId);
       socket.roomId = roomId;
       socket.userId = userId;
       if (!roomParticipants.has(roomId)) roomParticipants.set(roomId, new Set());
       roomParticipants.get(roomId).add(userId);
+      const currentParticipants = Array.from(roomParticipants.get(roomId));
+      console.log(`Room ${roomId} now has participants:`, currentParticipants);
       // Notify all in room of new participant list
-      const participants = Array.from(roomParticipants.get(roomId));
-      console.log(`[SOCKETS] join-room: roomId=${roomId}, participants=`, participants);
-      io.to(roomId).emit('room-participants', participants);
+      io.to(roomId).emit('room-participants', currentParticipants);
     });
 
     // User leaves a video room
     socket.on('leave-room', ({ roomId, userId }) => {
+      console.log(`User ${userId} leaving room ${roomId}`);
       socket.leave(roomId);
       if (roomParticipants.has(roomId)) {
         roomParticipants.get(roomId).delete(userId);
         if (roomParticipants.get(roomId).size === 0) {
           roomParticipants.delete(roomId);
+          console.log(`Room ${roomId} deleted - no participants left`);
         } else {
-          const participants = Array.from(roomParticipants.get(roomId));
-          console.log(`[SOCKETS] leave-room: roomId=${roomId}, participants=`, participants);
-          io.to(roomId).emit('room-participants', participants);
+          const currentParticipants = Array.from(roomParticipants.get(roomId));
+          console.log(`Room ${roomId} now has participants:`, currentParticipants);
+          io.to(roomId).emit('room-participants', currentParticipants);
         }
       }
     });
 
     // WebRTC signaling for room
     socket.on('signal', ({ roomId, userId, signal }) => {
+      console.log(`Relaying signal of type ${signal.type} from user ${userId} to room ${roomId}`);
       // Broadcast to all others in the room except the sender
       socket.to(roomId).emit('signal', { userId, signal });
     });
 
     // On disconnect, remove from room
     socket.on('disconnect', () => {
+      console.log(`Socket ${socket.id} disconnected`);
       const { roomId, userId } = socket;
+      
+      // Remove from user sockets map
+      if (userId) {
+        removeUserSocket(userId, socket.id);
+      }
+      
+      // Remove from room participants
       if (roomId && userId && roomParticipants.has(roomId)) {
+        console.log(`Removing user ${userId} from room ${roomId}`);
         roomParticipants.get(roomId).delete(userId);
         if (roomParticipants.get(roomId).size === 0) {
           roomParticipants.delete(roomId);
+          console.log(`Room ${roomId} deleted - no participants left`);
         } else {
+          console.log(`Notifying room ${roomId} of participant update`);
           io.to(roomId).emit('room-participants', Array.from(roomParticipants.get(roomId)));
         }
       }

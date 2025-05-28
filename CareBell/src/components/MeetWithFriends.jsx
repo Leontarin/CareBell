@@ -53,13 +53,11 @@ function MeetWithFriends() {
       upgrade: true,
       rememberUpgrade: true
     });
-    socketRef.current.emit("register", user.id);
-
-    // Listen for participants update    socketRef.current.on("room-participants", (userIds) => {
+    socketRef.current.emit("register", user.id);    // Listen for participants update
+    socketRef.current.on("room-participants", (userIds) => {
       console.log('room-participants update:', userIds);
       setParticipants(userIds);
-    });
-    // Listen for WebRTC signals with enhanced handling
+    });    // Listen for WebRTC signals with enhanced handling
     socketRef.current.on("signal", async ({ userId: remoteUserId, signal }) => {
       console.log(`Received signal of type ${signal.type} from user ${remoteUserId}`);
       
@@ -71,17 +69,26 @@ function MeetWithFriends() {
       // Check if we have an active peer for this user
       if (videoPeers[remoteUserId] && videoPeers[remoteUserId].handleSignal) {
         console.log(`Processing signal of type ${signal.type} for existing peer ${remoteUserId}`);
-        const success = await videoPeers[remoteUserId].handleSignal({ signal });
-        if (!success) {
-          console.warn(`Failed to handle signal for user ${remoteUserId}, will recreate peer connection`);
-          // Force creating a new peer on next participants update
-          setVideoPeers(prev => {
-            const copy = { ...prev };
-            delete copy[remoteUserId];
-            return copy;
-          });
-          
-          // Queue the signal
+        try {
+          const success = await videoPeers[remoteUserId].handleSignal({ signal });
+          if (!success) {
+            console.warn(`Failed to handle signal for user ${remoteUserId}, will recreate peer connection`);
+            // Force creating a new peer on next participants update
+            setVideoPeers(prev => {
+              const copy = { ...prev };
+              delete copy[remoteUserId];
+              return copy;
+            });
+            
+            // Queue the signal
+            setPendingSignals(prev => ({
+              ...prev,
+              [remoteUserId]: [...(prev[remoteUserId] || []), signal]
+            }));
+          }
+        } catch (error) {
+          console.error(`Error handling signal for user ${remoteUserId}:`, error);
+          // Queue the signal for retry
           setPendingSignals(prev => ({
             ...prev,
             [remoteUserId]: [...(prev[remoteUserId] || []), signal]
@@ -94,7 +101,7 @@ function MeetWithFriends() {
           ...prev,
           [remoteUserId]: [...(prev[remoteUserId] || []), signal]
         }));
-          // Do NOT manually add to participants here. Only trust backend updates.
+        // Do NOT manually add to participants here. Only trust backend updates.
         // If the peer is never created, check backend emits correct participant list.
       }
     });
@@ -105,35 +112,44 @@ function MeetWithFriends() {
     };
     // eslint-disable-next-line
   }, [user?.id]);
-
   // Join a room
   const joinRoom = async (roomId) => {
     if (!user?.id) return;
+    console.log(`Attempting to join room ${roomId} as user ${user.id}`);
+    
     // Get local media
     let stream;
     try {
       stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
       localStreamRef.current = stream;
       if (localVideoRef.current) localVideoRef.current.srcObject = stream;
+      console.log('Local media stream acquired successfully');
     } catch (err) {
+      console.error('Failed to get local media:', err);
       alert("Could not access camera/mic: " + err.message);
       return;
     }
+    
     socketRef.current.emit("join-room", { roomId, userId: user.id });
     setJoinedRoom(roomId);
+    console.log(`Emitted join-room event for room ${roomId}`);
   };
-
   // Leave a room
   const leaveRoom = () => {
     if (!joinedRoom || !user?.id) return;
+    console.log(`Leaving room ${joinedRoom} as user ${user.id}`);
+    
     socketRef.current.emit("leave-room", { roomId: joinedRoom, userId: user.id });
     setJoinedRoom(null);
     setParticipants([]);
     cleanupAllPeers();
+    
     if (localStreamRef.current) {
       localStreamRef.current.getTracks().forEach(track => track.stop());
       localStreamRef.current = null;
     }
+    
+    console.log('Left room and cleaned up resources');
   };
 
   // Create a room and join it
@@ -148,19 +164,27 @@ function MeetWithFriends() {
       alert("Failed to create room: " + err.message);
     }
   };
-
   // WebRTC peer management
   useEffect(() => {
     if (!joinedRoom || !localStreamRef.current) return;
+    
+    console.log('Managing peers for participants:', participants);
+    
     // For each participant (except self), create a peer if not exists
     participants.forEach(remoteUserId => {
       if (remoteUserId === user.id) return;
+      
+      console.log(`Checking peer for user ${remoteUserId}`);
+      
       if (!videoPeers[remoteUserId]) {
+        console.log(`Creating new peer for user ${remoteUserId}`);
+        
         let remoteVideoRef = remoteVideoRefs[remoteUserId];
         if (!remoteVideoRef) {
           remoteVideoRef = React.createRef();
           setRemoteVideoRefs(prev => ({ ...prev, [remoteUserId]: remoteVideoRef }));
         }
+        
         const manager = new WebRTCManager(
           localVideoRef,
           remoteVideoRef,
@@ -168,24 +192,37 @@ function MeetWithFriends() {
           joinedRoom,
           user.id // pass userId to manager
         );
-        manager.initialize(localStreamRef.current, user.id < remoteUserId);
+        
+        // Initialize the peer connection
+        manager.initialize(localStreamRef.current, user.id < remoteUserId)
+          .then(() => {
+            console.log(`Peer initialized successfully for user ${remoteUserId}`);
+            
+            // Process any pending signals for this user
+            if (pendingSignals[remoteUserId] && pendingSignals[remoteUserId].length > 0) {
+              console.log(`Processing ${pendingSignals[remoteUserId].length} pending signals for user ${remoteUserId}`);
+              pendingSignals[remoteUserId].forEach(signal => {
+                manager.handleSignal({ signal });
+              });
+              setPendingSignals(prev => {
+                const copy = { ...prev };
+                delete copy[remoteUserId];
+                return copy;
+              });
+            }
+          })
+          .catch(error => {
+            console.error(`Failed to initialize peer for user ${remoteUserId}:`, error);
+          });
+          
         setVideoPeers(prev => ({ ...prev, [remoteUserId]: manager }));
-        // Process any pending signals for this user
-        if (pendingSignals[remoteUserId] && pendingSignals[remoteUserId].length > 0) {
-          pendingSignals[remoteUserId].forEach(signal => {
-            manager.handleSignal({ signal });
-          });
-          setPendingSignals(prev => {
-            const copy = { ...prev };
-            delete copy[remoteUserId];
-            return copy;
-          });
-        }
       }
     });
+    
     // Remove peers and refs for users who left
     Object.keys(videoPeers).forEach(peerId => {
       if (!participants.includes(peerId)) {
+        console.log(`Removing peer for user ${peerId}`);
         videoPeers[peerId].destroy();
         setVideoPeers(prev => {
           const copy = { ...prev };
@@ -200,7 +237,7 @@ function MeetWithFriends() {
       }
     });
     // eslint-disable-next-line
-  }, [participants, joinedRoom, localStreamRef.current, pendingSignals]);
+  }, [participants, joinedRoom, localStreamRef.current]);
 
   // Ensure local video is always set when joining a room or stream changes
   useEffect(() => {
@@ -266,19 +303,26 @@ function MeetWithFriends() {
                 className="w-64 h-48 bg-black border-4 border-green-400 rounded-lg"
               />
               <div className="text-center text-white mt-2">You</div>
-            </div>
-            {/* Remote videos */}
-            {participants.filter(pid => pid !== user.id).map(pid => (
-              <div className="m-2" key={pid}>
-                <video
-                  ref={remoteVideoRefs[pid] || null}
-                  playsInline
-                  autoPlay
-                  className="w-64 h-48 bg-black border-4 border-blue-400 rounded-lg"
-                />
-                <div className="text-center text-white mt-2">{pid}</div>
-              </div>
-            ))}
+            </div>            {/* Remote videos */}
+            {participants.filter(pid => pid !== user.id).map(pid => {
+              // Ensure we have a ref for this participant
+              if (!remoteVideoRefs[pid]) {
+                const newRef = React.createRef();
+                setRemoteVideoRefs(prev => ({ ...prev, [pid]: newRef }));
+              }
+              
+              return (
+                <div className="m-2" key={pid}>
+                  <video
+                    ref={remoteVideoRefs[pid]}
+                    playsInline
+                    autoPlay
+                    className="w-64 h-48 bg-black border-4 border-blue-400 rounded-lg"
+                  />
+                  <div className="text-center text-white mt-2">{pid}</div>
+                </div>
+              );
+            })}
           </div>
         </div>
       )}

@@ -40,21 +40,8 @@ class WebRTCManager {
         
         // We need to ensure the ref exists and attach the stream
         if (this.remoteVideoRef.current) {
-          // If there's already a stream, we'll add this track to it
-          if (this.remoteVideoRef.current.srcObject instanceof MediaStream) {
-            // Don't add duplicate tracks
-            const existingTracks = this.remoteVideoRef.current.srcObject.getTracks();
-            const trackExists = existingTracks.some(t => 
-              t.id === event.track.id || (t.kind === event.track.kind && t.label === event.track.label)
-            );
-            
-            if (!trackExists) {
-              this.remoteVideoRef.current.srcObject.addTrack(event.track);
-            }
-          } else {
-            // If no stream yet, use the one from the event
-            this.remoteVideoRef.current.srcObject = remoteStream;
-          }
+          console.log('Setting remote stream to video element');
+          this.remoteVideoRef.current.srcObject = remoteStream;
           
           console.log('Set remote video for remote peer, track type:', event.track.kind);
           
@@ -167,18 +154,25 @@ class WebRTCManager {
   async handleSignal(signalData) {
     const { signal } = signalData;
     
-    switch (signal.type) {
-      case 'offer':
-        await this.handleOffer(signal.sdp);
-        break;
-      case 'answer':
-        await this.handleAnswer(signal.sdp);
-        break;
-      case 'ice-candidate':
-        await this.handleIceCandidate(signal.candidate);
-        break;
-      default:
-        console.log('Unknown signal type:', signal.type);
+    try {
+      switch (signal.type) {
+        case 'offer':
+          await this.handleOffer(signal.sdp);
+          break;
+        case 'answer':
+          await this.handleAnswer(signal.sdp);
+          break;
+        case 'ice-candidate':
+          await this.handleIceCandidate(signal.candidate);
+          break;
+        default:
+          console.log('Unknown signal type:', signal.type);
+          return false;
+      }
+      return true;
+    } catch (error) {
+      console.error('Error handling signal:', error);
+      return false;
     }
   }
 
