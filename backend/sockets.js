@@ -73,7 +73,12 @@ module.exports = function (io) {
       // Join both users to the same room
       socket.join(roomId);
       const callerSocket = io.sockets.sockets.get(callerSocketId);
-      if (callerSocket) callerSocket.join(roomId);
+      if (callerSocket) {
+        callerSocket.join(roomId);
+        console.log(`Both users joined room ${roomId}: caller ${callerId}, target ${targetUserId}`);
+      } else {
+        console.error(`Caller socket not found: ${callerSocketId}`);
+      }
       // Notify all sockets of target user: call answered (except this one)
       for (const targetSocketId of getUserSockets(targetUserId)) {
         if (targetSocketId !== socket.id) {
@@ -116,8 +121,12 @@ module.exports = function (io) {
     // WebRTC signaling
     socket.on('signal', data => {
       const { roomId } = data;
+      console.log(`Signal received from ${socket.userId}, roomId: ${roomId}`);
       if (roomId) {
+        console.log(`Broadcasting signal to room ${roomId}`);
         socket.to(roomId).emit('signal', data);
+      } else {
+        console.error('No roomId in signal data');
       }
     });
 

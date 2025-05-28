@@ -69,25 +69,28 @@ function MeetWithFriends() {
     socketRef.current.on("call-busy", ({ targetUserId }) => {
       alert(`${targetUserId} is currently busy`);
       cleanupCall();
-    });
-
-    // Call was accepted by target
+    });    // Call was accepted by target
     socketRef.current.on("call-accepted", ({ roomId }) => {
+      console.log("Call accepted, setting roomId:", roomId);
       setRoomId(roomId);
       setCallStatus('connected');
       setInCall(true);
     });    // Call connected (for the answering user)
     socketRef.current.on("call-connected", ({ roomId }) => {
+      console.log("Call connected, setting roomId:", roomId);
       setRoomId(roomId);
       setCallStatus('connected');
       setInCall(true);
       if (localStreamRef.current) {
-        createPeer(false);
+        createPeer(false, roomId);
       }
     });// Initiate WebRTC peer connection (caller side)
     socketRef.current.on("initiate-peer", () => {
-      if (localStreamRef.current) {
-        createPeer(true);
+      console.log("Initiate peer called, roomId:", roomId);
+      if (localStreamRef.current && roomId) {
+        createPeer(true, roomId);
+      } else {
+        console.error("Cannot create peer - missing stream or roomId");
       }
     });
 
@@ -108,14 +111,16 @@ function MeetWithFriends() {
     // Call ended
     socketRef.current.on("call-ended", () => {
       cleanupCall();
-    });
-
-    // WebRTC signaling
+    });    // WebRTC signaling
     socketRef.current.on("signal", (data) => {
+      console.log("Received signal from socket:", data);
       if (peerRef.current) {
+        console.log("Forwarding signal to peer");
         peerRef.current.signal(data.signal);
+      } else {
+        console.error("No peer to send signal to");
       }
-    });    return () => {
+    });return () => {
       socketRef.current?.disconnect();
       cleanupCall();
     };
@@ -159,8 +164,10 @@ function MeetWithFriends() {
       alert("Error starting call: " + err.message);
       cleanupCall();
     }
-  };
-  const createPeer = (isInitiator) => {
+  };  const createPeer = (isInitiator, passedRoomId = null) => {
+    const currentRoomId = passedRoomId || roomId;
+    console.log("Creating peer, isInitiator:", isInitiator, "roomId:", currentRoomId);
+    
     const peer = new SimplePeer({
       initiator: isInitiator,
       trickle: false,
@@ -169,11 +176,22 @@ function MeetWithFriends() {
     });
 
     peer.on("signal", (data) => {
-      socketRef.current.emit("signal", { roomId, signal: data });
+      console.log("Peer signaling:", data);
+      socketRef.current.emit("signal", { roomId: currentRoomId, signal: data });
     });
 
     peer.on("stream", (remoteStream) => {
-      remoteVideoRef.current.srcObject = remoteStream;
+      console.log("Received remote stream:", remoteStream);
+      if (remoteVideoRef.current) {
+        remoteVideoRef.current.srcObject = remoteStream;
+        console.log("Set remote video source");
+      } else {
+        console.error("Remote video ref is null");
+      }
+    });
+
+    peer.on("connect", () => {
+      console.log("Peer connection established");
     });
 
     peer.on("error", (err) => {
@@ -204,9 +222,10 @@ function MeetWithFriends() {
     socketRef.current.emit("reject-call");
     setIncomingCall(null);
     setCallStatus('idle');
-  };
-  const cleanupCall = () => {
-    if (otherUserId) {
+  };  const cleanupCall = () => {
+    console.log("Cleaning up call, otherUserId:", otherUserId);
+    
+    if (otherUserId && socketRef.current) {
       socketRef.current.emit("end-call", { otherUserId });
     }
     
