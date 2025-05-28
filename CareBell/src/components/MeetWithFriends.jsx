@@ -249,7 +249,7 @@ function MeetWithFriends() {
   };
   
   return (
-    <div className="w-full h-full bg-black relative">
+    <div className="w-[800px] h-[900px] bg-black relative">
       {!inCall && callStatus === 'idle' && (
         <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 z-20 bg-black/60 p-6 rounded-lg">
           <h2 className="text-white text-xl mb-4">
