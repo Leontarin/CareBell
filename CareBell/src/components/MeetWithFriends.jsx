@@ -64,6 +64,8 @@ function MeetWithFriends() {
       if (remoteUserId === user.id) return;
       if (videoPeers[remoteUserId] && videoPeers[remoteUserId].handleSignal) {
         videoPeers[remoteUserId].handleSignal({ signal });
+      } else {
+        console.log('No peer for user', remoteUserId, 'when handling signal');
       }
     });
 
@@ -133,9 +135,10 @@ function MeetWithFriends() {
           localVideoRef,
           remoteVideoRef,
           socketRef.current,
-          joinedRoom
+          joinedRoom,
+          user.id // pass userId to manager
         );
-        manager.initialize(localStreamRef.current, user.id < remoteUserId); // deterministic initiator
+        manager.initialize(localStreamRef.current, user.id < remoteUserId);
         setVideoPeers(prev => ({ ...prev, [remoteUserId]: manager }));
       }
     });

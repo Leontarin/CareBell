@@ -1,10 +1,11 @@
 // WebRTC Manager using native WebRTC APIs
 class WebRTCManager {
-  constructor(localVideoRef, remoteVideoRef, socket, roomId) {
+  constructor(localVideoRef, remoteVideoRef, socket, roomId, userId) {
     this.localVideoRef = localVideoRef;
     this.remoteVideoRef = remoteVideoRef;
     this.socket = socket;
     this.roomId = roomId;
+    this.userId = userId; // <-- add this
     this.peerConnection = null;
     this.localStream = null;
     this.isInitiator = false;
@@ -34,19 +35,21 @@ class WebRTCManager {
 
       // Handle remote stream
       this.peerConnection.ontrack = (event) => {
-        console.log('Received remote stream');
         const [remoteStream] = event.streams;
         if (this.remoteVideoRef.current) {
           this.remoteVideoRef.current.srcObject = remoteStream;
+          console.log('Set remote video for user', this.userId);
+        } else {
+          console.log('remoteVideoRef.current is null for user', this.userId);
         }
       };
 
       // Handle ICE candidates
       this.peerConnection.onicecandidate = (event) => {
         if (event.candidate) {
-          console.log('Sending ICE candidate');
           this.socket.emit('signal', {
             roomId: this.roomId,
+            userId: this.userId, // always include userId
             signal: {
               type: 'ice-candidate',
               candidate: event.candidate
