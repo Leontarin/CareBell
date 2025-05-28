@@ -13,6 +13,7 @@ function MeetWithFriends() {
   const [joinedRoom, setJoinedRoom] = useState(null);
   const [participants, setParticipants] = useState([]); // userIds
   const [videoPeers, setVideoPeers] = useState({}); // userId -> WebRTCManager
+  const [remoteVideoRefs, setRemoteVideoRefs] = useState({}); // userId -> React ref
   const [loading, setLoading] = useState(false);
   const [newRoomName, setNewRoomName] = useState("");
 
@@ -123,7 +124,11 @@ function MeetWithFriends() {
     participants.forEach(remoteUserId => {
       if (remoteUserId === user.id) return;
       if (!videoPeers[remoteUserId]) {
-        const remoteVideoRef = React.createRef();
+        let remoteVideoRef = remoteVideoRefs[remoteUserId];
+        if (!remoteVideoRef) {
+          remoteVideoRef = React.createRef();
+          setRemoteVideoRefs(prev => ({ ...prev, [remoteUserId]: remoteVideoRef }));
+        }
         const manager = new WebRTCManager(
           localVideoRef,
           remoteVideoRef,
@@ -134,11 +139,16 @@ function MeetWithFriends() {
         setVideoPeers(prev => ({ ...prev, [remoteUserId]: manager }));
       }
     });
-    // Remove peers for users who left
+    // Remove peers and refs for users who left
     Object.keys(videoPeers).forEach(peerId => {
       if (!participants.includes(peerId)) {
         videoPeers[peerId].destroy();
         setVideoPeers(prev => {
+          const copy = { ...prev };
+          delete copy[peerId];
+          return copy;
+        });
+        setRemoteVideoRefs(prev => {
           const copy = { ...prev };
           delete copy[peerId];
           return copy;
@@ -217,7 +227,7 @@ function MeetWithFriends() {
             {participants.filter(pid => pid !== user.id).map(pid => (
               <div className="m-2" key={pid}>
                 <video
-                  ref={videoPeers[pid]?.remoteVideoRef || null}
+                  ref={remoteVideoRefs[pid] || null}
                   playsInline
                   autoPlay
                   className="w-64 h-48 bg-black border-4 border-blue-400 rounded-lg"
