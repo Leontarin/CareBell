@@ -148,6 +148,13 @@ function MeetWithFriends() {
     // eslint-disable-next-line
   }, [participants, joinedRoom, localStreamRef.current]);
 
+  // Ensure local video is always set when joining a room or stream changes
+  useEffect(() => {
+    if (localVideoRef.current && localStreamRef.current) {
+      localVideoRef.current.srcObject = localStreamRef.current;
+    }
+  }, [joinedRoom, localStreamRef.current]);
+
   const cleanupAllPeers = () => {
     Object.values(videoPeers).forEach(manager => manager.destroy && manager.destroy());
     setVideoPeers({});
