@@ -52,7 +52,9 @@ module.exports = function (io) {
       if (!roomParticipants.has(roomId)) roomParticipants.set(roomId, new Set());
       roomParticipants.get(roomId).add(userId);
       // Notify all in room of new participant list
-      io.to(roomId).emit('room-participants', Array.from(roomParticipants.get(roomId)));
+      const participants = Array.from(roomParticipants.get(roomId));
+      console.log(`[SOCKETS] join-room: roomId=${roomId}, participants=`, participants);
+      io.to(roomId).emit('room-participants', participants);
     });
 
     // User leaves a video room
@@ -63,7 +65,9 @@ module.exports = function (io) {
         if (roomParticipants.get(roomId).size === 0) {
           roomParticipants.delete(roomId);
         } else {
-          io.to(roomId).emit('room-participants', Array.from(roomParticipants.get(roomId)));
+          const participants = Array.from(roomParticipants.get(roomId));
+          console.log(`[SOCKETS] leave-room: roomId=${roomId}, participants=`, participants);
+          io.to(roomId).emit('room-participants', participants);
         }
       }
     });
