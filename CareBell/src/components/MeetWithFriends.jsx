@@ -80,17 +80,12 @@ function MeetWithFriends() {
       if (currentPeers[remoteUserId] && currentPeers[remoteUserId].handleSignal) {
         console.log(`Processing signal of type ${signal.type} for existing peer ${remoteUserId}`);
         try {
+          // Add a small delay to prevent signal flooding
+          await new Promise(resolve => setTimeout(resolve, 10));
           const success = await currentPeers[remoteUserId].handleSignal({ signal });
           if (!success) {
-            console.warn(`Failed to handle signal for user ${remoteUserId}, will recreate peer connection`);
-            // Force creating a new peer on next participants update
-            setVideoPeers(prev => {
-              const copy = { ...prev };
-              delete copy[remoteUserId];
-              return copy;
-            });
-            
-            // Queue the signal
+            console.warn(`Failed to handle signal for user ${remoteUserId}, queuing for retry`);
+            // Queue the signal instead of immediately recreating peer
             setPendingSignals(prev => ({
               ...prev,
               [remoteUserId]: [...(prev[remoteUserId] || []), signal]
@@ -111,8 +106,6 @@ function MeetWithFriends() {
           ...prev,
           [remoteUserId]: [...(prev[remoteUserId] || []), signal]
         }));
-        // Do NOT manually add to participants here. Only trust backend updates.
-        // If the peer is never created, check backend emits correct participant list.
       }
     });
 
@@ -188,46 +181,65 @@ function MeetWithFriends() {
         if (!videoPeers[remoteUserId]) {
           console.log(`Creating new peer for user ${remoteUserId}`);
           
-          // Create video ref immediately and synchronously
-          let remoteVideoRef = remoteVideoRefs[remoteUserId];
-          if (!remoteVideoRef) {
-            remoteVideoRef = React.createRef();
-            setRemoteVideoRefs(prev => ({ ...prev, [remoteUserId]: remoteVideoRef }));
-          }          const manager = new WebRTCManager(
-            localVideoRef,
-            remoteVideoRef,
-            socketRef.current,
-            joinedRoom,
-            user.id // pass userId to manager
-          );
-          
-          // Set up connection failure callback
-          manager.onConnectionFailed = () => {
-            console.log(`Connection failed for user ${remoteUserId}, will recreate peer`);
-            // Remove the failed peer to trigger recreation
-            setVideoPeers(prev => {
-              const copy = { ...prev };
-              delete copy[remoteUserId];
-              return copy;
-            });
-            videoPeersRef.current = { ...videoPeersRef.current };
-            delete videoPeersRef.current[remoteUserId];
-          };
-        
-          // CRITICAL: Update ref IMMEDIATELY to avoid race condition with incoming signals
-          videoPeersRef.current = { ...videoPeersRef.current, [remoteUserId]: manager };
-          
-          // Then update state (this will trigger re-render but ref is already updated)
-          setVideoPeers(prev => ({ ...prev, [remoteUserId]: manager }));
-          
           try {
-            // IMPROVED: Better logic for determining who initiates the offer
-            // Use a more deterministic approach that works with multiple users
+            // Create video ref immediately and synchronously
+            let remoteVideoRef = remoteVideoRefs[remoteUserId];
+            if (!remoteVideoRef) {
+              remoteVideoRef = React.createRef();
+              setRemoteVideoRefs(prev => ({ ...prev, [remoteUserId]: remoteVideoRef }));
+            }
+
+            const manager = new WebRTCManager(
+              localVideoRef,
+              remoteVideoRef,
+              socketRef.current,
+              joinedRoom,
+              user.id
+            );
+              // Set up connection failure callback
+            manager.onConnectionFailed = () => {
+              console.log(`Connection failed for user ${remoteUserId}, will recreate peer`);
+              
+              // Track retry count
+              setConnectionRetries(prev => ({
+                ...prev,
+                [remoteUserId]: (prev[remoteUserId] || 0) + 1
+              }));
+              
+              // Only recreate if we haven't exceeded max retries
+              const currentRetries = connectionRetries[remoteUserId] || 0;
+              if (currentRetries < 3) {
+                console.log(`Recreating peer for ${remoteUserId} (retry ${currentRetries + 1}/3)`);
+                // Remove the failed peer to trigger recreation
+                setVideoPeers(prev => {
+                  const copy = { ...prev };
+                  delete copy[remoteUserId];
+                  return copy;
+                });
+                videoPeersRef.current = { ...videoPeersRef.current };
+                delete videoPeersRef.current[remoteUserId];
+              } else {
+                console.log(`Max retries exceeded for user ${remoteUserId}, giving up`);
+              }
+            };
+          
+            // CRITICAL: Update ref IMMEDIATELY to avoid race condition with incoming signals
+            videoPeersRef.current = { ...videoPeersRef.current, [remoteUserId]: manager };
+            
+            // Then update state (this will trigger re-render but ref is already updated)
+            setVideoPeers(prev => ({ ...prev, [remoteUserId]: manager }));
+            
+            // Better logic for determining who initiates the offer
             const shouldCreateOffer = user.id.localeCompare(remoteUserId) < 0;
             console.log(`User ${user.id} will ${shouldCreateOffer ? 'create offer for' : 'wait for offer from'} ${remoteUserId}`);
             
-            // Initialize the peer connection with delay to prevent simultaneous offers
-            await new Promise(resolve => setTimeout(resolve, 100));
+            // Add staggered delay to prevent simultaneous negotiations
+            const userIndex = participants.indexOf(remoteUserId);
+            const delay = userIndex * 200; // 200ms between each peer creation
+            console.log(`Adding ${delay}ms delay before initializing peer for ${remoteUserId}`);
+            await new Promise(resolve => setTimeout(resolve, delay));
+            
+            // Initialize the peer connection
             await manager.initialize(localStreamRef.current, shouldCreateOffer);
             console.log(`Peer initialized successfully for user ${remoteUserId}`);
             
@@ -243,6 +255,8 @@ function MeetWithFriends() {
                   if (!success) {
                     console.warn(`Failed to process pending ${signal.type} signal for user ${remoteUserId}`);
                   }
+                  // Small delay between processing signals
+                  await new Promise(resolve => setTimeout(resolve, 50));
                 } catch (error) {
                   console.error(`Error processing pending ${signal.type} signal for user ${remoteUserId}:`, error);
                 }
@@ -294,9 +308,15 @@ function MeetWithFriends() {
           delete copy[peerId];
           return copy;
         });
-        
-        // Clean up pending signals
+          // Clean up pending signals
         setPendingSignals(prev => {
+          const copy = { ...prev };
+          delete copy[peerId];
+          return copy;
+        });
+        
+        // Clean up connection retries
+        setConnectionRetries(prev => {
           const copy = { ...prev };
           delete copy[peerId];
           return copy;
@@ -325,7 +345,36 @@ function MeetWithFriends() {
     setVideoPeers({});
     setRemoteVideoRefs({});
     setPendingSignals({});
+    setConnectionRetries({});
     videoPeersRef.current = {};
+  };
+
+  // Manual peer recreation for debugging
+  const recreatePeer = (userId) => {
+    console.log(`Manually recreating peer for user ${userId}`);
+    
+    // Clean up existing peer
+    if (videoPeers[userId]) {
+      videoPeers[userId].destroy();
+    }
+    
+    // Remove from state to trigger recreation
+    setVideoPeers(prev => {
+      const copy = { ...prev };
+      delete copy[userId];
+      return copy;
+    });
+    
+    // Reset retry count
+    setConnectionRetries(prev => {
+      const copy = { ...prev };
+      delete copy[userId];
+      return copy;
+    });
+    
+    // Update ref
+    videoPeersRef.current = { ...videoPeersRef.current };
+    delete videoPeersRef.current[userId];
   };
 
   if (!user?.id) {
@@ -375,17 +424,51 @@ function MeetWithFriends() {
             <div>Active Peers: {Object.keys(videoPeers).length}</div>
             <div>Pending Signals: {Object.keys(pendingSignals).reduce((acc, key) => acc + pendingSignals[key].length, 0)}</div>
             <div>Remote Video Refs: {Object.keys(remoteVideoRefs).length}</div>
-            
-            {/* Connection Status per user */}
+              {/* Connection Status per user */}
             <div className="mt-2 border-t border-gray-600 pt-2">
               <div className="font-bold">Connection Status:</div>
-              {participants.filter(pid => pid !== user.id).map(pid => (
-                <div key={pid} className="text-xs">
-                  {pid}: {videoPeers[pid] ? '✅ Connected' : 
-                          connectionRetries[pid] ? `❌ Failed (${connectionRetries[pid]} retries)` : 
-                          '🔄 Connecting...'}
-                </div>
-              ))}
+              {participants.filter(pid => pid !== user.id).map(pid => {
+                const peer = videoPeers[pid];
+                const retries = connectionRetries[pid] || 0;
+                let status = '🔄 Connecting...';
+                let details = '';
+                
+                if (peer) {
+                  const state = peer.getConnectionState && peer.getConnectionState();
+                  if (state && state !== 'no-peer') {
+                    const { connectionState, iceConnectionState, attempts } = state;
+                    if (connectionState === 'connected' && iceConnectionState === 'connected') {
+                      status = '✅ Connected';
+                      details = `(${attempts} attempts)`;
+                    } else if (connectionState === 'failed' || iceConnectionState === 'failed') {
+                      status = '❌ Failed';
+                      details = `(${retries} retries, ${attempts} attempts)`;
+                    } else {
+                      status = '🔄 Connecting...';
+                      details = `(${connectionState}/${iceConnectionState}, ${attempts} attempts)`;
+                    }
+                  } else {
+                    status = '✅ Peer Created';
+                  }
+                } else if (retries > 0) {
+                  status = retries >= 3 ? '💀 Max Retries' : '🔄 Retrying...';
+                  details = `(${retries}/3 retries)`;
+                }
+                  return (
+                  <div key={pid} className="text-xs flex justify-between items-center">
+                    <span>{pid.slice(-6)}: {status} {details}</span>
+                    {(!peer || retries > 0) && retries < 3 && (
+                      <button 
+                        onClick={() => recreatePeer(pid)}
+                        className="ml-2 px-1 py-0 bg-yellow-600 text-white rounded text-xs"
+                        title="Retry connection"
+                      >
+                        🔄
+                      </button>
+                    )}
+                  </div>
+                );
+              })}
             </div>
           </div>
           

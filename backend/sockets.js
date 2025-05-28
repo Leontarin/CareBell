@@ -54,8 +54,13 @@ module.exports = function (io) {
       roomParticipants.get(roomId).add(userId);
       const currentParticipants = Array.from(roomParticipants.get(roomId));
       console.log(`Room ${roomId} now has participants:`, currentParticipants);
-      // Notify all in room of new participant list
-      io.to(roomId).emit('room-participants', currentParticipants);
+      
+      // Add a small delay before notifying participants to prevent race conditions
+      setTimeout(() => {
+        // Notify all in room of new participant list
+        io.to(roomId).emit('room-participants', currentParticipants);
+        console.log(`Notified room ${roomId} of updated participants:`, currentParticipants);
+      }, 100); // 100ms delay
     });
 
     // User leaves a video room
@@ -75,11 +80,37 @@ module.exports = function (io) {
       }
     });
 
-    // WebRTC signaling for room
+    // WebRTC signaling for room with improved handling
     socket.on('signal', ({ roomId, userId, signal }) => {
-      console.log(`Relaying signal of type ${signal.type} from user ${userId} to room ${roomId}`);
-      // Broadcast to all others in the room except the sender
-      socket.to(roomId).emit('signal', { userId, signal });
+      try {
+        console.log(`Relaying signal of type ${signal.type} from user ${userId} to room ${roomId}`);
+        
+        // Validate signal data
+        if (!signal || !signal.type) {
+          console.error('Invalid signal received:', signal);
+          return;
+        }
+        
+        // Validate that user is actually in the room
+        if (!roomParticipants.has(roomId) || !roomParticipants.get(roomId).has(userId)) {
+          console.warn(`User ${userId} not in room ${roomId}, ignoring signal`);
+          return;
+        }
+        
+        // Add timestamp to signal for debugging
+        const timestampedSignal = {
+          ...signal,
+          timestamp: Date.now(),
+          fromUser: userId
+        };
+        
+        // Broadcast to all others in the room except the sender
+        socket.to(roomId).emit('signal', { userId, signal: timestampedSignal });
+        
+        console.log(`Successfully relayed ${signal.type} signal from ${userId} to room ${roomId}`);
+      } catch (error) {
+        console.error('Error handling signal:', error);
+      }
     });
 
     // On disconnect, remove from room
