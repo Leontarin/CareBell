@@ -277,7 +277,17 @@ class WebRTCManager {
     try {
       console.log(`Handling answer, current signaling state: ${this.peerConnection.signalingState}`);
 
-      // Check if we're in the right state to handle an answer
+      // If in stable, this is a negotiation collision. Rollback and re-negotiate.
+      if (this.peerConnection.signalingState === 'stable') {
+        console.warn("Received answer in 'stable' state. Rolling back and re-negotiating.");
+        await this.peerConnection.setLocalDescription({ type: 'rollback' });
+        if (this.isInitiator) {
+          await this.createOffer();
+        }
+        return false;
+      }
+
+      // Normal case: only handle answer in 'have-local-offer'
       if (this.peerConnection.signalingState !== 'have-local-offer') {
         console.warn(`Cannot handle answer in state: ${this.peerConnection.signalingState}. Expected 'have-local-offer'`);
         return false;
