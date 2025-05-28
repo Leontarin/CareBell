@@ -27,13 +27,19 @@ function MeetWithFriends() {
   const remoteVideoRef = useRef(null);
   const socketRef = useRef();
   const peerRef = useRef();
-  const localStreamRef = useRef();
-  useEffect(() => {
+  const localStreamRef = useRef();  useEffect(() => {
     fetchAllUsers();
     if (user?.id) {
       fetchContacts();
     }
   }, [user?.id]);
+
+  // Set local video stream when video element is available and we have a stream
+  useEffect(() => {
+    if (localVideoRef.current && localStreamRef.current) {
+      localVideoRef.current.srcObject = localStreamRef.current;
+    }
+  }, [inCall, localStreamRef.current]);
 
   useEffect(() => {
     if (!user?.id) return;
@@ -138,15 +144,13 @@ function MeetWithFriends() {
     } finally {
       setLoading(false);
     }
-  };
-  const initiateCall = async (targetUserId) => {
+  };  const initiateCall = async (targetUserId) => {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({
         video: true,
         audio: true,
       });
       localStreamRef.current = stream;
-      localVideoRef.current.srcObject = stream;
       
       setOtherUserId(targetUserId);
       socketRef.current.emit("call-user", targetUserId);
@@ -179,7 +183,6 @@ function MeetWithFriends() {
 
     peerRef.current = peer;
   };
-
   const acceptCall = async () => {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({
@@ -187,7 +190,6 @@ function MeetWithFriends() {
         audio: true,
       });
       localStreamRef.current = stream;
-      localVideoRef.current.srcObject = stream;
       
       setOtherUserId(incomingCall);
       socketRef.current.emit("accept-call");
