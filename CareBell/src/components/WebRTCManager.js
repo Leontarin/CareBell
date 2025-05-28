@@ -86,12 +86,11 @@ class WebRTCManager {
         offerToReceiveAudio: true,
         offerToReceiveVideo: true
       });
-      
       await this.peerConnection.setLocalDescription(offer);
-      
       console.log('Sending offer');
       this.socket.emit('signal', {
         roomId: this.roomId,
+        userId: this.userId, // <--- FIX: always include userId
         signal: {
           type: 'offer',
           sdp: offer
@@ -106,13 +105,12 @@ class WebRTCManager {
   async handleOffer(offer) {
     try {
       await this.peerConnection.setRemoteDescription(offer);
-      
       const answer = await this.peerConnection.createAnswer();
       await this.peerConnection.setLocalDescription(answer);
-      
       console.log('Sending answer');
       this.socket.emit('signal', {
         roomId: this.roomId,
+        userId: this.userId, // <--- FIX: always include userId
         signal: {
           type: 'answer',
           sdp: answer

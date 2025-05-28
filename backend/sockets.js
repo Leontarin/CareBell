@@ -70,7 +70,7 @@ module.exports = function (io) {
 
     // WebRTC signaling for room
     socket.on('signal', ({ roomId, userId, signal }) => {
-      // Broadcast to all others in the room
+      // Broadcast to all others in the room except the sender
       socket.to(roomId).emit('signal', { userId, signal });
     });
 
