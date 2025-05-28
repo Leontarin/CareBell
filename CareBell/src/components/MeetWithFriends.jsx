@@ -183,15 +183,15 @@ function MeetWithFriends() {
       if (remoteUserId === user.id) return;
       
       console.log(`Checking peer for user ${remoteUserId}`);
-      
-      if (!videoPeers[remoteUserId]) {
+        if (!videoPeers[remoteUserId]) {
         console.log(`Creating new peer for user ${remoteUserId}`);
         
+        // Create video ref immediately and synchronously
         let remoteVideoRef = remoteVideoRefs[remoteUserId];
         if (!remoteVideoRef) {
           remoteVideoRef = React.createRef();
           setRemoteVideoRefs(prev => ({ ...prev, [remoteUserId]: remoteVideoRef }));
-        }        const manager = new WebRTCManager(
+        }const manager = new WebRTCManager(
           localVideoRef,
           remoteVideoRef,
           socketRef.current,
@@ -204,22 +204,34 @@ function MeetWithFriends() {
         
         // Then update state (this will trigger re-render but ref is already updated)
         setVideoPeers(prev => ({ ...prev, [remoteUserId]: manager }));
-        
-        try {
+          try {
+          // IMPROVED: Better logic for determining who initiates the offer
+          // Use a more deterministic approach that works with multiple users
+          const shouldCreateOffer = user.id.localeCompare(remoteUserId) < 0;
+          console.log(`User ${user.id} will ${shouldCreateOffer ? 'create offer for' : 'wait for offer from'} ${remoteUserId}`);
+          
           // Initialize the peer connection
-          await manager.initialize(localStreamRef.current, user.id < remoteUserId);
+          await manager.initialize(localStreamRef.current, shouldCreateOffer);
           console.log(`Peer initialized successfully for user ${remoteUserId}`);
           
-          // Process any pending signals for this user
+          // Process any pending signals for this user SEQUENTIALLY
           if (pendingSignals[remoteUserId] && pendingSignals[remoteUserId].length > 0) {
             console.log(`Processing ${pendingSignals[remoteUserId].length} pending signals for user ${remoteUserId}`);
+            
+            // Process signals one by one to avoid race conditions
             for (const signal of pendingSignals[remoteUserId]) {
               try {
-                await manager.handleSignal({ signal });
+                console.log(`Processing pending ${signal.type} signal for user ${remoteUserId}`);
+                const success = await manager.handleSignal({ signal });
+                if (!success) {
+                  console.warn(`Failed to process pending ${signal.type} signal for user ${remoteUserId}`);
+                }
               } catch (error) {
-                console.error(`Error processing pending signal:`, error);
+                console.error(`Error processing pending ${signal.type} signal for user ${remoteUserId}:`, error);
               }
             }
+            
+            // Clear pending signals for this user
             setPendingSignals(prev => {
               const copy = { ...prev };
               delete copy[remoteUserId];
@@ -228,31 +240,49 @@ function MeetWithFriends() {
           }
         } catch (error) {
           console.error(`Failed to initialize peer for user ${remoteUserId}:`, error);
-          // Remove the failed peer
+          // Remove the failed peer from both state and ref
           setVideoPeers(prev => {
             const copy = { ...prev };
             delete copy[remoteUserId];
             return copy;
           });
+          videoPeersRef.current = { ...videoPeersRef.current };
+          delete videoPeersRef.current[remoteUserId];
         }
       }
     });
-    
-    // Remove peers and refs for users who left
+      // Remove peers and refs for users who left
     Object.keys(videoPeers).forEach(peerId => {
       if (!participants.includes(peerId)) {
-        console.log(`Removing peer for user ${peerId}`);
-        videoPeers[peerId].destroy();
+        console.log(`Removing peer for user ${peerId} who left the room`);
+        if (videoPeers[peerId] && videoPeers[peerId].destroy) {
+          videoPeers[peerId].destroy();
+        }
+        
+        // Clean up state
         setVideoPeers(prev => {
           const copy = { ...prev };
           delete copy[peerId];
           return copy;
         });
+        
+        // Clean up refs
         setRemoteVideoRefs(prev => {
           const copy = { ...prev };
           delete copy[peerId];
           return copy;
         });
+        
+        // Clean up pending signals
+        setPendingSignals(prev => {
+          const copy = { ...prev };
+          delete copy[peerId];
+          return copy;
+        });
+        
+        // Clean up videoPeersRef
+        videoPeersRef.current = { ...videoPeersRef.current };
+        delete videoPeersRef.current[peerId];
       }
     });
     // eslint-disable-next-line
@@ -263,8 +293,7 @@ function MeetWithFriends() {
     if (localVideoRef.current && localStreamRef.current) {
       localVideoRef.current.srcObject = localStreamRef.current;
     }
-  }, [joinedRoom, localStreamRef.current]);
-  const cleanupAllPeers = () => {
+  }, [joinedRoom, localStreamRef.current]);  const cleanupAllPeers = () => {
     console.log('Cleaning up all peers');
     Object.values(videoPeersRef.current).forEach(manager => {
       if (manager && manager.destroy) {
@@ -272,6 +301,8 @@ function MeetWithFriends() {
       }
     });
     setVideoPeers({});
+    setRemoteVideoRefs({});
+    setPendingSignals({});
     videoPeersRef.current = {};
   };
 
@@ -310,12 +341,21 @@ function MeetWithFriends() {
             ))}
           </ul>
         </div>
-      ) : (
-        <div className="w-full h-full flex flex-col items-center">
+      ) : (        <div className="w-full h-full flex flex-col items-center">
           <div className="flex justify-between w-full p-4">
             <span className="text-white text-lg">Room: {rooms.find(r => r._id === joinedRoom)?.name}</span>
             <button onClick={leaveRoom} className="px-4 py-2 bg-red-600 text-white rounded">Leave Room</button>
           </div>
+          
+          {/* Debug panel for multi-user monitoring */}
+          <div className="absolute top-4 right-4 bg-gray-800 text-white p-2 rounded text-sm opacity-80">
+            <div>Room ID: {joinedRoom}</div>
+            <div>Total Participants: {participants.length}</div>
+            <div>Active Peers: {Object.keys(videoPeers).length}</div>
+            <div>Pending Signals: {Object.keys(pendingSignals).reduce((acc, key) => acc + pendingSignals[key].length, 0)}</div>
+            <div>Remote Video Refs: {Object.keys(remoteVideoRefs).length}</div>
+          </div>
+          
           <div className="flex flex-wrap justify-center items-center w-full h-full">
             {/* Local video */}
             <div className="m-2">
@@ -327,14 +367,8 @@ function MeetWithFriends() {
                 className="w-64 h-48 bg-black border-4 border-green-400 rounded-lg"
               />
               <div className="text-center text-white mt-2">You</div>
-            </div>            {/* Remote videos */}
+            </div>            {/* Remote videos - Improved for multiple users */}
             {participants.filter(pid => pid !== user.id).map(pid => {
-              // Ensure we have a ref for this participant
-              if (!remoteVideoRefs[pid]) {
-                const newRef = React.createRef();
-                setRemoteVideoRefs(prev => ({ ...prev, [pid]: newRef }));
-              }
-              
               return (
                 <div className="m-2" key={pid}>
                   <video
@@ -343,7 +377,10 @@ function MeetWithFriends() {
                     autoPlay
                     className="w-64 h-48 bg-black border-4 border-blue-400 rounded-lg"
                   />
-                  <div className="text-center text-white mt-2">{pid}</div>
+                  <div className="text-center text-white mt-2">
+                    User: {pid}
+                    {videoPeers[pid] ? ' (Connected)' : ' (Connecting...)'}
+                  </div>
                 </div>
               );
             })}
