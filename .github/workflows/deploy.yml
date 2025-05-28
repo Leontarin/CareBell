@@ -3,7 +3,7 @@ name: Deploy CareBell Backend
 on:
   push:
     branches:
-      - main
+      - master
 
 jobs:
   deploy:
@@ -22,6 +22,6 @@ jobs:
           port: 6922
           script: |
             cd /home/bella/CareBell/backend
-            git pull origin main
+            git pull origin master
             npm install
             sudo systemctl restart carebell.service
