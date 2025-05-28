@@ -16,6 +16,7 @@ const bellaReminderRoute = require('./routes/bellaReminders');
 const newsRoute = require('./routes/news'); 
 const exercisesRoute = require('./routes/exercises');
 const reminderRoute = require('./routes/reminders');
+const roomsRoute = require('./routes/rooms');
 
 const app = express(); 
 const server = https.createServer({ 
@@ -67,6 +68,7 @@ app.use('/bellaReminders', bellaReminderRoute);
 app.use('/news', newsRoute); 
 app.use('/exercises', exercisesRoute);
 app.use('/reminders', reminderRoute);
+app.use('/rooms', roomsRoute);
 
 app.get('/', (req, res) =>{ 
     res.send('asdfsfd'); 
