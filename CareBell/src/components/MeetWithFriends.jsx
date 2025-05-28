@@ -191,9 +191,7 @@ function MeetWithFriends() {
         if (!remoteVideoRef) {
           remoteVideoRef = React.createRef();
           setRemoteVideoRefs(prev => ({ ...prev, [remoteUserId]: remoteVideoRef }));
-        }
-        
-        const manager = new WebRTCManager(
+        }        const manager = new WebRTCManager(
           localVideoRef,
           remoteVideoRef,
           socketRef.current,
@@ -201,7 +199,10 @@ function MeetWithFriends() {
           user.id // pass userId to manager
         );
         
-        // Set the peer immediately to avoid race condition
+        // CRITICAL: Update ref IMMEDIATELY to avoid race condition with incoming signals
+        videoPeersRef.current = { ...videoPeersRef.current, [remoteUserId]: manager };
+        
+        // Then update state (this will trigger re-render but ref is already updated)
         setVideoPeers(prev => ({ ...prev, [remoteUserId]: manager }));
         
         try {
