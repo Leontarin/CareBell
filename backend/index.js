@@ -25,11 +25,21 @@ const server = https.createServer({
 
 const io = new Server(server, { 
   cors: { 
-    origin: '*', 
+    origin: [
+      'https://*.vercel.app',
+      'https://localhost:5173',
+      'http://localhost:5173',
+      'https://carebell.online',
+      '*'
+    ], 
     methods: ['GET', 'POST'], 
-    credentials: true 
+    credentials: true,
+    allowedHeaders: ['Content-Type', 'Authorization']
   }, 
-  transports: ['websocket', 'polling'] 
+  transports: ['websocket', 'polling'],
+  allowEIO3: true,
+  pingTimeout: 60000,
+  pingInterval: 25000
 }); 
 
 io.on('connection_error', (err) => { 

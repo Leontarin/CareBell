@@ -32,10 +32,13 @@ module.exports = function (io) {
   }
 
   io.on('connection', socket => {
+    console.log(`New socket connection: ${socket.id} from ${socket.handshake.address}`);
+    
     // User identifies themselves with their user ID
     socket.on('register', userId => {
       setUserSocket(userId, socket.id);
       socket.userId = userId;
+      console.log(`User ${userId} registered with socket ${socket.id}`);
     });
 
     // User initiates a call to another user
@@ -120,13 +123,14 @@ module.exports = function (io) {
 
     // WebRTC signaling
     socket.on('signal', data => {
-      const { roomId } = data;
-      console.log(`Signal received from ${socket.userId}, roomId: ${roomId}`);
-      if (roomId) {
+      const { roomId, signal } = data;
+      console.log(`Signal received from ${socket.userId}, roomId: ${roomId}, type: ${signal?.type}`);
+      
+      if (roomId && signal) {
         console.log(`Broadcasting signal to room ${roomId}`);
-        socket.to(roomId).emit('signal', data);
+        socket.to(roomId).emit('signal', { signal, roomId });
       } else {
-        console.error('No roomId in signal data');
+        console.error('Invalid signal data:', data);
       }
     });
 

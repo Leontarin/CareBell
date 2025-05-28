@@ -9,7 +9,24 @@ import { AppContext } from '../AppContext';
 
 
 const SIGNALING_SERVER_URL = `${API}`;
-const ICE_SERVERS = [{ urls: "stun:stun.l.google.com:19302" }];
+const ICE_SERVERS = [
+  { urls: "stun:stun.l.google.com:19302" },
+  { urls: "stun:stun1.l.google.com:19302" },
+  { urls: "stun:stun2.l.google.com:19302" },
+  { urls: "stun:stun3.l.google.com:19302" },
+  { urls: "stun:stun4.l.google.com:19302" },
+  // Alternative STUN servers
+  { urls: "stun:stun.ekiga.net" },
+  { urls: "stun:stun.ideasip.com" },
+  { urls: "stun:stun.rixtelecom.se" },
+  { urls: "stun:stun.schlund.de" },
+  { urls: "stun:stunserver.org" },
+  { urls: "stun:stun.softjoys.com" },
+  { urls: "stun:stun.voiparound.com" },
+  { urls: "stun:stun.voipbuster.com" },
+  { urls: "stun:stun.voipstunt.com" },
+  { urls: "stun:stun.voxgratia.org" }
+];
 
 function MeetWithFriends() {
   const { user } = useContext(AppContext);
@@ -42,16 +59,30 @@ function MeetWithFriends() {
   }, [inCall, localStreamRef.current]);
 
   useEffect(() => {
-    if (!user?.id) return;
-
-    socketRef.current = io(SIGNALING_SERVER_URL, {
-      transports: ["websocket"],
+    if (!user?.id) return;    socketRef.current = io(SIGNALING_SERVER_URL, {
+      transports: ["websocket", "polling"],
       secure: true,
       reconnection: true,
-      rejectUnauthorized: false
+      rejectUnauthorized: false,
+      timeout: 20000,
+      forceNew: true,
+      autoConnect: true,
+      upgrade: true,
+      rememberUpgrade: true
+    });    socketRef.current.emit("register", user.id);
+
+    // Socket connection events
+    socketRef.current.on('connect', () => {
+      console.log('Socket connected:', socketRef.current.id);
     });
 
-    socketRef.current.emit("register", user.id);
+    socketRef.current.on('disconnect', (reason) => {
+      console.log('Socket disconnected:', reason);
+    });
+
+    socketRef.current.on('connect_error', (error) => {
+      console.error('Socket connection error:', error);
+    });
 
     // Incoming call from another user
     socketRef.current.on("incoming-call", ({ callerId }) => {
@@ -169,38 +200,79 @@ function MeetWithFriends() {
     const currentRoomId = passedRoomId || roomId;
     console.log("Creating peer, isInitiator:", isInitiator, "roomId:", currentRoomId);
     
-    const peer = new SimplePeer({
-      initiator: isInitiator,
-      trickle: false,
-      stream: localStreamRef.current,
-      config: { iceServers: ICE_SERVERS },
-    });
+    try {
+      const peer = new SimplePeer({
+        initiator: isInitiator,
+        trickle: true, // Enable trickle ICE for better NAT traversal
+        stream: localStreamRef.current,
+        config: { 
+          iceServers: ICE_SERVERS,
+          sdpSemantics: 'unified-plan',
+          iceTransportPolicy: 'all',
+          bundlePolicy: 'max-bundle',
+          rtcpMuxPolicy: 'require'
+        },
+        objectMode: true,
+        allowHalfTrickle: false,
+        iceCompleteTimeout: 5000,
+        offerOptions: {
+          offerToReceiveAudio: true,
+          offerToReceiveVideo: true
+        },
+        answerOptions: {
+          offerToReceiveAudio: true,
+          offerToReceiveVideo: true
+        }
+      });
 
-    peer.on("signal", (data) => {
-      console.log("Peer signaling:", data);
-      socketRef.current.emit("signal", { roomId: currentRoomId, signal: data });
-    });
+      peer.on("signal", (data) => {
+        console.log("Peer signaling:", data.type, data);
+        socketRef.current.emit("signal", { roomId: currentRoomId, signal: data });
+      });
 
-    peer.on("stream", (remoteStream) => {
-      console.log("Received remote stream:", remoteStream);
-      if (remoteVideoRef.current) {
-        remoteVideoRef.current.srcObject = remoteStream;
-        console.log("Set remote video source");
+      peer.on("stream", (remoteStream) => {
+        console.log("Received remote stream:", remoteStream);
+        console.log("Remote stream tracks:", remoteStream.getTracks());
+        if (remoteVideoRef.current) {
+          remoteVideoRef.current.srcObject = remoteStream;
+          console.log("Set remote video source");
+          // Force play the video
+          remoteVideoRef.current.play().catch(e => console.error("Error playing remote video:", e));
+        } else {
+          console.error("Remote video ref is null");
+        }
+      });
+
+      peer.on("connect", () => {
+        console.log("Peer connection established");
+      });
+
+      peer.on("close", () => {
+        console.log("Peer connection closed");
+      });
+
+      peer.on("error", (err) => {
+        console.error("Peer error:", err);
+        // Don't immediately cleanup on errors, some are recoverable
+        if (err.code === 'ERR_ICE_CONNECTION_FAILURE') {
+          console.log("ICE connection failed, this might be a NAT/firewall issue");
+          alert("Connection failed. This might be due to network restrictions. Please check your firewall settings.");
+        } else if (err.code === 'ERR_CONNECTION_FAILURE') {
+          alert("WebRTC connection failed: " + err.message);
+        }
+        cleanupCall();
+      });
+
+      peerRef.current = peer;
+    } catch (error) {
+      console.error("Failed to create peer:", error);
+      if (error.message.includes('secure random')) {
+        alert("WebRTC requires a secure context (HTTPS). Please ensure both frontend and backend are using HTTPS.");
       } else {
-        console.error("Remote video ref is null");
+        alert("Failed to create WebRTC connection: " + error.message);
       }
-    });
-
-    peer.on("connect", () => {
-      console.log("Peer connection established");
-    });
-
-    peer.on("error", (err) => {
-      console.error("Peer error:", err);
       cleanupCall();
-    });
-
-    peerRef.current = peer;
+    }
   };
   const acceptCall = async () => {
     try {
