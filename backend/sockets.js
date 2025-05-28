@@ -3,66 +3,90 @@
  * @param {import('socket.io').Server} io
  */
 module.exports = function (io) {
-  // Store active users and their socket IDs
-  const userSockets = new Map(); // userId -> socketId
-  const pendingCalls = new Map(); // userId -> {callerId, callerSocketId}
+  // Store all sockets for each userId
+  const userSockets = new Map(); // userId -> Set of socketIds
+  const pendingCalls = new Map(); // targetUserId -> {callerId, callerSocketId, roomId}
+  const activeCalls = new Set(); // userId pairs in call (as string: `${userA}|${userB}`)
+
+  function getUserSockets(userId) {
+    return userSockets.get(userId) || new Set();
+  }
+
+  function setUserSocket(userId, socketId) {
+    if (!userSockets.has(userId)) userSockets.set(userId, new Set());
+    userSockets.get(userId).add(socketId);
+  }
+
+  function removeUserSocket(userId, socketId) {
+    if (userSockets.has(userId)) {
+      userSockets.get(userId).delete(socketId);
+      if (userSockets.get(userId).size === 0) userSockets.delete(userId);
+    }
+  }
+
+  function isUserInCall(userId) {
+    for (const pair of activeCalls) {
+      if (pair.split('|').includes(userId)) return true;
+    }
+    return false;
+  }
 
   io.on('connection', socket => {
-    console.log('socket connected:', socket.id);
-    
     // User identifies themselves with their user ID
     socket.on('register', userId => {
-      console.log(`User ${userId} registered with socket ${socket.id}`);
-      userSockets.set(userId, socket.id);
-      socket.userId = userId; // Store userId on the socket object
+      setUserSocket(userId, socket.id);
+      socket.userId = userId;
     });
 
     // User initiates a call to another user
     socket.on('call-user', targetUserId => {
       const callerUserId = socket.userId;
-      console.log(`${callerUserId} is calling ${targetUserId}`);
-      
+      if (!callerUserId || !targetUserId) return;
+      // If target is in a call, do not ring
+      if (isUserInCall(targetUserId)) {
+        socket.emit('call-busy', { targetUserId });
+        return;
+      }
+      // Mark as pending call
       pendingCalls.set(targetUserId, {
-  callerId: callerUserId,
-  callerSocketId: socket.id
-});
-
-// If the target is online, notify them
-const targetSocketId = userSockets.get(targetUserId);
-if (targetSocketId) {
-  io.to(targetSocketId).emit('incoming-call', {
-    callerId: callerUserId
-  });
-}
-
-// Caller gets confirmation that the call is pending
-socket.emit('call-pending', { targetUserId });
+        callerId: callerUserId,
+        callerSocketId: socket.id,
+        roomId: null
+      });
+      // Ring all sockets for the target user
+      for (const targetSocketId of getUserSockets(targetUserId)) {
+        io.to(targetSocketId).emit('incoming-call', { callerId: callerUserId });
+      }
+      // Caller gets confirmation
+      socket.emit('call-pending', { targetUserId });
     });
 
     // Target user accepts the call
     socket.on('accept-call', () => {
       const targetUserId = socket.userId;
-      if (pendingCalls.has(targetUserId)) {
-        const { callerId, callerSocketId } = pendingCalls.get(targetUserId);
-        const roomId = `${callerId}-${targetUserId}-${Date.now()}`;
-        
-        // Join both users to the same room
-        socket.join(roomId);
-        const callerSocket = io.sockets.sockets.get(callerSocketId);
-        if (callerSocket) {
-          callerSocket.join(roomId);
+      if (!pendingCalls.has(targetUserId)) return;
+      const { callerId, callerSocketId } = pendingCalls.get(targetUserId);
+      // Mark both users as in call
+      const roomId = `${callerId}-${targetUserId}-${Date.now()}`;
+      activeCalls.add([callerId, targetUserId].sort().join('|'));
+      pendingCalls.set(targetUserId, { callerId, callerSocketId, roomId });
+      // Join both users to the same room
+      socket.join(roomId);
+      const callerSocket = io.sockets.sockets.get(callerSocketId);
+      if (callerSocket) callerSocket.join(roomId);
+      // Notify all sockets of target user: call answered (except this one)
+      for (const targetSocketId of getUserSockets(targetUserId)) {
+        if (targetSocketId !== socket.id) {
+          io.to(targetSocketId).emit('call-declined', { reason: 'answered elsewhere' });
         }
-        
-        // Notify caller that call was accepted
-        io.to(callerSocketId).emit('call-accepted', { roomId });
-        socket.emit('call-connected', { roomId });
-        
-        // Initiate WebRTC connection
-        io.to(callerSocketId).emit('initiate-peer');
-        
-        // Remove from pending calls
-        pendingCalls.delete(targetUserId);
       }
+      // Notify caller and this target socket
+      io.to(callerSocketId).emit('call-accepted', { roomId });
+      socket.emit('call-connected', { roomId });
+      // Initiate WebRTC connection
+      io.to(callerSocketId).emit('initiate-peer');
+      // Remove from pending calls
+      pendingCalls.delete(targetUserId);
     });
 
     // Target user rejects the call
@@ -75,16 +99,42 @@ socket.emit('call-pending', { targetUserId });
       }
     });
 
+    // End call (either user)
+    socket.on('end-call', ({ otherUserId }) => {
+      const userId = socket.userId;
+      if (!userId || !otherUserId) return;
+      const pairKey = [userId, otherUserId].sort().join('|');
+      if (activeCalls.has(pairKey)) {
+        activeCalls.delete(pairKey);
+        // Notify all sockets of both users
+        for (const sId of [...getUserSockets(userId), ...getUserSockets(otherUserId)]) {
+          io.to(sId).emit('call-ended');
+        }
+      }
+    });
+
+    // WebRTC signaling
     socket.on('signal', data => {
-      const [, roomId] = Array.from(socket.rooms);
-      socket.to(roomId).emit('signal', data);
+      const { roomId } = data;
+      if (roomId) {
+        socket.to(roomId).emit('signal', data);
+      }
     });
 
     socket.on('disconnect', reason => {
-      console.log('socket disconnected:', socket.id, reason);
-      // Remove from userSockets map if this user was registered
-      if (socket.userId) {
-        userSockets.delete(socket.userId);
+      const userId = socket.userId;
+      if (userId) {
+        removeUserSocket(userId, socket.id);
+        // If user was in a call, end it for all
+        for (const pair of Array.from(activeCalls)) {
+          if (pair.split('|').includes(userId)) {
+            const [userA, userB] = pair.split('|');
+            for (const sId of [...getUserSockets(userA), ...getUserSockets(userB)]) {
+              io.to(sId).emit('call-ended');
+            }
+            activeCalls.delete(pair);
+          }
+        }
       }
     });
   });
