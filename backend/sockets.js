@@ -8,6 +8,9 @@ module.exports = function (io) {
   const pendingCalls = new Map(); // targetUserId -> {callerId, callerSocketId, roomId}
   const activeCalls = new Set(); // userId pairs in call (as string: `${userA}|${userB}`)
 
+  // Room-based video presence
+  const roomParticipants = new Map(); // roomId -> Set of userIds
+
   function getUserSockets(userId) {
     return userSockets.get(userId) || new Set();
   }
@@ -41,112 +44,45 @@ module.exports = function (io) {
       console.log(`User ${userId} registered with socket ${socket.id}`);
     });
 
-    // User initiates a call to another user
-    socket.on('call-user', targetUserId => {
-      const callerUserId = socket.userId;
-      if (!callerUserId || !targetUserId) return;
-      // If target is in a call, do not ring
-      if (isUserInCall(targetUserId)) {
-        socket.emit('call-busy', { targetUserId });
-        return;
-      }
-      // Mark as pending call
-      pendingCalls.set(targetUserId, {
-        callerId: callerUserId,
-        callerSocketId: socket.id,
-        roomId: null
-      });
-      // Ring all sockets for the target user
-      for (const targetSocketId of getUserSockets(targetUserId)) {
-        io.to(targetSocketId).emit('incoming-call', { callerId: callerUserId });
-      }
-      // Caller gets confirmation
-      socket.emit('call-pending', { targetUserId });
-    });
-
-    // Target user accepts the call
-    socket.on('accept-call', () => {
-      const targetUserId = socket.userId;
-      if (!pendingCalls.has(targetUserId)) return;
-      const { callerId, callerSocketId } = pendingCalls.get(targetUserId);
-      // Mark both users as in call
-      const roomId = `${callerId}-${targetUserId}-${Date.now()}`;
-      activeCalls.add([callerId, targetUserId].sort().join('|'));
-      pendingCalls.set(targetUserId, { callerId, callerSocketId, roomId });
-      // Join both users to the same room
+    // User joins a video room
+    socket.on('join-room', ({ roomId, userId }) => {
       socket.join(roomId);
-      const callerSocket = io.sockets.sockets.get(callerSocketId);
-      if (callerSocket) {
-        callerSocket.join(roomId);
-        console.log(`Both users joined room ${roomId}: caller ${callerId}, target ${targetUserId}`);
-      } else {
-        console.error(`Caller socket not found: ${callerSocketId}`);
-      }
-      // Notify all sockets of target user: call answered (except this one)
-      for (const targetSocketId of getUserSockets(targetUserId)) {
-        if (targetSocketId !== socket.id) {
-          io.to(targetSocketId).emit('call-declined', { reason: 'answered elsewhere' });
-        }
-      }
-      // Notify caller and this target socket
-      io.to(callerSocketId).emit('call-accepted', { roomId });
-      socket.emit('call-connected', { roomId });
-      // Initiate WebRTC connection
-      io.to(callerSocketId).emit('initiate-peer', { roomId });
-      // Remove from pending calls
-      pendingCalls.delete(targetUserId);
+      socket.roomId = roomId;
+      socket.userId = userId;
+      if (!roomParticipants.has(roomId)) roomParticipants.set(roomId, new Set());
+      roomParticipants.get(roomId).add(userId);
+      // Notify all in room of new participant list
+      io.to(roomId).emit('room-participants', Array.from(roomParticipants.get(roomId)));
     });
 
-    // Target user rejects the call
-    socket.on('reject-call', () => {
-      const targetUserId = socket.userId;
-      if (pendingCalls.has(targetUserId)) {
-        const { callerSocketId } = pendingCalls.get(targetUserId);
-        io.to(callerSocketId).emit('call-rejected');
-        pendingCalls.delete(targetUserId);
-      }
-    });
-
-    // End call (either user)
-    socket.on('end-call', ({ otherUserId }) => {
-      const userId = socket.userId;
-      if (!userId || !otherUserId) return;
-      const pairKey = [userId, otherUserId].sort().join('|');
-      if (activeCalls.has(pairKey)) {
-        activeCalls.delete(pairKey);
-        // Notify all sockets of both users
-        for (const sId of [...getUserSockets(userId), ...getUserSockets(otherUserId)]) {
-          io.to(sId).emit('call-ended');
+    // User leaves a video room
+    socket.on('leave-room', ({ roomId, userId }) => {
+      socket.leave(roomId);
+      if (roomParticipants.has(roomId)) {
+        roomParticipants.get(roomId).delete(userId);
+        if (roomParticipants.get(roomId).size === 0) {
+          roomParticipants.delete(roomId);
+        } else {
+          io.to(roomId).emit('room-participants', Array.from(roomParticipants.get(roomId)));
         }
       }
     });
 
-    // WebRTC signaling
-    socket.on('signal', data => {
-      const { roomId, signal } = data;
-      console.log(`Signal received from ${socket.userId}, roomId: ${roomId}, type: ${signal?.type}`);
-      
-      if (roomId && signal) {
-        console.log(`Broadcasting signal to room ${roomId}`);
-        socket.to(roomId).emit('signal', { signal, roomId });
-      } else {
-        console.error('Invalid signal data:', data);
-      }
+    // WebRTC signaling for room
+    socket.on('signal', ({ roomId, userId, signal }) => {
+      // Broadcast to all others in the room
+      socket.to(roomId).emit('signal', { userId, signal });
     });
 
-    socket.on('disconnect', reason => {
-      const userId = socket.userId;
-      if (userId) {
-        removeUserSocket(userId, socket.id);
-        // If user was in a call, end it for all
-        for (const pair of Array.from(activeCalls)) {
-          if (pair.split('|').includes(userId)) {
-            const [userA, userB] = pair.split('|');
-            for (const sId of [...getUserSockets(userA), ...getUserSockets(userB)]) {
-              io.to(sId).emit('call-ended');
-            }
-            activeCalls.delete(pair);
-          }
+    // On disconnect, remove from room
+    socket.on('disconnect', () => {
+      const { roomId, userId } = socket;
+      if (roomId && userId && roomParticipants.has(roomId)) {
+        roomParticipants.get(roomId).delete(userId);
+        if (roomParticipants.get(roomId).size === 0) {
+          roomParticipants.delete(roomId);
+        } else {
+          io.to(roomId).emit('room-participants', Array.from(roomParticipants.get(roomId)));
         }
       }
     });
