@@ -16,6 +16,7 @@ function MeetWithFriends() {
   const [remoteVideoRefs, setRemoteVideoRefs] = useState({}); // userId -> React ref
   const [loading, setLoading] = useState(false);
   const [newRoomName, setNewRoomName] = useState("");
+  const [pendingSignals, setPendingSignals] = useState({}); // userId -> array of signals
 
   const localVideoRef = useRef(null);
   const localStreamRef = useRef(null);
@@ -65,7 +66,12 @@ function MeetWithFriends() {
       if (videoPeers[remoteUserId] && videoPeers[remoteUserId].handleSignal) {
         videoPeers[remoteUserId].handleSignal({ signal });
       } else {
-        console.log('No peer for user', remoteUserId, 'when handling signal');
+        // Queue the signal for later processing
+        setPendingSignals(prev => ({
+          ...prev,
+          [remoteUserId]: [...(prev[remoteUserId] || []), signal]
+        }));
+        console.log('Queued signal for user', remoteUserId);
       }
     });
 
@@ -140,6 +146,17 @@ function MeetWithFriends() {
         );
         manager.initialize(localStreamRef.current, user.id < remoteUserId);
         setVideoPeers(prev => ({ ...prev, [remoteUserId]: manager }));
+        // Process any pending signals for this user
+        if (pendingSignals[remoteUserId] && pendingSignals[remoteUserId].length > 0) {
+          pendingSignals[remoteUserId].forEach(signal => {
+            manager.handleSignal({ signal });
+          });
+          setPendingSignals(prev => {
+            const copy = { ...prev };
+            delete copy[remoteUserId];
+            return copy;
+          });
+        }
       }
     });
     // Remove peers and refs for users who left
@@ -159,7 +176,7 @@ function MeetWithFriends() {
       }
     });
     // eslint-disable-next-line
-  }, [participants, joinedRoom, localStreamRef.current]);
+  }, [participants, joinedRoom, localStreamRef.current, pendingSignals]);
 
   // Ensure local video is always set when joining a room or stream changes
   useEffect(() => {
