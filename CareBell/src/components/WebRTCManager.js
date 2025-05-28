@@ -1,16 +1,25 @@
 // WebRTC Manager using native WebRTC APIs
 class WebRTCManager {
-  constructor(localVideoRef, remoteVideoRef, socket, roomId, userId) {
+  constructor(localVideoRef, remoteVideoRef, socket, roomId, userId, polite) {
     this.localVideoRef = localVideoRef;
     this.remoteVideoRef = remoteVideoRef;
     this.socket = socket;
     this.roomId = roomId;
-    this.userId = userId; // <-- add this
+    this.userId = userId;
     this.peerConnection = null;
     this.localStream = null;
     this.isInitiator = false;
-    this.iceCandidateQueue = []; // Queue for ICE candidates received before remote description
-    
+    this.queuedIceCandidates = []; // Queue for ICE candidates received before remote description
+    this.onConnectionFailed = null; // Callback for connection failures
+    this.connectionAttempts = 0; // Track connection attempts
+    this.maxConnectionAttempts = 3; // Maximum retry attempts
+    this.connectionTimeout = null; // Timeout for connection attempts
+    this.lastSignalTime = 0; // Track last signal timestamp for rate limiting
+    this.negotiationLock = false;
+    this.polite = polite; // use passed polite flag
+    this.makingOffer = false;
+    this.ignoreOffer = false;
+
     this.iceServers = [
       { urls: 'stun:stun.l.google.com:19302' },
       { urls: 'stun:stun1.l.google.com:19302' },
@@ -21,10 +30,29 @@ class WebRTCManager {
   async initialize(localStream, isInitiator = false) {
     this.localStream = localStream;
     this.isInitiator = isInitiator;
-    
-    console.log(`Initializing WebRTC peer, isInitiator: ${isInitiator}`);
-    
+    this.connectionAttempts++;
+
+    console.log(`Initializing WebRTC peer (attempt ${this.connectionAttempts}), isInitiator: ${isInitiator}`);
+
     try {
+      // Clear any existing timeout
+      if (this.connectionTimeout) {
+        clearTimeout(this.connectionTimeout);
+      }
+
+      // Set connection timeout
+      this.connectionTimeout = setTimeout(() => {
+        console.log('Connection timeout - taking too long to establish');
+        if (this.connectionAttempts < this.maxConnectionAttempts) {
+          console.log(`Will retry connection (attempt ${this.connectionAttempts + 1}/${this.maxConnectionAttempts})`);
+          if (this.onConnectionFailed) {
+            this.onConnectionFailed();
+          }
+        } else {
+          console.log('Max connection attempts reached, giving up');
+        }
+      }, 15000); // 15 second timeout
+
       // Create RTCPeerConnection
       this.peerConnection = new RTCPeerConnection({
         iceServers: this.iceServers,
@@ -43,29 +71,36 @@ class WebRTCManager {
       this.peerConnection.ontrack = (event) => {
         const [remoteStream] = event.streams;
         console.log('Got remote track', event.track.kind, 'from remote peer');
-        
+
+        // Clear connection timeout on successful track
+        if (this.connectionTimeout) {
+          clearTimeout(this.connectionTimeout);
+          this.connectionTimeout = null;
+        }
+
         // We need to ensure the ref exists and attach the stream
         if (this.remoteVideoRef.current) {
           console.log('Setting remote stream to video element');
           this.remoteVideoRef.current.srcObject = remoteStream;
-          
+
           console.log('Set remote video for remote peer, track type:', event.track.kind);
-          
-          // Ensure video plays
-          this.remoteVideoRef.current.play().catch(err => {
-            console.warn('Auto-play prevented for remote video:', err);
+
+          // Attempt to play the video
+          this.remoteVideoRef.current.play().catch(e => {
+            console.log('Auto-play prevented for remote video:', e.message);
           });
         } else {
-          console.error('remoteVideoRef.current is null - cannot set remote stream');
+          console.warn('Remote video ref not available when track received');
         }
       };
 
       // Handle ICE candidates
       this.peerConnection.onicecandidate = (event) => {
         if (event.candidate) {
+          console.log('Generated ICE candidate');
           this.socket.emit('signal', {
             roomId: this.roomId,
-            userId: this.userId, // always include userId
+            userId: this.userId,
             signal: {
               type: 'ice-candidate',
               candidate: event.candidate
@@ -74,47 +109,98 @@ class WebRTCManager {
         }
       };
 
-      // Handle connection state changes
-      this.peerConnection.onconnectionstatechange = () => {
-        console.log('Connection state:', this.peerConnection.connectionState);
-      };
-
-      // Handle ICE connection state changes
+      // Handle ICE connection state changes with recovery
       this.peerConnection.oniceconnectionstatechange = () => {
         console.log('ICE connection state:', this.peerConnection.iceConnectionState);
+
+        if (this.peerConnection.iceConnectionState === 'connected') {
+          console.log('ICE connection established successfully');
+          // Clear timeout on successful connection
+          if (this.connectionTimeout) {
+            clearTimeout(this.connectionTimeout);
+            this.connectionTimeout = null;
+          }
+          // Reset connection attempts on success
+          this.connectionAttempts = 0;
+        } else if (this.peerConnection.iceConnectionState === 'failed') {
+          console.log('ICE connection failed, attempting restart...');
+          this.restartIce();
+        }
       };
 
-      // If initiator, create offer
-      if (this.isInitiator) {
+      // Handle connection state changes with recovery
+      this.peerConnection.onconnectionstatechange = () => {
+        console.log('Connection state:', this.peerConnection.connectionState);
+
+        if (this.peerConnection.connectionState === 'connected') {
+          console.log('Peer connection established successfully');
+          // Reset connection attempts on success
+          this.connectionAttempts = 0;
+        } else if (this.peerConnection.connectionState === 'failed') {
+          console.log('Connection failed, will need peer recreation');
+          // Emit a custom event that the parent component can listen to
+          if (this.onConnectionFailed) {
+            this.onConnectionFailed();
+          }
+        }
+      };
+
+      // Handle negotiation needed event
+      this.peerConnection.onnegotiationneeded = async () => {
+        if (this.negotiationLock) {
+          console.log('Negotiation already in progress, skipping');
+          return;
+        }
+        this.negotiationLock = true;
+        try {
+          this.makingOffer = true;
+          await this.createOffer();
+        } catch (e) {
+          console.error('Negotiationneeded error:', e);
+        } finally {
+          this.makingOffer = false;
+          this.negotiationLock = false;
+        }
+      };
+
+      // If we're the initiator, create offer
+      if (isInitiator) {
         await this.createOffer();
       }
 
       return true;
     } catch (error) {
-      console.error('Error initializing WebRTC:', error);
+      console.error('Error initializing WebRTC peer:', error);
       throw error;
+    }
+  }
+
+  async restartIce() {
+    try {
+      console.log('Restarting ICE...');
+      await this.peerConnection.restartIce();
+    } catch (error) {
+      console.error('Error restarting ICE:', error);
     }
   }
 
   async createOffer() {
     try {
-      console.log(`Creating offer, current signaling state: ${this.peerConnection.signalingState}`);
-      
       // Only create offer if we're in stable state
       if (this.peerConnection.signalingState !== 'stable') {
         console.warn(`Cannot create offer in state: ${this.peerConnection.signalingState}`);
         return false;
       }
-      
+
       const offer = await this.peerConnection.createOffer({
         offerToReceiveAudio: true,
         offerToReceiveVideo: true
       });
-      
+
       console.log('Setting local description with offer');
       await this.peerConnection.setLocalDescription(offer);
       console.log('Sending offer');
-      
+
       this.socket.emit('signal', {
         roomId: this.roomId,
         userId: this.userId,
@@ -132,34 +218,22 @@ class WebRTCManager {
 
   async handleOffer(offer) {
     try {
-      console.log(`Handling offer, current signaling state: ${this.peerConnection.signalingState}`);
-      
-      // Check if we're in the right state to handle an offer
-      if (this.peerConnection.signalingState !== 'stable' && this.peerConnection.signalingState !== 'have-local-offer') {
-        console.warn(`Cannot handle offer in state: ${this.peerConnection.signalingState}`);
+      const offerDesc = typeof offer.sdp === 'string' ? offer : { type: 'offer', sdp: offer };
+      const readyForOffer = !this.makingOffer && (this.peerConnection.signalingState === 'stable' || this.peerConnection.signalingState === 'have-local-offer');
+      const offerCollision = !readyForOffer;
+      this.ignoreOffer = !this.polite && offerCollision;
+      if (this.ignoreOffer) {
+        console.warn('Ignoring offer due to collision and impolite role');
         return false;
       }
-      
-      // If we already have a local offer and receive a remote offer, we need to handle collision
-      if (this.peerConnection.signalingState === 'have-local-offer') {
-        console.log('Offer collision detected, handling collision resolution');
-        // Use polite/impolite pattern - the "polite" peer backs down
-        if (!this.isInitiator) {
-          console.log('Acting as polite peer, rolling back local offer');
-          await this.peerConnection.setLocalDescription({type: 'rollback'});
-        } else {
-          console.log('Acting as impolite peer, ignoring remote offer');
-          return false;
-        }
+      if (offerCollision && this.polite) {
+        console.log('Polite peer rolling back local offer');
+        await this.peerConnection.setLocalDescription({ type: 'rollback' });
       }
-      
-      console.log('Setting remote description with offer');
-      await this.peerConnection.setRemoteDescription(offer);
-      console.log('Creating answer');
+      await this.peerConnection.setRemoteDescription(offerDesc);
+      await this.processQueuedIceCandidates();
       const answer = await this.peerConnection.createAnswer();
-      console.log('Setting local description (answer)');
       await this.peerConnection.setLocalDescription(answer);
-      console.log('Sending answer');
       this.socket.emit('signal', {
         roomId: this.roomId,
         userId: this.userId,
@@ -168,50 +242,30 @@ class WebRTCManager {
           sdp: answer
         }
       });
-      
-      // Process any queued ICE candidates now that we have remote description
-      while (this.iceCandidateQueue.length > 0) {
-        const queuedCandidate = this.iceCandidateQueue.shift();
-        try {
-          await this.peerConnection.addIceCandidate(queuedCandidate);
-          console.log('Queued ICE candidate added successfully after offer');
-        } catch (error) {
-          console.error('Error adding queued ICE candidate after offer:', error);
-        }
-      }
-      
       return true;
     } catch (error) {
       console.error('Error handling offer:', error);
-      throw error;
+      return false;
     }
   }
 
   async handleAnswer(answer) {
     try {
       console.log(`Handling answer, current signaling state: ${this.peerConnection.signalingState}`);
-      
+
       // Check if we're in the right state to handle an answer
       if (this.peerConnection.signalingState !== 'have-local-offer') {
         console.warn(`Cannot handle answer in state: ${this.peerConnection.signalingState}. Expected 'have-local-offer'`);
         return false;
       }
-      
+
       console.log('Setting remote description with answer');
       await this.peerConnection.setRemoteDescription(answer);
-      console.log('Answer set successfully');
-      
+
       // Process any queued ICE candidates now that we have remote description
-      while (this.iceCandidateQueue.length > 0) {
-        const queuedCandidate = this.iceCandidateQueue.shift();
-        try {
-          await this.peerConnection.addIceCandidate(queuedCandidate);
-          console.log('Queued ICE candidate added successfully after answer');
-        } catch (error) {
-          console.error('Error adding queued ICE candidate after answer:', error);
-        }
-      }
-      
+      await this.processQueuedIceCandidates();
+
+      console.log('Answer set successfully');
       return true;
     } catch (error) {
       console.error('Error handling answer:', error);
@@ -221,42 +275,41 @@ class WebRTCManager {
 
   async handleIceCandidate(candidate) {
     try {
-      console.log(`Adding ICE candidate, signaling state: ${this.peerConnection.signalingState}`);
-      
-      // Only add ICE candidates if we have a remote description
-      if (this.peerConnection.remoteDescription) {
+      if (this.peerConnection.remoteDescription && this.peerConnection.remoteDescription.type) {
         await this.peerConnection.addIceCandidate(candidate);
-        console.log('ICE candidate added successfully');
-        
-        // Process any queued candidates
-        while (this.iceCandidateQueue.length > 0) {
-          const queuedCandidate = this.iceCandidateQueue.shift();
-          try {
-            await this.peerConnection.addIceCandidate(queuedCandidate);
-            console.log('Queued ICE candidate added successfully');
-          } catch (error) {
-            console.error('Error adding queued ICE candidate:', error);
-          }
-        }
         return true;
       } else {
-        console.warn('Cannot add ICE candidate: no remote description set yet, queuing candidate');
-        this.iceCandidateQueue.push(candidate);
-        return true; // Return true since we queued it successfully
+        this.queuedIceCandidates.push(candidate);
+        return true;
       }
     } catch (error) {
       console.error('Error adding ICE candidate:', error);
-      // Don't throw for ICE candidate errors, just return false
       return false;
+    }
+  }
+
+  async processQueuedIceCandidates() {
+    while (this.queuedIceCandidates.length > 0 && this.peerConnection.remoteDescription && this.peerConnection.remoteDescription.type) {
+      const candidate = this.queuedIceCandidates.shift();
+      try {
+        await this.peerConnection.addIceCandidate(candidate);
+      } catch (e) {
+        console.error('Error adding queued ICE candidate:', e);
+      }
     }
   }
 
   async handleSignal(signalData) {
     const { signal } = signalData;
-    
+
+    // Defensive: If peerConnection is null, return false so the signal is queued for retry
+    if (!this.peerConnection) {
+      console.warn('handleSignal called but peerConnection is null');
+      return false;
+    }
+
     try {
       console.log(`Processing signal type: ${signal.type}, current state: ${this.peerConnection.signalingState}`);
-      
       switch (signal.type) {
         case 'offer':
           return await this.handleOffer(signal.sdp);
@@ -274,7 +327,23 @@ class WebRTCManager {
     }
   }
 
+  getConnectionState() {
+    if (!this.peerConnection) return 'no-peer';
+    return {
+      connectionState: this.peerConnection.connectionState,
+      iceConnectionState: this.peerConnection.iceConnectionState,
+      signalingState: this.peerConnection.signalingState,
+      attempts: this.connectionAttempts
+    };
+  }
+
   destroy() {
+    // Clear any timeouts
+    if (this.connectionTimeout) {
+      clearTimeout(this.connectionTimeout);
+      this.connectionTimeout = null;
+    }
+
     if (this.peerConnection) {
       this.peerConnection.close();
       this.peerConnection = null;
@@ -283,8 +352,10 @@ class WebRTCManager {
       this.localStream.getTracks().forEach(track => track.stop());
       this.localStream = null;
     }
-    // Clear ICE candidate queue
-    this.iceCandidateQueue = [];
+    // Clear queued ICE candidates
+    this.queuedIceCandidates = [];
+
+    console.log('WebRTCManager destroyed and cleaned up');
   }
 }
 
