@@ -176,19 +176,13 @@ function MeetWithFriends() {
     const createPeersSequentially = async () => {
       for (const remoteUserId of participants) {
         if (remoteUserId === user.id) continue;
-        
-        console.log(`Checking peer for user ${remoteUserId}`);
         if (!videoPeers[remoteUserId]) {
-          console.log(`Creating new peer for user ${remoteUserId}`);
-          
           try {
-            // Create video ref immediately and synchronously
             let remoteVideoRef = remoteVideoRefs[remoteUserId];
             if (!remoteVideoRef) {
               remoteVideoRef = React.createRef();
               setRemoteVideoRefs(prev => ({ ...prev, [remoteUserId]: remoteVideoRef }));
             }
-
             const manager = new WebRTCManager(
               localVideoRef,
               remoteVideoRef,
@@ -196,73 +190,48 @@ function MeetWithFriends() {
               joinedRoom,
               user.id
             );
-              // Set up connection failure callback
             manager.onConnectionFailed = () => {
-              console.log(`Connection failed for user ${remoteUserId}, will recreate peer`);
-              
-              // Track retry count
               setConnectionRetries(prev => ({
                 ...prev,
                 [remoteUserId]: (prev[remoteUserId] || 0) + 1
               }));
-              
-              // Only recreate if we haven't exceeded max retries
-              const currentRetries = connectionRetries[remoteUserId] || 0;
-              if (currentRetries < 3) {
-                console.log(`Recreating peer for ${remoteUserId} (retry ${currentRetries + 1}/3)`);
-                // Remove the failed peer to trigger recreation
-                setVideoPeers(prev => {
-                  const copy = { ...prev };
-                  delete copy[remoteUserId];
-                  return copy;
-                });
-                videoPeersRef.current = { ...videoPeersRef.current };
-                delete videoPeersRef.current[remoteUserId];
-              } else {
-                console.log(`Max retries exceeded for user ${remoteUserId}, giving up`);
-              }
+              // Clean up all state for this peer
+              setVideoPeers(prev => {
+                const copy = { ...prev };
+                delete copy[remoteUserId];
+                return copy;
+              });
+              setRemoteVideoRefs(prev => {
+                const copy = { ...prev };
+                delete copy[remoteUserId];
+                return copy;
+              });
+              setPendingSignals(prev => {
+                const copy = { ...prev };
+                delete copy[remoteUserId];
+                return copy;
+              });
+              videoPeersRef.current = { ...videoPeersRef.current };
+              delete videoPeersRef.current[remoteUserId];
             };
-          
-            // CRITICAL: Update ref IMMEDIATELY to avoid race condition with incoming signals
             videoPeersRef.current = { ...videoPeersRef.current, [remoteUserId]: manager };
-            
-            // Then update state (this will trigger re-render but ref is already updated)
             setVideoPeers(prev => ({ ...prev, [remoteUserId]: manager }));
-            
-            // Better logic for determining who initiates the offer
-            const shouldCreateOffer = user.id.localeCompare(remoteUserId) < 0;
-            console.log(`User ${user.id} will ${shouldCreateOffer ? 'create offer for' : 'wait for offer from'} ${remoteUserId}`);
-            
-            // Add staggered delay to prevent simultaneous negotiations
+            // Add a small random delay to further reduce race conditions
             const userIndex = participants.indexOf(remoteUserId);
-            const delay = userIndex * 200; // 200ms between each peer creation
-            console.log(`Adding ${delay}ms delay before initializing peer for ${remoteUserId}`);
+            const delay = userIndex * 200 + Math.floor(Math.random() * 100);
             await new Promise(resolve => setTimeout(resolve, delay));
-            
-            // Initialize the peer connection
+            const shouldCreateOffer = user.id.localeCompare(remoteUserId) < 0;
             await manager.initialize(localStreamRef.current, shouldCreateOffer);
-            console.log(`Peer initialized successfully for user ${remoteUserId}`);
-            
             // Process any pending signals for this user SEQUENTIALLY
             if (pendingSignals[remoteUserId] && pendingSignals[remoteUserId].length > 0) {
-              console.log(`Processing ${pendingSignals[remoteUserId].length} pending signals for user ${remoteUserId}`);
-              
-              // Process signals one by one to avoid race conditions
               for (const signal of pendingSignals[remoteUserId]) {
                 try {
-                  console.log(`Processing pending ${signal.type} signal for user ${remoteUserId}`);
-                  const success = await manager.handleSignal({ signal });
-                  if (!success) {
-                    console.warn(`Failed to process pending ${signal.type} signal for user ${remoteUserId}`);
-                  }
-                  // Small delay between processing signals
+                  await manager.handleSignal({ signal });
                   await new Promise(resolve => setTimeout(resolve, 50));
                 } catch (error) {
                   console.error(`Error processing pending ${signal.type} signal for user ${remoteUserId}:`, error);
                 }
               }
-              
-              // Clear pending signals for this user
               setPendingSignals(prev => {
                 const copy = { ...prev };
                 delete copy[remoteUserId];
@@ -270,9 +239,17 @@ function MeetWithFriends() {
               });
             }
           } catch (error) {
-            console.error(`Failed to initialize peer for user ${remoteUserId}:`, error);
-            // Remove the failed peer from both state and ref
             setVideoPeers(prev => {
+              const copy = { ...prev };
+              delete copy[remoteUserId];
+              return copy;
+            });
+            setRemoteVideoRefs(prev => {
+              const copy = { ...prev };
+              delete copy[remoteUserId];
+              return copy;
+            });
+            setPendingSignals(prev => {
               const copy = { ...prev };
               delete copy[remoteUserId];
               return copy;
