@@ -17,6 +17,7 @@ function MeetWithFriends() {
   const [loading, setLoading] = useState(false);
   const [newRoomName, setNewRoomName] = useState("");
   const [pendingSignals, setPendingSignals] = useState({}); // userId -> array of signals
+  const [connectionRetries, setConnectionRetries] = useState({}); // userId -> retry count
 
   const localVideoRef = useRef(null);
   const localStreamRef = useRef(null);
@@ -192,15 +193,26 @@ function MeetWithFriends() {
           if (!remoteVideoRef) {
             remoteVideoRef = React.createRef();
             setRemoteVideoRefs(prev => ({ ...prev, [remoteUserId]: remoteVideoRef }));
-          }
-
-          const manager = new WebRTCManager(
+          }          const manager = new WebRTCManager(
             localVideoRef,
             remoteVideoRef,
             socketRef.current,
             joinedRoom,
             user.id // pass userId to manager
           );
+          
+          // Set up connection failure callback
+          manager.onConnectionFailed = () => {
+            console.log(`Connection failed for user ${remoteUserId}, will recreate peer`);
+            // Remove the failed peer to trigger recreation
+            setVideoPeers(prev => {
+              const copy = { ...prev };
+              delete copy[remoteUserId];
+              return copy;
+            });
+            videoPeersRef.current = { ...videoPeersRef.current };
+            delete videoPeersRef.current[remoteUserId];
+          };
         
           // CRITICAL: Update ref IMMEDIATELY to avoid race condition with incoming signals
           videoPeersRef.current = { ...videoPeersRef.current, [remoteUserId]: manager };
@@ -356,14 +368,25 @@ function MeetWithFriends() {
             <span className="text-white text-lg">Room: {rooms.find(r => r._id === joinedRoom)?.name}</span>
             <button onClick={leaveRoom} className="px-4 py-2 bg-red-600 text-white rounded">Leave Room</button>
           </div>
-          
-          {/* Debug panel for multi-user monitoring */}
-          <div className="absolute top-4 right-4 bg-gray-800 text-white p-2 rounded text-sm opacity-80">
+            {/* Debug panel for multi-user monitoring */}
+          <div className="absolute top-4 right-4 bg-gray-800 text-white p-2 rounded text-sm opacity-80 max-w-md">
             <div>Room ID: {joinedRoom}</div>
             <div>Total Participants: {participants.length}</div>
             <div>Active Peers: {Object.keys(videoPeers).length}</div>
             <div>Pending Signals: {Object.keys(pendingSignals).reduce((acc, key) => acc + pendingSignals[key].length, 0)}</div>
             <div>Remote Video Refs: {Object.keys(remoteVideoRefs).length}</div>
+            
+            {/* Connection Status per user */}
+            <div className="mt-2 border-t border-gray-600 pt-2">
+              <div className="font-bold">Connection Status:</div>
+              {participants.filter(pid => pid !== user.id).map(pid => (
+                <div key={pid} className="text-xs">
+                  {pid}: {videoPeers[pid] ? '✅ Connected' : 
+                          connectionRetries[pid] ? `❌ Failed (${connectionRetries[pid]} retries)` : 
+                          '🔄 Connecting...'}
+                </div>
+              ))}
+            </div>
           </div>
           
           <div className="flex flex-wrap justify-center items-center w-full h-full">
