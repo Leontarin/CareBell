@@ -263,7 +263,7 @@ function MeetWithFriends() {
       {!inCall && callStatus === 'idle' && (
         <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 z-20 bg-black/60 p-6 rounded-lg">
           <h2 className="text-white text-xl mb-4">
-            You are: {user.fullName || user.id}
+            You areaaaa: {user.fullName || user.id}
           </h2>
           <h3 className="text-white text-lg mb-4">Select a contact to call</h3>
           {loading ? (
