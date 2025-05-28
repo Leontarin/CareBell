@@ -1,7 +1,6 @@
 const express = require('express');
 const router = express.Router();
 const Room = require('../models/room');
-const User = require('../models/user');
 
 // Create a new room and add the user as the first participant
 router.post('/create', async (req, res) => {
@@ -51,10 +50,10 @@ router.post('/leave', async (req, res) => {
   }
 });
 
-// Get all rooms
+// Get all rooms (no populate, just return user IDs)
 router.get('/', async (req, res) => {
   try {
-    const rooms = await Room.find().populate('participants', 'fullName');
+    const rooms = await Room.find();
     res.json(rooms);
   } catch (err) {
     res.status(500).json({ error: err.message });
