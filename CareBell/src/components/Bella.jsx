@@ -1,6 +1,7 @@
 // src/components/Bella.jsx
 
 import React, { useEffect, useState, useRef, useContext } from 'react';
+import { useNavigate } from 'react-router-dom';
 import Vapi from '@vapi-ai/web';
 import { FaPhone, FaPhoneSlash } from 'react-icons/fa';
 import bella_img from '../resources/Grafik3a.png';
@@ -10,34 +11,67 @@ import { API } from '../config';
 
 export default function Bella() {
   const { t, i18n } = useTranslation();
-  const { user } = useContext(AppContext);
+  const { user }   = useContext(AppContext);
+  const navigate   = useNavigate();
 
-  const [callStatus, setCallStatus] = useState('ready'); // 'ready' | 'calling' | 'in-call'
-  const [messages, setMessages] = useState([]);
+  const [callStatus, setCallStatus] = useState('ready');   // 'ready' | 'calling' | 'in-call'
+  const [messages, setMessages]     = useState([]);
   const [isChatOpen, setIsChatOpen] = useState(false);
 
   const vapiRef = useRef(null);
   const chatRef = useRef(null);
 
-  // map locales → env var names
+  // Intent classifier
+  async function classifyIntent(text) {
+    const lc = text.toLowerCase().trim();
+    // open menu
+    const menus = {
+      'open contacts':     'call-contacts',
+      'open friends':      'meet-with-friends',
+      'open medicine':     'medicine',
+      'open meals':        'meals',
+      'open news':         'news',
+      'open exercise':     'exercise'
+    };
+    for (let phrase in menus) {
+      if (lc.includes(phrase)) {
+        return { intent: 'open_menu', slot: menus[phrase] };
+      }
+    }
+    // call contact
+    if (lc.startsWith('call ')) {
+      const name = lc.slice(5).trim();
+      return { intent: 'call_contact', slot: name };
+    }
+    // list medications
+    if (/(what|which).*(medication|medicine).*(take|should take)/.test(lc)) {
+      return { intent: 'list_medications', slot: null };
+    }
+    // mark medication taken
+    let m = lc.match(/(?:i (?:have )?taken|i took) (.+)/);
+    if (m) {
+      const medName = m[1].replace(/\?$/, '').trim();
+      return { intent: 'mark_medication_taken', slot: medName };
+    }
+    // default chat
+    return { intent: 'chat', slot: null };
+  }
+
+  // locale → assistant IDs
   const assistantIdMap = {
     en: import.meta.env.VITE_VAPI_ASSISTANT_ID_EN,
     de: import.meta.env.VITE_VAPI_ASSISTANT_ID_DE,
-    he: import.meta.env.VITE_VAPI_ASSISTANT_ID_HE,
+    he: import.meta.env.VITE_VAPI_ASSISTANT_ID_HE
   };
-  // pick the right one, fallback to English
   const getAssistantId = () => {
     const lang = i18n.language.split('-')[0];
     return assistantIdMap[lang] || assistantIdMap.en;
   };
 
-  // ——— persist chat history ———
+  // load & persist chat, auto-scroll
   useEffect(() => {
     const saved = localStorage.getItem('bella_chat');
-    if (saved) {
-      try { setMessages(JSON.parse(saved)); }
-      catch { /*ignore*/ }
-    }
+    if (saved) try { setMessages(JSON.parse(saved)); } catch {}
   }, []);
   useEffect(() => {
     localStorage.setItem('bella_chat', JSON.stringify(messages));
@@ -48,142 +82,180 @@ export default function Bella() {
     }
   }, [messages, isChatOpen]);
 
-  // ——— Init Vapi & load reminders on call-start ———
+  // init Vapi
   useEffect(() => {
-    const vapi = (vapiRef.current = new Vapi(import.meta.env.VITE_VAPI_PUBLIC_KEY));
+    const vapi = vapiRef.current = new Vapi(import.meta.env.VITE_VAPI_PUBLIC_KEY);
 
+    // inject reminders
     vapi.on('call-start', async () => {
       setCallStatus('in-call');
       setIsChatOpen(true);
       if (!user?.id) return;
       try {
         const res = await fetch(`${API}/bellaReminders/user/${user.id}`);
-        if (!res.ok) throw new Error(`Status ${res.status}`);
-        const reminders = await res.json();
-        for (let r of reminders) {
-          console.log(r)
+        if (!res.ok) throw new Error(res.statusText);
+        const rems = await res.json();
+        for (let r of rems) {
           await vapi.send({
             type: 'add-message',
-            message: {
-              role: "system",
-              content: `Remember this about the user: ${r.description}`,
-            },
+            message: { role: 'system', content: `Remember: ${r.description}` }
           });
         }
-      } catch (err) {
-        console.error('Could not load Bella reminders:', err);
-      }
+      } catch (e) { console.error(e); }
     });
 
     vapi.on('call-end', () => setCallStatus('ready'));
 
-    vapi.on('message', msg => {
+    vapi.on('message', async msg => {
       if (msg.type !== 'transcript') return;
-      const speaker = msg.role === 'assistant' ? 'assistant' : 'user';
-      const text = msg.transcript;
 
-      // partial vs final…
+      const speaker = msg.role === 'assistant' ? 'assistant' : 'user';
+      const text    = msg.transcript.trim();
+
+      // partial update
       if (msg.transcriptType === 'partial') {
         setMessages(prev => {
-          const last = prev[prev.length - 1];
-          if (last && last.speaker === speaker && last.partial) {
-            const up = [...prev];
-            up[up.length - 1] = { speaker, text, partial: true };
-            return up;
-          }
-          return [...prev, { speaker, text, partial: true }];
-        });
-      } else {
-        setMessages(prev => {
           const out = [...prev];
-          const last = out[out.length - 1];
-          if (last && last.speaker === speaker && last.partial) {
-            out[out.length - 1] = { speaker, text, partial: false };
+          const last = out[out.length-1];
+          if (last && last.speaker===speaker && last.partial) {
+            out[out.length-1] = { speaker, text, partial: true };
           } else {
-            out.push({ speaker, text, partial: false });
+            out.push({ speaker, text, partial: true });
           }
           return out;
         });
+        return;
+      }
 
-        // final user → analyze
-        if (speaker === 'user' && user?.id) {
-          fetch(`${API}/bellaReminders/analyze`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ userId: user.id, text })
-          })
-            .then(r => r.json())
-            .then(async ({ saved, reminder, label }) => {
-              const v = vapiRef.current;
-              if (!v) return;
-
-              if (saved) {
-                await v.send({
-                  type: 'text',
-                  text: t('Bella.confirmSaved', { title: reminder.title })
-                });
-              } else if (label === 'question') {
-                const r2 = await fetch(`${API}/bellaReminders/user/${user.id}`);
-                const list = (await r2.json()) || [];
-                if (list.length) {
-                  for (let r of list) {
-                    await v.send({
-                      type: 'text',
-                      text: `${t('Bella.reminderPrefix')} ${r.title} — ${r.description}`
-                    });
-                  }
-                } else {
-                  await v.send({ type: 'text', text: t('Bella.noReminders') });
-                }
-              }
-            })
-            .catch(err => console.error('Analyze error:', err));
+      // final update
+      setMessages(prev => {
+        const out = [...prev];
+        const last = out[out.length-1];
+        if (last && last.speaker===speaker && last.partial) {
+          out[out.length-1] = { speaker, text, partial: false };
+        } else {
+          out.push({ speaker, text, partial: false });
         }
+        return out;
+      });
+
+      // only user final
+      if (speaker !== 'user' || !user?.id) return;
+
+      let { intent, slot } = await classifyIntent(text);
+
+      switch (intent) {
+        case 'chat':
+          await vapi.send({
+            type: 'add-message',
+            message: { role: 'user', content: text }
+          });
+          break;
+
+        case 'open_menu':
+          navigate(slot);
+          await vapi.send({
+            type: 'add-message',
+            message: { role: 'system', content: `Say "Opening ${slot.replace('-', ' ')}"` }
+          });
+          break;
+
+        case 'call_contact': {
+          const resp = await fetch(`${API}/contacts/getAll/${user.id}`);
+          const contacts = await resp.json();
+          const match = contacts.find(c =>
+            c.fullName.toLowerCase().includes(slot)
+          );
+          if (match) {
+            await vapi.send({
+              type: 'add-message',
+              message: { role: 'system', content: `Calling ${match.fullName}` }
+            });
+            // TODO: trigger actual call UI with match.phoneNumber
+          } else {
+            await vapi.send({
+              type: 'add-message',
+              message: { role: 'system', content: `Sorry, I can't find that person in your contacts` }
+            });
+          }
+          break;
+        }
+
+        case 'list_medications': {
+          const resp = await fetch(`${API}/medications/user/${user.id}`);
+          const meds = await resp.json();
+          const due = meds.filter(m => m.canTake);
+          const list = due.map(m=>m.name).join(', ');
+          await vapi.send({
+            type: 'add-message',
+            message: {
+              role: 'system',
+              content: `The medication you need to take are: ${list}. Feel free to tell me when you've taken any.`
+            }
+          });
+          break;
+        }
+
+        case 'mark_medication_taken': {
+          const resp = await fetch(`${API}/medications/user/${user.id}`);
+          const meds = await resp.json();
+          const found = meds.find(m =>
+            m.name.toLowerCase().includes(slot.toLowerCase())
+          );
+          if (found) {
+            await fetch(`${API}/medications/markTaken`, {
+              method:'POST',
+              headers:{'Content-Type':'application/json'},
+              body: JSON.stringify({ id: found._id })
+            });
+            await vapi.send({
+              type:'add-message',
+              message:{ role:'system', content: `${found.name} marked as taken.` }
+            });
+          } else {
+            await vapi.send({
+              type:'add-message',
+              message:{ role:'system', content:`Sorry, I don't see that medication` }
+            });
+          }
+          break;
+        }
+
+        default:
+          console.log('Unhandled intent', intent);
       }
     });
 
-    vapi.on('error', err => console.error('Vapi error', err));
+    vapi.on('error', err => console.error(err));
     return () => vapi.removeAllListeners();
   }, [user, t]);
 
-  // ——— call controls ———
+  // call controls
   const startCall = () => {
     setCallStatus('calling');
-    const assistantId = getAssistantId();
-    vapiRef.current.start(assistantId, {
-      clientMessages: ['transcript']
-    });
+    vapiRef.current.start(getAssistantId(), {});
   };
-  const endCall = () => vapiRef.current.stop();
-  const toggleCall = () =>
-    callStatus === 'ready' ? startCall() : endCall();
+  const endCall    = () => vapiRef.current.stop();
+  const toggleCall = () => callStatus==='ready' ? startCall() : endCall();
 
-  // ——— labels & classes ———
-  const Icon = callStatus === 'ready' ? FaPhone : FaPhoneSlash;
+  const Icon      = callStatus==='ready' ? FaPhone : FaPhoneSlash;
   const callLabel =
-    callStatus === 'ready'
-      ? t('Bella.talk')
-      : callStatus === 'calling'
-      ? t('Bella.calling')
-      : t('Bella.stop');
+    callStatus==='ready'    ? t('Bella.talk')
+  : callStatus==='calling' ? t('Bella.calling')
+  :                          t('Bella.stop');
 
   const btnClass = `
     inline-flex items-center justify-center
-    text-base
-    border-2 border-blue-900 rounded-xl
-    py-2 px-4 bg-blue-900 text-white
-    font-semibold hover:bg-blue-800
-    focus:outline-none focus:ring-2 focus:ring-white
+    text-base border-2 border-blue-900 rounded-xl
+    py-2 px-4 bg-blue-900 text-white font-semibold
+    hover:bg-blue-800 focus:outline-none focus:ring-2 focus:ring-white
     transition
   `;
-
   const chatBtnClass = `
     inline-flex items-center justify-center
     border-2 border-blue-700 rounded-full
-    py-1 px-4 text-sm
-    bg-blue-700 text-white font-semibold
-    hover:bg-blue-600
-    focus:outline-none focus:ring-2 focus:ring-blue-300
+    py-1 px-4 text-sm bg-blue-700 text-white font-semibold
+    hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-300
     transition mb-4
   `;
 
@@ -191,73 +263,40 @@ export default function Bella() {
     <div className="flex flex-col items-center w-full">
       {isChatOpen ? (
         <>
-          <div
-            className="rounded-full overflow-hidden border-[5px] border-blue-800 mb-2 w-24 h-24"
-            id="bella-img"
-          >
-            <img
-              src={bella_img}
-              alt="Bella"
-              className="w-full h-full object-cover"
-            />
+          <div id="bella-img" className="rounded-full overflow-hidden border-[5px] border-blue-800 mb-2 w-24 h-24">
+            <img src={bella_img} alt="Bella" className="w-full h-full object-cover" />
           </div>
-          <button
-            onClick={() => setIsChatOpen(false)}
-            className={chatBtnClass}
-            aria-label={t('Bella.closeChat')}
-          >
+          <button onClick={()=>setIsChatOpen(false)} className={chatBtnClass}>
             {t('Bella.closeChat')}
           </button>
-          <div
-            ref={chatRef}
-            className="w-full max-w-md p-4 bg-white rounded-lg shadow overflow-y-auto mb-4 space-y-3"
-            style={{ maxHeight: '300px' }}
-          >
-            {messages.map((m, i) => (
-              <div
-                key={i}
-                className={`flex ${
-                  m.speaker === 'assistant' ? 'justify-start' : 'justify-end'
-                }`}
-              >
-                <div
-                  className={`px-4 py-2 rounded-lg ${
-                    m.speaker === 'assistant'
-                      ? 'bg-blue-900 text-white'
-                      : 'bg-gray-300 text-black'
-                  } text-lg leading-snug`}
-                >
+          <div ref={chatRef}
+               className="w-full max-w-md p-4 bg-white rounded-lg shadow overflow-y-auto mb-4 space-y-3"
+               style={{maxHeight:'300px'}}>
+            {messages.map((m,i)=>(
+              <div key={i} className={`flex ${m.speaker==='assistant'?'justify-start':'justify-end'}`}>
+                <div className={`px-4 py-2 rounded-lg ${m.speaker==='assistant'?'bg-blue-900 text-white':'bg-gray-300 text-black'}`}
+                     style={{fontSize:'18px',lineHeight:'1.4'}}>
                   {m.text}
                 </div>
               </div>
             ))}
           </div>
         </>
-      ) : (
+      ):(
         <>
-          <div
-            id="bella-img"
-            className="rounded-full overflow-hidden border-[5px] border-blue-800 mb-4 w-48 h-48"
-          >
-            <img
-              src={bella_img}
-              alt="Bella"
-              className="w-full h-full object-cover"
-            />
+          <div id="bella-img"
+               className="rounded-full overflow-hidden border-[5px] border-blue-800 mb-4 w-48 h-48">
+            <img src={bella_img} alt="Bella" className="w-full h-full object-cover" />
           </div>
-          {messages.length > 0 && (
-            <button
-              onClick={() => setIsChatOpen(true)}
-              className={chatBtnClass}
-              aria-label={t('Bella.openChat')}
-            >
+          {messages.length>0 && (
+            <button onClick={()=>setIsChatOpen(true)} className={chatBtnClass}>
               {t('Bella.openChat')}
             </button>
           )}
         </>
       )}
       <button onClick={toggleCall} className={btnClass}>
-        <Icon className="mr-2 text-xl" />
+        <Icon className="mr-2 text-xl"/>
         {callLabel}
       </button>
     </div>
