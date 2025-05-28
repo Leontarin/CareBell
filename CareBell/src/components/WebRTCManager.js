@@ -21,6 +21,8 @@ class WebRTCManager {
     this.localStream = localStream;
     this.isInitiator = isInitiator;
     
+    console.log(`Initializing WebRTC peer, isInitiator: ${isInitiator}`);
+    
     try {
       // Create RTCPeerConnection
       this.peerConnection = new RTCPeerConnection({
@@ -28,8 +30,11 @@ class WebRTCManager {
         iceCandidatePoolSize: 10,
       });
 
+      console.log('RTCPeerConnection created');
+
       // Add local stream tracks
       this.localStream.getTracks().forEach(track => {
+        console.log(`Adding local track: ${track.kind}`);
         this.peerConnection.addTrack(track, this.localStream);
       });
 
@@ -114,8 +119,11 @@ class WebRTCManager {
 
   async handleOffer(offer) {
     try {
+      console.log('Handling offer, setting remote description');
       await this.peerConnection.setRemoteDescription(offer);
+      console.log('Creating answer');
       const answer = await this.peerConnection.createAnswer();
+      console.log('Setting local description (answer)');
       await this.peerConnection.setLocalDescription(answer);
       console.log('Sending answer');
       this.socket.emit('signal', {
@@ -134,6 +142,7 @@ class WebRTCManager {
 
   async handleAnswer(answer) {
     try {
+      console.log('Handling answer, setting remote description');
       await this.peerConnection.setRemoteDescription(answer);
       console.log('Answer set successfully');
     } catch (error) {
@@ -144,6 +153,7 @@ class WebRTCManager {
 
   async handleIceCandidate(candidate) {
     try {
+      console.log('Adding ICE candidate');
       await this.peerConnection.addIceCandidate(candidate);
       console.log('ICE candidate added successfully');
     } catch (error) {

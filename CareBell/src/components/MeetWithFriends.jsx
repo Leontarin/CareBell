@@ -21,6 +21,12 @@ function MeetWithFriends() {
   const localVideoRef = useRef(null);
   const localStreamRef = useRef(null);
   const socketRef = useRef();
+  const videoPeersRef = useRef({}); // Keep a ref to the current peers
+
+  // Update the ref whenever videoPeers changes
+  useEffect(() => {
+    videoPeersRef.current = videoPeers;
+  }, [videoPeers]);
 
   // Fetch all rooms
   useEffect(() => {
@@ -66,11 +72,14 @@ function MeetWithFriends() {
         return;
       }
       
+      // Use ref to get current peers to avoid stale closure
+      const currentPeers = videoPeersRef.current;
+      
       // Check if we have an active peer for this user
-      if (videoPeers[remoteUserId] && videoPeers[remoteUserId].handleSignal) {
+      if (currentPeers[remoteUserId] && currentPeers[remoteUserId].handleSignal) {
         console.log(`Processing signal of type ${signal.type} for existing peer ${remoteUserId}`);
         try {
-          const success = await videoPeers[remoteUserId].handleSignal({ signal });
+          const success = await currentPeers[remoteUserId].handleSignal({ signal });
           if (!success) {
             console.warn(`Failed to handle signal for user ${remoteUserId}, will recreate peer connection`);
             // Force creating a new peer on next participants update
@@ -163,15 +172,14 @@ function MeetWithFriends() {
     } catch (err) {
       alert("Failed to create room: " + err.message);
     }
-  };
-  // WebRTC peer management
+  };  // WebRTC peer management
   useEffect(() => {
     if (!joinedRoom || !localStreamRef.current) return;
     
     console.log('Managing peers for participants:', participants);
     
     // For each participant (except self), create a peer if not exists
-    participants.forEach(remoteUserId => {
+    participants.forEach(async (remoteUserId) => {
       if (remoteUserId === user.id) return;
       
       console.log(`Checking peer for user ${remoteUserId}`);
@@ -193,29 +201,39 @@ function MeetWithFriends() {
           user.id // pass userId to manager
         );
         
-        // Initialize the peer connection
-        manager.initialize(localStreamRef.current, user.id < remoteUserId)
-          .then(() => {
-            console.log(`Peer initialized successfully for user ${remoteUserId}`);
-            
-            // Process any pending signals for this user
-            if (pendingSignals[remoteUserId] && pendingSignals[remoteUserId].length > 0) {
-              console.log(`Processing ${pendingSignals[remoteUserId].length} pending signals for user ${remoteUserId}`);
-              pendingSignals[remoteUserId].forEach(signal => {
-                manager.handleSignal({ signal });
-              });
-              setPendingSignals(prev => {
-                const copy = { ...prev };
-                delete copy[remoteUserId];
-                return copy;
-              });
-            }
-          })
-          .catch(error => {
-            console.error(`Failed to initialize peer for user ${remoteUserId}:`, error);
-          });
-          
+        // Set the peer immediately to avoid race condition
         setVideoPeers(prev => ({ ...prev, [remoteUserId]: manager }));
+        
+        try {
+          // Initialize the peer connection
+          await manager.initialize(localStreamRef.current, user.id < remoteUserId);
+          console.log(`Peer initialized successfully for user ${remoteUserId}`);
+          
+          // Process any pending signals for this user
+          if (pendingSignals[remoteUserId] && pendingSignals[remoteUserId].length > 0) {
+            console.log(`Processing ${pendingSignals[remoteUserId].length} pending signals for user ${remoteUserId}`);
+            for (const signal of pendingSignals[remoteUserId]) {
+              try {
+                await manager.handleSignal({ signal });
+              } catch (error) {
+                console.error(`Error processing pending signal:`, error);
+              }
+            }
+            setPendingSignals(prev => {
+              const copy = { ...prev };
+              delete copy[remoteUserId];
+              return copy;
+            });
+          }
+        } catch (error) {
+          console.error(`Failed to initialize peer for user ${remoteUserId}:`, error);
+          // Remove the failed peer
+          setVideoPeers(prev => {
+            const copy = { ...prev };
+            delete copy[remoteUserId];
+            return copy;
+          });
+        }
       }
     });
     
@@ -245,10 +263,15 @@ function MeetWithFriends() {
       localVideoRef.current.srcObject = localStreamRef.current;
     }
   }, [joinedRoom, localStreamRef.current]);
-
   const cleanupAllPeers = () => {
-    Object.values(videoPeers).forEach(manager => manager.destroy && manager.destroy());
+    console.log('Cleaning up all peers');
+    Object.values(videoPeersRef.current).forEach(manager => {
+      if (manager && manager.destroy) {
+        manager.destroy();
+      }
+    });
     setVideoPeers({});
+    videoPeersRef.current = {};
   };
 
   if (!user?.id) {
