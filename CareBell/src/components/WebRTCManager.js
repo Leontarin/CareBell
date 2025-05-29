@@ -1,3 +1,6 @@
+// WebRTCManager.js
+// Removes localStream stoppage on destroy so local preview stays alive
+
 class WebRTCManager {
   constructor(localVideoRef, remoteVideoRef, socket, roomId, userId, polite) {
     this.localVideoRef       = localVideoRef;
@@ -138,10 +141,7 @@ class WebRTCManager {
     this.socket.emit('signal', {
       roomId: this.roomId,
       userId: this.userId,
-      signal: {
-        type: 'offer',
-        sdp: offer
-      }
+      signal: { type: 'offer', sdp: offer }
     });
     return true;
   }
@@ -160,11 +160,11 @@ class WebRTCManager {
 
   async handleOffer(offer) {
     const offerDesc = typeof offer.sdp === 'string' ? offer : { type: 'offer', sdp: offer };
-    const readyForOffer = !this.makingOffer && (
+    const ready = !this.makingOffer && (
       this.peerConnection.signalingState === 'stable' ||
       this.peerConnection.signalingState === 'have-local-offer'
     );
-    const collision = !readyForOffer;
+    const collision = !ready;
     this.ignoreOffer = !this.polite && collision;
     if (this.ignoreOffer) return false;
     if (collision && this.polite) {
@@ -177,10 +177,7 @@ class WebRTCManager {
     this.socket.emit('signal', {
       roomId: this.roomId,
       userId: this.userId,
-      signal: {
-        type: 'answer',
-        sdp: answer
-      }
+      signal: { type: 'answer', sdp: answer }
     });
     return true;
   }
@@ -212,11 +209,7 @@ class WebRTCManager {
   }
 
   async processQueuedIceCandidates() {
-    while (
-      this.queuedIceCandidates.length > 0 &&
-      this.peerConnection.remoteDescription &&
-      this.peerConnection.remoteDescription.type
-    ) {
+    while (this.queuedIceCandidates.length > 0 && this.peerConnection.remoteDescription && this.peerConnection.remoteDescription.type) {
       const c = this.queuedIceCandidates.shift();
       try {
         await this.peerConnection.addIceCandidate(c);
@@ -245,10 +238,7 @@ class WebRTCManager {
       this.peerConnection.close();
       this.peerConnection = null;
     }
-    if (this.localStream) {
-      this.localStream.getTracks().forEach(t => t.stop());
-      this.localStream = null;
-    }
+    // do not stop this.localStream here
     if (this._remoteStream) {
       this._remoteStream.getTracks().forEach(t => t.stop());
       this._remoteStream = null;
