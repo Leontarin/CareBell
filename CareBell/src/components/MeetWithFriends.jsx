@@ -15,7 +15,6 @@ function MeetWithFriends() {
   const [participants, setParticipants] = useState([]);
   const [videoPeers, setVideoPeers] = useState({});
   const [pendingSignals, setPendingSignals] = useState({});
-  const [connectionRetries, setConnectionRetries] = useState({});
   const [loading, setLoading] = useState(false);
   const [newRoomName, setNewRoomName] = useState("");
 
@@ -25,12 +24,10 @@ function MeetWithFriends() {
   const videoPeersRef   = useRef({});
   const remoteVideoRefs = useRef({});
 
-  // keep peer-ref in sync
   useEffect(() => {
     videoPeersRef.current = videoPeers;
   }, [videoPeers]);
 
-  // fetch rooms once
   useEffect(() => {
     fetchRooms();
   }, []);
@@ -47,11 +44,17 @@ function MeetWithFriends() {
     }
   }
 
-  // setup signaling socket
+  // always attach local preview
+  useEffect(() => {
+    if (localStreamRef.current && localVideoRef.current) {
+      localVideoRef.current.srcObject = localStreamRef.current;
+    }
+  });
+
+  // setup socket and handle participants/disconnection
   useEffect(() => {
     if (!user?.id) return;
-
-    socketRef.current = io(SIGNALING_SERVER_URL, {
+    const socket = io(SIGNALING_SERVER_URL, {
       transports: ["websocket","polling"],
       secure: true,
       reconnection: true,
@@ -61,12 +64,24 @@ function MeetWithFriends() {
       upgrade: true,
       rememberUpgrade: true
     });
+    socketRef.current = socket;
+    socket.emit("register", user.id);
 
-    socketRef.current.emit("register", user.id);
+    socket.on("room-participants", (ids) => {
+      // remove peers who left
+      Object.keys(videoPeersRef.current).forEach(id => {
+        if (!ids.includes(id)) {
+          videoPeersRef.current[id].destroy();
+          setVideoPeers(peers => {
+            const c = { ...peers }; delete c[id]; return c;
+          });
+          delete remoteVideoRefs.current[id];
+        }
+      });
+      setParticipants(ids);
+    });
 
-    socketRef.current.on("room-participants", setParticipants);
-
-    socketRef.current.on("signal", async ({ userId: from, signal }) => {
+    socket.on("signal", async ({ userId: from, signal }) => {
       if (from === user.id) return;
       const peers = videoPeersRef.current;
       if (peers[from]?.handleSignal) {
@@ -83,7 +98,7 @@ function MeetWithFriends() {
     });
 
     return () => {
-      socketRef.current.disconnect();
+      socket.disconnect();
       cleanupAllPeers();
     };
   }, [user?.id]);
@@ -95,12 +110,11 @@ function MeetWithFriends() {
     }));
   }
 
-  // join room: get local media, emit join
   async function joinRoom(roomId) {
     if (!user?.id) return;
     let stream;
     try {
-      stream = await navigator.mediaDevices.getUserMedia({ video:true, audio:true });
+      stream = await navigator.mediaDevices.getUserMedia({ video:true,audio:true });
       localStreamRef.current = stream;
     } catch (err) {
       alert("Could not access camera/mic: " + err.message);
@@ -109,34 +123,7 @@ function MeetWithFriends() {
 
     setJoinedRoom(roomId);
     socketRef.current.emit("join-room", { roomId, userId: user.id });
-
-    // fallback attach
-    setTimeout(() => {
-      if (localVideoRef.current) {
-        localVideoRef.current.srcObject = stream;
-      }
-    }, 0);
   }
-
-  // always attach local preview whenever ready
-  useEffect(() => {
-    if (localStreamRef.current && localVideoRef.current) {
-      localVideoRef.current.srcObject = localStreamRef.current;
-    }
-  });
-
-  // detect when everyone else leaves
-  useEffect(() => {
-    if (joinedRoom && participants.length === 1 && participants[0] === user.id) {
-      // clean up old peer machinery
-      cleanupAllPeers();
-      // reattach local preview
-      if (localStreamRef.current && localVideoRef.current) {
-        localVideoRef.current.srcObject = localStreamRef.current;
-        localVideoRef.current.play().catch(() => {});
-      }
-    }
-  }, [participants, joinedRoom, user.id]);
 
   function leaveRoom() {
     if (!joinedRoom || !user?.id) return;
@@ -154,73 +141,50 @@ function MeetWithFriends() {
     if (!newRoomName.trim()) return;
     try {
       const { data } = await axios.post(
-        `${API}/rooms/create`,
-        { name: newRoomName, userId: user.id }
+        `${API}/rooms/create`, { name: newRoomName, userId: user.id }
       );
       setNewRoomName("");
       fetchRooms();
       joinRoom(data._id);
-    } catch (err) {
-      alert("Failed to create room: " + err.message);
+    } catch (e) {
+      alert("Failed to create room: " + e.message);
     }
   }
 
-  // build/destroy peers on participants change
+  // build and remove peers when participants change
   useEffect(() => {
     if (!joinedRoom || !localStreamRef.current) return;
-
     async function buildPeers() {
       for (const peerId of participants) {
         if (peerId === user.id) continue;
-        if (!videoPeers[peerId]) {
+        if (!videoPeersRef.current[peerId]) {
           if (!remoteVideoRefs.current[peerId]) {
             remoteVideoRefs.current[peerId] = React.createRef();
           }
           const remoteRef = remoteVideoRefs.current[peerId];
           const polite    = user.id > peerId;
           const manager   = new WebRTCManager(
-            localVideoRef,
-            remoteRef,
-            socketRef.current,
-            joinedRoom,
-            user.id,
-            polite
+            localVideoRef, remoteRef,
+            socketRef.current, joinedRoom,
+            user.id, polite
           );
           manager.onConnectionFailed = () => recreatePeer(peerId);
-
           videoPeersRef.current = { ...videoPeersRef.current, [peerId]: manager };
           setVideoPeers(vp => ({ ...vp, [peerId]: manager }));
 
           const idx = participants.indexOf(peerId);
           await new Promise(r => setTimeout(r, idx*200 + Math.random()*100));
+          const offer = user.id.localeCompare(peerId) < 0;
+          await manager.initialize(localStreamRef.current, offer);
 
-          const shouldOffer = user.id.localeCompare(peerId) < 0;
-          await manager.initialize(localStreamRef.current, shouldOffer);
-
-          const queue = pendingSignals[peerId] || [];
+          const queue = pendingSignals[peerId]||[];
           for (const sig of queue) {
-            try {
-              await manager.handleSignal({ signal: sig });
-              await new Promise(r => setTimeout(r,50));
-            } catch {}
+            try { await manager.handleSignal({ signal: sig }); } catch {}
           }
-          setPendingSignals(ps => {
-            const c = { ...ps };
-            delete c[peerId];
-            return c;
-          });
+          setPendingSignals(ps => { const c={...ps}; delete c[peerId]; return c; });
         }
       }
-
-      Object.keys(videoPeers).forEach(pid => {
-        if (!participants.includes(pid)) {
-          videoPeers[pid].destroy();
-          setVideoPeers(vp => { const c={...vp}; delete c[pid]; return c; });
-          delete remoteVideoRefs.current[pid];
-        }
-      });
     }
-
     buildPeers();
   }, [participants, joinedRoom]);
 
@@ -229,12 +193,13 @@ function MeetWithFriends() {
     setVideoPeers({});
     remoteVideoRefs.current = {};
     setPendingSignals({});
-    setConnectionRetries({});
     videoPeersRef.current = {};
   }
 
   async function recreatePeer(peerId) {
-    if (videoPeers[peerId]) videoPeers[peerId].destroy();
+    if (videoPeersRef.current[peerId]) {
+      videoPeersRef.current[peerId].destroy();
+    }
     setVideoPeers(vp => { const c={...vp}; delete c[peerId]; return c; });
     videoPeersRef.current = { ...videoPeersRef.current };
     delete videoPeersRef.current[peerId];
@@ -246,27 +211,20 @@ function MeetWithFriends() {
       const remoteRef = remoteVideoRefs.current[peerId];
       const polite    = user.id > peerId;
       const manager   = new WebRTCManager(
-        localVideoRef,
-        remoteRef,
-        socketRef.current,
-        joinedRoom,
-        user.id,
-        polite
+        localVideoRef, remoteRef,
+        socketRef.current, joinedRoom,
+        user.id, polite
       );
       manager.onConnectionFailed = () => recreatePeer(peerId);
-
       videoPeersRef.current = { ...videoPeersRef.current, [peerId]: manager };
       setVideoPeers(vp => ({ ...vp, [peerId]: manager }));
 
-      const shouldOffer = user.id.localeCompare(peerId) < 0;
-      await manager.initialize(localStreamRef.current, shouldOffer);
+      const offer = user.id.localeCompare(peerId) < 0;
+      await manager.initialize(localStreamRef.current, offer);
 
-      const queue = pendingSignals[peerId] || [];
+      const queue = pendingSignals[peerId]||[];
       for (const sig of queue) {
-        try {
-          await manager.handleSignal({ signal: sig });
-          await new Promise(r => setTimeout(r,50));
-        } catch {}
+        try { await manager.handleSignal({ signal: sig }); } catch {}
       }
       setPendingSignals(ps => { const c={...ps}; delete c[peerId]; return c; });
     }
@@ -275,9 +233,7 @@ function MeetWithFriends() {
   if (!user?.id) {
     return (
       <div className="w-full h-full bg-black flex items-center justify-center">
-        <h2 className="text-white text-xl">
-          Please log in to use video rooms
-        </h2>
+        <h2 className="text-white text-xl">Please log in to use video rooms</h2>
       </div>
     );
   }
@@ -298,68 +254,51 @@ function MeetWithFriends() {
             <button
               className="px-4 py-2 bg-green-600 text-white rounded"
               onClick={createRoom}
-            >
-              Create Room
-            </button>
+            >Create Room</button>
           </div>
           <ul className="text-white w-96">
             {rooms.map(r => (
-              <li
-                key={r._id}
-                className="flex justify-between items-center mb-2 bg-gray-800 p-2 rounded"
-              >
+              <li key={r._id} className="flex justify-between items-center mb-2 bg-gray-800 p-2 rounded">
                 <span>{r.name}</span>
                 <button
                   className="px-3 py-1 bg-blue-500 text-white rounded"
                   onClick={() => joinRoom(r._id)}
-                >
-                  Join
-                </button>
+                >Join</button>
               </li>
             ))}
           </ul>
         </div>
       ) : (
         <div className="w-full h-full flex flex-col items-center">
-          <div className="flex justify-between w/full p-4">
+          <div className="flex justify-between w-full p-4">
             <span className="text-white text-lg">
-              Room: {rooms.find(r => r._id===joinedRoom)?.name}
+              Room: {rooms.find(r => r._id === joinedRoom)?.name}
             </span>
-            <button
-              className="px-4 py-2 bg-red-600 text-white rounded"
-              onClick={leaveRoom}
-            >
+            <button onClick={leaveRoom} className="px-4 py-2 bg-red-600 text-white rounded">
               Leave Room
             </button>
           </div>
-          <div className="flex flex-wrap justify-center items-center w/full h/full">
+          <div className="flex flex-wrap justify-center items-center w-full h-full">
             <div className="m-2">
               <video
                 ref={localVideoRef}
-                playsInline
-                autoPlay
-                muted
+                playsInline autoPlay muted
                 className="w-64 h-48 bg-black border-4 border-green-400 rounded-lg"
               />
               <div className="text-center text-white mt-2">You</div>
             </div>
-            {participants
-              .filter(pid => pid !== user.id)
-              .map(pid => (
-                <div className="m-2" key={pid}>
-                  <video
-                    ref={remoteVideoRefs.current[pid]}
-                    playsInline
-                    autoPlay
-                    muted
-                    className="w-64 h-48 bg-black border-4 border-blue-400 rounded-lg"
-                  />
-                  <div className="text-center text-white mt-2">
-                    User: {pid}{" "}
-                    {videoPeers[pid] ? "(Connected)" : "(Connecting...)"}
-                  </div>
+            {participants.filter(pid => pid !== user.id).map(pid => (
+              <div key={pid} className="m-2">
+                <video
+                  ref={remoteVideoRefs.current[pid]}
+                  playsInline autoPlay muted
+                  className="w-64 h-48 bg-black border-4 border-blue-400 rounded-lg"
+                />
+                <div className="text-center text-white mt-2">
+                  User: {pid} {videoPeers[pid] ? "(Connected)" : "(Connecting...)"}
                 </div>
-              ))}
+              </div>
+            ))}
           </div>
         </div>
       )}
