@@ -25,12 +25,12 @@ function MeetWithFriends() {
   const videoPeersRef   = useRef({});
   const remoteVideoRefs = useRef({});
 
-  // keep ref in sync
+  // keep peer-ref in sync
   useEffect(() => {
     videoPeersRef.current = videoPeers;
   }, [videoPeers]);
 
-  // load rooms
+  // fetch rooms once
   useEffect(() => {
     fetchRooms();
   }, []);
@@ -47,7 +47,7 @@ function MeetWithFriends() {
     }
   }
 
-  // signaling socket
+  // setup signaling socket
   useEffect(() => {
     if (!user?.id) return;
 
@@ -63,7 +63,9 @@ function MeetWithFriends() {
     });
 
     socketRef.current.emit("register", user.id);
+
     socketRef.current.on("room-participants", setParticipants);
+
     socketRef.current.on("signal", async ({ userId: from, signal }) => {
       if (from === user.id) return;
       const peers = videoPeersRef.current;
@@ -93,12 +95,12 @@ function MeetWithFriends() {
     }));
   }
 
-  // join: get camera then show video UI
+  // join room: get local media, emit join
   async function joinRoom(roomId) {
     if (!user?.id) return;
     let stream;
     try {
-      stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+      stream = await navigator.mediaDevices.getUserMedia({ video:true, audio:true });
       localStreamRef.current = stream;
     } catch (err) {
       alert("Could not access camera/mic: " + err.message);
@@ -108,7 +110,7 @@ function MeetWithFriends() {
     setJoinedRoom(roomId);
     socketRef.current.emit("join-room", { roomId, userId: user.id });
 
-    // *this* effect below will also catch it — this is just a backup
+    // fallback attach
     setTimeout(() => {
       if (localVideoRef.current) {
         localVideoRef.current.srcObject = stream;
@@ -116,12 +118,25 @@ function MeetWithFriends() {
     }, 0);
   }
 
-  // <-- new: always attach the local stream as soon as both are ready -->
+  // always attach local preview whenever ready
   useEffect(() => {
     if (localStreamRef.current && localVideoRef.current) {
       localVideoRef.current.srcObject = localStreamRef.current;
     }
   });
+
+  // detect when everyone else leaves
+  useEffect(() => {
+    if (joinedRoom && participants.length === 1 && participants[0] === user.id) {
+      // clean up old peer machinery
+      cleanupAllPeers();
+      // reattach local preview
+      if (localStreamRef.current && localVideoRef.current) {
+        localVideoRef.current.srcObject = localStreamRef.current;
+        localVideoRef.current.play().catch(() => {});
+      }
+    }
+  }, [participants, joinedRoom, user.id]);
 
   function leaveRoom() {
     if (!joinedRoom || !user?.id) return;
@@ -150,7 +165,7 @@ function MeetWithFriends() {
     }
   }
 
-  // build/destroy peers when participants change
+  // build/destroy peers on participants change
   useEffect(() => {
     if (!joinedRoom || !localStreamRef.current) return;
 
@@ -200,7 +215,7 @@ function MeetWithFriends() {
       Object.keys(videoPeers).forEach(pid => {
         if (!participants.includes(pid)) {
           videoPeers[pid].destroy();
-          setVideoPeers(vp => { const c = {...vp}; delete c[pid]; return c; });
+          setVideoPeers(vp => { const c={...vp}; delete c[pid]; return c; });
           delete remoteVideoRefs.current[pid];
         }
       });
@@ -270,7 +285,6 @@ function MeetWithFriends() {
   return (
     <div className="w-full h-full bg-black relative">
       {!joinedRoom ? (
-        // room list / create UI...
         <div className="flex flex-col items-center justify-center h-full">
           <h2 className="text-white text-2xl mb-4">Video Rooms</h2>
           <div className="mb-4">
@@ -306,9 +320,8 @@ function MeetWithFriends() {
           </ul>
         </div>
       ) : (
-        // video grid
         <div className="w-full h-full flex flex-col items-center">
-          <div className="flex justify-between w-full p-4">
+          <div className="flex justify-between w/full p-4">
             <span className="text-white text-lg">
               Room: {rooms.find(r => r._id===joinedRoom)?.name}
             </span>
@@ -319,8 +332,7 @@ function MeetWithFriends() {
               Leave Room
             </button>
           </div>
-          <div className="flex flex-wrap justify-center items-center w-full h-full">
-            {/* local */}
+          <div className="flex flex-wrap justify-center items-center w/full h/full">
             <div className="m-2">
               <video
                 ref={localVideoRef}
@@ -331,7 +343,6 @@ function MeetWithFriends() {
               />
               <div className="text-center text-white mt-2">You</div>
             </div>
-            {/* remotes */}
             {participants
               .filter(pid => pid !== user.id)
               .map(pid => (
