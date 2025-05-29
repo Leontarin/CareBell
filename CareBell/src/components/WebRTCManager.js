@@ -1,17 +1,17 @@
 class WebRTCManager {
   constructor(localVideoRef, remoteVideoRef, socket, roomId, userId, polite) {
-    this.localVideoRef     = localVideoRef;
-    this.remoteVideoRef    = remoteVideoRef;
-    this.socket            = socket;
-    this.roomId            = roomId;
-    this.userId            = userId;
-    this.polite            = polite;
-    this.peerConnection    = null;
-    this.localStream       = null;
-    this._remoteStream     = null;
+    this.localVideoRef       = localVideoRef;
+    this.remoteVideoRef      = remoteVideoRef;
+    this.socket              = socket;
+    this.roomId              = roomId;
+    this.userId              = userId;
+    this.polite              = polite;
+    this.peerConnection      = null;
+    this.localStream         = null;
+    this._remoteStream       = null;
     this.queuedIceCandidates = [];
     this.onConnectionFailed  = null;
-    this.connectionAttempts   = 0;
+    this.connectionAttempts  = 0;
     this.maxConnectionAttempts = 3;
     this.connectionTimeout     = null;
     this.lastSignalTime        = 0;
@@ -149,9 +149,9 @@ class WebRTCManager {
   async handleSignal({ signal }) {
     if (!this.peerConnection) return false;
     switch (signal.type) {
-      case 'offer':       return this.handleOffer(signal.sdp);
-      case 'answer':      return this.handleAnswer(signal.sdp);
-      case 'ice-candidate': return this.handleIceCandidate(signal.candidate);
+      case 'offer':          return this.handleOffer(signal.sdp);
+      case 'answer':         return this.handleAnswer(signal.sdp);
+      case 'ice-candidate':  return this.handleIceCandidate(signal.candidate);
       default:
         console.log('Unknown signal type:', signal.type);
         return false;
@@ -160,7 +160,10 @@ class WebRTCManager {
 
   async handleOffer(offer) {
     const offerDesc = typeof offer.sdp === 'string' ? offer : { type: 'offer', sdp: offer };
-    const readyForOffer = !this.makingOffer && (this.peerConnection.signalingState === 'stable' || this.peerConnection.signalingState === 'have-local-offer');
+    const readyForOffer = !this.makingOffer && (
+      this.peerConnection.signalingState === 'stable' ||
+      this.peerConnection.signalingState === 'have-local-offer'
+    );
     const collision = !readyForOffer;
     this.ignoreOffer = !this.polite && collision;
     if (this.ignoreOffer) return false;
@@ -209,7 +212,11 @@ class WebRTCManager {
   }
 
   async processQueuedIceCandidates() {
-    while (this.queuedIceCandidates.length > 0 && this.peerConnection.remoteDescription && this.peerConnection.remoteDescription.type) {
+    while (
+      this.queuedIceCandidates.length > 0 &&
+      this.peerConnection.remoteDescription &&
+      this.peerConnection.remoteDescription.type
+    ) {
       const c = this.queuedIceCandidates.shift();
       try {
         await this.peerConnection.addIceCandidate(c);

@@ -99,13 +99,20 @@ function MeetWithFriends() {
     try {
       stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
       localStreamRef.current = stream;
-      if (localVideoRef.current) localVideoRef.current.srcObject = stream;
     } catch (err) {
       alert("Could not access camera/mic: " + err.message);
       return;
     }
-    socketRef.current.emit("join-room", { roomId, userId: user.id });
+
     setJoinedRoom(roomId);
+    socketRef.current.emit("join-room", { roomId, userId: user.id });
+
+    // wait for video element to mount
+    setTimeout(() => {
+      if (localVideoRef.current) {
+        localVideoRef.current.srcObject = stream;
+      }
+    }, 0);
   }
 
   function leaveRoom() {
@@ -193,12 +200,6 @@ function MeetWithFriends() {
 
     buildPeers();
   }, [participants, joinedRoom]);
-
-  useEffect(() => {
-    if (localVideoRef.current && localStreamRef.current) {
-      localVideoRef.current.srcObject = localStreamRef.current;
-    }
-  }, [joinedRoom]);
 
   function cleanupAllPeers() {
     Object.values(videoPeersRef.current).forEach(m => m.destroy && m.destroy());
@@ -313,20 +314,22 @@ function MeetWithFriends() {
               />
               <div className="text-center text-white mt-2">You</div>
             </div>
-            {participants.filter(pid => pid !== user.id).map(pid => (
-              <div className="m-2" key={pid}>
-                <video
-                  ref={remoteVideoRefs.current[pid]}
-                  playsInline
-                  autoPlay
-                  muted
-                  className="w-64 h-48 bg-black border-4 border-blue-400 rounded-lg"
-                />
-                <div className="text-center text-white mt-2">
-                  User: {pid} {videoPeers[pid] ? "(Connected)" : "(Connecting...)"}
+            {participants
+              .filter(pid => pid !== user.id)
+              .map(pid => (
+                <div className="m-2" key={pid}>
+                  <video
+                    ref={remoteVideoRefs.current[pid]}
+                    playsInline
+                    autoPlay
+                    muted
+                    className="w-64 h-48 bg-black border-4 border-blue-400 rounded-lg"
+                  />
+                  <div className="text-center text-white mt-2">
+                    User: {pid} {videoPeers[pid] ? "(Connected)" : "(Connecting...)"}
+                  </div>
                 </div>
-              </div>
-            ))}
+              ))}
           </div>
         </div>
       )}
