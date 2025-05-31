@@ -102,7 +102,6 @@ export default function MeetWithFriends() {
           </ul>
         </div>
       ) : (
-        {/* 6) If joinedRoom is set, embed Jitsi in an iframe */}
         <div className="w-full h-full flex flex-col">
           <div className="flex justify-between w-full p-4 bg-gray-900">
             <span className="text-white text-lg">Room: {joinedRoom}</span>
