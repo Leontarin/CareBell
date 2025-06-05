@@ -2,7 +2,7 @@
 import React, { useState, useEffect, useContext, useRef } from "react";
 import axios from "axios";
 import { API } from "./config";
-import { AppContext } from "./AppContext";
+import { AppContext } from "../AppContext";
 
 export default function MeetWithFriends() {
   const { user } = useContext(AppContext);
