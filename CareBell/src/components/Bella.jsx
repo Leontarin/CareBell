@@ -27,11 +27,17 @@ export default function Bella() {
     // open menu
     const menus = {
       'open contacts':     'call-contacts',
+      'open contact':     'call-contacts',
       'open friends':      'meet-with-friends',
+      'open meet with friends':      'meet-with-friends',
       'open medicine':     'medicine',
+      'open medication':     'medicine',
       'open meals':        'meals',
+      'open meal':        'meals',
+      'open food':        'meals',
       'open news':         'news',
-      'open exercise':     'exercise'
+      'open exercise':     'exercise',
+      'open workout':     'exercise'
     };
     for (let phrase in menus) {
       if (lc.includes(phrase)) {
