@@ -37,7 +37,7 @@ export default function MeetWithFriends() {
 
     // Listen for room participants updates
     socket.on('room-participants', (participantList) => {
-      console.log('Room participants updated:', participantList);
+      console.log('Room participants updated:', participantList, 'for user', user?.id);
       // Always include self in participants for robust connection logic
       if (user?.id && !participantList.includes(user.id)) {
         participantList.push(user.id);
@@ -129,15 +129,15 @@ export default function MeetWithFriends() {
   useEffect(() => {
     if (!isInCall || !localStream || !joinedRoom || !user?.id) return;
 
-    console.log('Current participants:', participants);
-    console.log('Current webRTC managers:', Array.from(webRTCManagers.keys()));
+    console.log('Current participants for', user.id, ':', participants);
+    console.log('Current webRTC managers for', user.id, ':', Array.from(webRTCManagers.keys()));
 
     // Create connections for new participants
     participants.forEach(async (participantId) => {
       if (participantId === user.id) return; // Skip self
 
       if (!webRTCManagers.has(participantId)) {
-        console.log('Creating WebRTC connection for participant:', participantId);
+        console.log('Creating WebRTC connection for participant:', participantId, 'from user', user.id);
 
         // Create new WebRTC connection for this participant
         const remoteVideoRef = { current: null };
