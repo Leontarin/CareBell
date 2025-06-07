@@ -21,6 +21,7 @@ class WebRTCManager {
     this.negotiationLock       = false;
     this.makingOffer           = false;
     this.ignoreOffer           = false;
+    this.onRemoteStream        = null; // Callback for when remote stream is received
 
     this.iceServers = [
       { urls: 'stun:stun.l.google.com:19302' },
@@ -61,6 +62,12 @@ class WebRTCManager {
       } else {
         this._remoteStream.addTrack(event.track);
       }
+
+      // Call the callback if provided
+      if (this.onRemoteStream) {
+        this.onRemoteStream(this._remoteStream);
+      }
+
       if (this.remoteVideoRef.current) {
         this.remoteVideoRef.current.srcObject = this._remoteStream;
         this.remoteVideoRef.current.play().catch(e => {
@@ -227,6 +234,10 @@ class WebRTCManager {
       signalingState: this.peerConnection.signalingState,
       attempts: this.connectionAttempts
     };
+  }
+
+  cleanup() {
+    this.destroy();
   }
 
   destroy() {

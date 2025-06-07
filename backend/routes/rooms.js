@@ -60,4 +60,31 @@ router.get('/', async (req, res) => {
   }
 });
 
+// Get room by ID with participants
+router.get('/:roomId', async (req, res) => {
+  try {
+    const room = await Room.findById(req.params.roomId);
+    if (!room) return res.status(404).json({ error: 'Room not found' });
+    res.json(room);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Update room status (active/inactive)
+router.patch('/:roomId/status', async (req, res) => {
+  try {
+    const { isActive } = req.body;
+    const room = await Room.findByIdAndUpdate(
+      req.params.roomId,
+      { isActive },
+      { new: true }
+    );
+    if (!room) return res.status(404).json({ error: 'Room not found' });
+    res.json(room);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 module.exports = router;

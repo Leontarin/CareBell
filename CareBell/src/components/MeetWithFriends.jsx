@@ -1,8 +1,10 @@
 // src/MeetWithFriends.jsx
 import React, { useState, useEffect, useContext, useRef } from "react";
 import axios from "axios";
-import { API } from "./config";
-import { AppContext } from "./AppContext";
+import { io } from "socket.io-client";
+import { API } from "../config";
+import { AppContext } from "../AppContext";
+import { WebRTCManager } from "./WebRTCManager";
 
 export default function MeetWithFriends() {
   const { user } = useContext(AppContext);
@@ -10,6 +12,47 @@ export default function MeetWithFriends() {
   const [rooms, setRooms] = useState([]);
   const [joinedRoom, setJoinedRoom] = useState(null);
   const [newRoomName, setNewRoomName] = useState("");
+
+  // Video call state
+  const [isInCall, setIsInCall] = useState(false);
+  const [localStream, setLocalStream] = useState(null);
+  const [remoteStreams, setRemoteStreams] = useState(new Map()); // userId -> MediaStream
+  const [participants, setParticipants] = useState([]);
+  const [webRTCManagers, setWebRTCManagers] = useState(new Map()); // userId -> WebRTCManager
+
+  // Refs
+  const localVideoRef = useRef(null);
+  const socketRef = useRef(null);
+  const remoteVideoRefs = useRef(new Map()); // userId -> videoRef
+
+  // Initialize socket connection
+  useEffect(() => {
+    const socket = io(API);
+    socketRef.current = socket;
+
+    if (user?.id) {
+      socket.emit('register', user.id);
+    }
+
+    // Listen for room participants updates
+    socket.on('room-participants', (participantList) => {
+      console.log('Room participants updated:', participantList);
+      setParticipants(participantList.filter(p => p !== user?.id));
+    });
+
+    // Listen for WebRTC signals
+    socket.on('signal', async ({ signal, fromUser }) => {
+      console.log('Received signal from', fromUser, ':', signal.type);
+      const manager = webRTCManagers.get(fromUser);
+      if (manager) {
+        await manager.handleSignal({ signal });
+      }
+    });
+
+    return () => {
+      socket.disconnect();
+    };
+  }, [user?.id]);
 
   // 1) Fetch the list of rooms on mount
   useEffect(() => {
@@ -23,6 +66,64 @@ export default function MeetWithFriends() {
     }
     fetchRooms();
   }, []);
+
+  // Handle participants joining/leaving and create WebRTC connections
+  useEffect(() => {
+    if (!isInCall || !localStream || !joinedRoom) return;
+
+    participants.forEach(async (participantId) => {
+      if (!webRTCManagers.has(participantId)) {
+        // Create new WebRTC connection for this participant
+        const remoteVideoRef = { current: null };
+        remoteVideoRefs.current.set(participantId, remoteVideoRef);
+
+        const manager = new WebRTCManager(
+          localVideoRef,
+          remoteVideoRef,
+          socketRef.current,
+          joinedRoom,
+          user.id,
+          user.id < participantId // Use consistent polite/impolite assignment
+        );
+
+        manager.onConnectionFailed = () => {
+          console.log('Connection failed with', participantId);
+        };
+
+        // Handle remote stream
+        manager.onRemoteStream = (stream) => {
+          setRemoteStreams(prev => new Map(prev.set(participantId, stream)));
+          if (remoteVideoRef.current) {
+            remoteVideoRef.current.srcObject = stream;
+          }
+        };
+
+        setWebRTCManagers(prev => new Map(prev.set(participantId, manager)));
+
+        // Initialize the connection
+        const isInitiator = user.id < participantId;
+        await manager.initialize(localStream, isInitiator);
+      }
+    });
+
+    // Clean up connections for participants who left
+    webRTCManagers.forEach((manager, participantId) => {
+      if (!participants.includes(participantId)) {
+        manager.cleanup();
+        setWebRTCManagers(prev => {
+          const newMap = new Map(prev);
+          newMap.delete(participantId);
+          return newMap;
+        });
+        setRemoteStreams(prev => {
+          const newMap = new Map(prev);
+          newMap.delete(participantId);
+          return newMap;
+        });
+        remoteVideoRefs.current.delete(participantId);
+      }
+    });
+  }, [participants, isInCall, localStream, joinedRoom, user?.id, webRTCManagers]);
 
   // 2) Create a new room on the backend and immediately join it
   async function createRoom() {
@@ -40,6 +141,60 @@ export default function MeetWithFriends() {
     }
   }
 
+  // Start video call
+  async function startVideoCall() {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: true,
+        audio: true
+      });
+
+      setLocalStream(stream);
+      setIsInCall(true);
+
+      if (localVideoRef.current) {
+        localVideoRef.current.srcObject = stream;
+      }
+
+      // Join the room via socket
+      socketRef.current.emit('join-room', {
+        roomId: joinedRoom,
+        userId: user.id
+      });
+
+    } catch (error) {
+      console.error('Error accessing media devices:', error);
+      alert('Could not access camera/microphone. Please check permissions.');
+    }
+  }
+
+  // Stop video call
+  function stopVideoCall() {
+    // Stop local stream
+    if (localStream) {
+      localStream.getTracks().forEach(track => track.stop());
+      setLocalStream(null);
+    }
+
+    // Close all WebRTC connections
+    webRTCManagers.forEach(manager => {
+      manager.cleanup();
+    });
+    setWebRTCManagers(new Map());
+    setRemoteStreams(new Map());
+
+    // Leave the room via socket
+    if (socketRef.current && joinedRoom) {
+      socketRef.current.emit('leave-room', {
+        roomId: joinedRoom,
+        userId: user.id
+      });
+    }
+
+    setIsInCall(false);
+    setParticipants([]);
+  }
+
   // 3) Join an existing room by name
   function joinRoom(roomName) {
     if (!user?.id) return;
@@ -48,6 +203,7 @@ export default function MeetWithFriends() {
 
   // 4) Leave the current room
   function leaveRoom() {
+    stopVideoCall();
     setJoinedRoom(null);
   }
 
@@ -103,26 +259,92 @@ export default function MeetWithFriends() {
         </div>
       ) : (
         <div className="w-full h-full flex flex-col">
-          <div className="flex justify-between w-full p-4 bg-gray-900">
+          {/* Room Header */}
+          <div className="flex justify-between items-center w-full p-4 bg-gray-900">
             <span className="text-white text-lg">Room: {joinedRoom}</span>
-            <button
-              onClick={leaveRoom}
-              className="px-4 py-2 bg-red-600 text-white rounded"
-            >
-              Leave Room
-            </button>
+            <div className="flex gap-2">
+              {!isInCall ? (
+                <button
+                  onClick={startVideoCall}
+                  className="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700"
+                >
+                  Start Video Call
+                </button>
+              ) : (
+                <button
+                  onClick={stopVideoCall}
+                  className="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700"
+                >
+                  End Call
+                </button>
+              )}
+              <button
+                onClick={leaveRoom}
+                className="px-4 py-2 bg-gray-600 text-white rounded hover:bg-gray-700"
+              >
+                Leave Room
+              </button>
+            </div>
           </div>
 
-          <iframe
-            src={`https://meet.jit.si/${encodeURIComponent(joinedRoom)}#config.disableDeepLinking=true&interfaceConfig.DEFAULT_REMOTE_DISPLAY_NAME="Participant"&interfaceConfig.DEFAULT_LOCAL_DISPLAY_NAME="You"&config.resolution=360`}
-            allow="camera; microphone; fullscreen; display-capture"
-            style={{
-              width: "100%",
-              height: "100%",
-              border: 0,
-              flexGrow: 1,
-            }}
-          />
+          {/* Video Call Interface */}
+          {isInCall ? (
+            <div className="flex-1 bg-black p-4">
+              {/* Video Grid */}
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 h-full">
+                {/* Local Video */}
+                <div className="relative bg-gray-800 rounded-lg overflow-hidden">
+                  <video
+                    ref={localVideoRef}
+                    autoPlay
+                    muted
+                    playsInline
+                    className="w-full h-full object-cover"
+                  />
+                  <div className="absolute bottom-2 left-2 bg-black bg-opacity-50 text-white px-2 py-1 rounded text-sm">
+                    You
+                  </div>
+                </div>
+
+                {/* Remote Videos */}
+                {participants.map((participantId) => {
+                  const videoRef = remoteVideoRefs.current.get(participantId);
+                  return (
+                    <div key={participantId} className="relative bg-gray-800 rounded-lg overflow-hidden">
+                      <video
+                        ref={(el) => {
+                          if (videoRef) videoRef.current = el;
+                        }}
+                        autoPlay
+                        playsInline
+                        className="w-full h-full object-cover"
+                      />
+                      <div className="absolute bottom-2 left-2 bg-black bg-opacity-50 text-white px-2 py-1 rounded text-sm">
+                        User {participantId}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+
+              {/* Call Info */}
+              <div className="mt-4 text-center text-white">
+                <p>Participants: {participants.length + 1}</p>
+              </div>
+            </div>
+          ) : (
+            <div className="flex-1 flex items-center justify-center bg-gray-100">
+              <div className="text-center">
+                <h3 className="text-xl font-semibold mb-4">Ready to start video call</h3>
+                <p className="text-gray-600 mb-4">
+                  Click "Start Video Call" to begin the meeting
+                </p>
+                <p className="text-sm text-gray-500">
+                  Participants in room: {participants.length + 1}
+                </p>
+              </div>
+            </div>
+          )}
         </div>
       )}
     </div>
