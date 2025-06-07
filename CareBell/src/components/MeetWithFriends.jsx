@@ -460,30 +460,38 @@ export default function MeetWithFriends() {
 
           <div className="w-full max-w-2xl">
             <h3 className="text-white text-xl mb-4">{t("MeetWithFriends.availableRooms")}</h3>
-            <ul className="space-y-3">              {rooms.map((r) => {
-                // Use room.name for participant count lookup (consistent with backend)
-                const participantCount = roomParticipants.get(r.name) || 0;
-                return (
-                  <li
-                    key={r._id}
-                    className="flex justify-between items-center bg-gray-800 p-4 rounded-lg shadow-lg hover:bg-gray-700 transition-colors"
-                  >
-                    <div className="flex flex-col">
-                      <span className="text-white text-lg font-medium">{r.name}</span>
-                      <span className="text-gray-400 text-sm">
-                        👥 {participantCount} {t("MeetWithFriends.participant")}{participantCount !== 1 ? t("MeetWithFriends.s") : ''} {t("MeetWithFriends.online")}
-                      </span>
-                    </div>
-                    <button
-                      className="px-6 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 font-semibold transition-colors"
-                      onClick={() => joinRoom(r.name)}
-                    >
-                      🎥 {t("MeetWithFriends.joinCall")}
-                    </button>
-                  </li>
-                );
-              })}
-            </ul>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+  {rooms.map((r) => {
+    const participantCount = roomParticipants.get(r.name) || 0;
+    return (
+      <div
+        key={r._id}
+        className="flex flex-col justify-between bg-[#2b2b2f] border border-gray-700 rounded-xl p-6 shadow-md hover:shadow-xl transition duration-300"
+        style={{ minHeight: '200px' }}
+      >
+        {/*Title and the name of the room*/}
+        <div>
+          <h4 className="text-white text-xl font-semibold mb-1">
+            {r.name}
+          </h4>
+          <p className="text-gray-400 text-sm">
+            👥 {participantCount} {t("MeetWithFriends.participant")}
+            {participantCount !== 1 ? t("MeetWithFriends.s") : ""} {t("MeetWithFriends.online")}
+          </p>
+        </div>
+
+        {/*Entrance button*/}
+        <button
+          onClick={() => joinRoom(r.name)}
+          className="mt-4 bg-[#4f46e5] hover:bg-[#4338ca] text-white font-semibold py-2 px-4 rounded-lg text-center transition-all"
+        >
+          🎥 {t("MeetWithFriends.joinCall")}
+        </button>
+      </div>
+    );
+  })}
+</div>
+
             {rooms.length === 0 && (
               <p className="text-gray-400 text-center py-8">{t("MeetWithFriends.noRooms")}</p>
             )}
