@@ -60,6 +60,9 @@ module.exports = function (io) {
         // Notify all in room of new participant list
         io.to(roomId).emit('room-participants', currentParticipants);
         console.log(`Notified room ${roomId} of updated participants:`, currentParticipants);
+
+        // Broadcast updated participant count to all clients
+        io.emit('room-participant-count', { roomName: roomId, count: currentParticipants.length });
       }, 100); // 100ms delay
     });
 
@@ -76,6 +79,9 @@ module.exports = function (io) {
           const currentParticipants = Array.from(roomParticipants.get(roomId));
           console.log(`Room ${roomId} now has participants:`, currentParticipants);
           io.to(roomId).emit('room-participants', currentParticipants);
+
+          // Broadcast updated participant count to all clients
+          io.emit('room-participant-count', { roomName: roomId, count: currentParticipants.length });
         }
       }
     });
@@ -113,6 +119,12 @@ module.exports = function (io) {
       }
     });
 
+    // Get participant count for a specific room
+    socket.on('get-room-participant-count', (roomName) => {
+      const count = roomParticipants.has(roomName) ? roomParticipants.get(roomName).size : 0;
+      socket.emit('room-participant-count', { roomName, count });
+    });
+
     // On disconnect, remove from room
     socket.on('disconnect', () => {
       console.log(`Socket ${socket.id} disconnected`);
@@ -132,7 +144,11 @@ module.exports = function (io) {
           console.log(`Room ${roomId} deleted - no participants left`);
         } else {
           console.log(`Notifying room ${roomId} of participant update`);
-          io.to(roomId).emit('room-participants', Array.from(roomParticipants.get(roomId)));
+          const currentParticipants = Array.from(roomParticipants.get(roomId));
+          io.to(roomId).emit('room-participants', currentParticipants);
+
+          // Broadcast updated participant count to all clients
+          io.emit('room-participant-count', { roomName: roomId, count: currentParticipants.length });
         }
       }
     });

@@ -12,6 +12,7 @@ export default function MeetWithFriends() {
   const [rooms, setRooms] = useState([]);
   const [joinedRoom, setJoinedRoom] = useState(null);
   const [newRoomName, setNewRoomName] = useState("");
+  const [roomParticipants, setRoomParticipants] = useState(new Map()); // roomName -> participant count
 
   // Video call state
   const [isInCall, setIsInCall] = useState(false);
@@ -49,23 +50,44 @@ export default function MeetWithFriends() {
       }
     });
 
+    // Listen for room participant counts (for room list)
+    socket.on('room-participant-count', ({ roomName, count }) => {
+      setRoomParticipants(prev => new Map(prev.set(roomName, count)));
+    });
+
     return () => {
       socket.disconnect();
     };
   }, [user?.id]);
 
-  // 1) Fetch the list of rooms on mount
+  // 1) Fetch the list of rooms on mount and get participant counts
   useEffect(() => {
     async function fetchRooms() {
       try {
         const res = await axios.get(`${API}/rooms`);
         setRooms(res.data);
+
+        // Request participant counts for all rooms
+        if (socketRef.current) {
+          res.data.forEach(room => {
+            socketRef.current.emit('get-room-participant-count', room.name);
+          });
+        }
       } catch (e) {
         console.error("Error fetching rooms:", e);
       }
     }
     fetchRooms();
   }, []);
+
+  // Request participant counts when socket is ready
+  useEffect(() => {
+    if (socketRef.current && rooms.length > 0) {
+      rooms.forEach(room => {
+        socketRef.current.emit('get-room-participant-count', room.name);
+      });
+    }
+  }, [rooms]);
 
   // Handle participants joining/leaving and create WebRTC connections
   useEffect(() => {
@@ -141,32 +163,7 @@ export default function MeetWithFriends() {
     }
   }
 
-  // Start video call
-  async function startVideoCall() {
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({
-        video: true,
-        audio: true
-      });
 
-      setLocalStream(stream);
-      setIsInCall(true);
-
-      if (localVideoRef.current) {
-        localVideoRef.current.srcObject = stream;
-      }
-
-      // Join the room via socket
-      socketRef.current.emit('join-room', {
-        roomId: joinedRoom,
-        userId: user.id
-      });
-
-    } catch (error) {
-      console.error('Error accessing media devices:', error);
-      alert('Could not access camera/microphone. Please check permissions.');
-    }
-  }
 
   // Stop video call
   function stopVideoCall() {
@@ -195,10 +192,36 @@ export default function MeetWithFriends() {
     setParticipants([]);
   }
 
-  // 3) Join an existing room by name
-  function joinRoom(roomName) {
+  // 3) Join an existing room by name and automatically start video call
+  async function joinRoom(roomName) {
     if (!user?.id) return;
     setJoinedRoom(roomName);
+
+    // Automatically start video call when joining room
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: true,
+        audio: true
+      });
+
+      setLocalStream(stream);
+      setIsInCall(true);
+
+      if (localVideoRef.current) {
+        localVideoRef.current.srcObject = stream;
+      }
+
+      // Join the room via socket
+      socketRef.current.emit('join-room', {
+        roomId: roomName,
+        userId: user.id
+      });
+
+    } catch (error) {
+      console.error('Error accessing media devices:', error);
+      alert('Could not access camera/microphone. Please check permissions and try again.');
+      setJoinedRoom(null); // Go back to room list if media access fails
+    }
   }
 
   // 4) Leave the current room
@@ -247,20 +270,28 @@ export default function MeetWithFriends() {
           <div className="w-full max-w-2xl">
             <h3 className="text-white text-xl mb-4">Available Rooms:</h3>
             <ul className="space-y-3">
-              {rooms.map((r) => (
-                <li
-                  key={r._id}
-                  className="flex justify-between items-center bg-gray-800 p-4 rounded-lg shadow-lg"
-                >
-                  <span className="text-white text-lg font-medium">{r.name}</span>
-                  <button
-                    className="px-6 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 font-semibold"
-                    onClick={() => joinRoom(r.name)}
+              {rooms.map((r) => {
+                const participantCount = roomParticipants.get(r.name) || 0;
+                return (
+                  <li
+                    key={r._id}
+                    className="flex justify-between items-center bg-gray-800 p-4 rounded-lg shadow-lg hover:bg-gray-700 transition-colors"
                   >
-                    Join Room
-                  </button>
-                </li>
-              ))}
+                    <div className="flex flex-col">
+                      <span className="text-white text-lg font-medium">{r.name}</span>
+                      <span className="text-gray-400 text-sm">
+                        👥 {participantCount} participant{participantCount !== 1 ? 's' : ''} online
+                      </span>
+                    </div>
+                    <button
+                      className="px-6 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 font-semibold transition-colors"
+                      onClick={() => joinRoom(r.name)}
+                    >
+                      🎥 Join Call
+                    </button>
+                  </li>
+                );
+              })}
             </ul>
             {rooms.length === 0 && (
               <p className="text-gray-400 text-center py-8">No rooms available. Create one to get started!</p>
@@ -272,27 +303,18 @@ export default function MeetWithFriends() {
           {/* Room Header */}
           <div className="flex justify-between items-center w-full p-6 bg-gray-800 border-b border-gray-700">
             <div>
-              <h2 className="text-white text-2xl font-bold">Room: {joinedRoom}</h2>
+              <h2 className="text-white text-2xl font-bold">🎥 Room: {joinedRoom}</h2>
               <p className="text-gray-300 text-sm mt-1">
-                {isInCall ? `${participants.length + 1} participants in call` : 'Ready to start video call'}
+                👥 {participants.length + 1} participant{participants.length !== 0 ? 's' : ''} in call
               </p>
             </div>
             <div className="flex gap-3">
-              {!isInCall ? (
-                <button
-                  onClick={startVideoCall}
-                  className="px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 font-semibold text-lg shadow-lg transition-colors"
-                >
-                  🎥 Start Video Call
-                </button>
-              ) : (
-                <button
-                  onClick={stopVideoCall}
-                  className="px-6 py-3 bg-red-600 text-white rounded-lg hover:bg-red-700 font-semibold text-lg shadow-lg transition-colors"
-                >
-                  📞 End Call
-                </button>
-              )}
+              <button
+                onClick={stopVideoCall}
+                className="px-6 py-3 bg-red-600 text-white rounded-lg hover:bg-red-700 font-semibold text-lg shadow-lg transition-colors"
+              >
+                📞 End Call
+              </button>
               <button
                 onClick={leaveRoom}
                 className="px-6 py-3 bg-gray-600 text-white rounded-lg hover:bg-gray-700 font-semibold text-lg shadow-lg transition-colors"
@@ -303,87 +325,62 @@ export default function MeetWithFriends() {
           </div>
 
           {/* Video Call Interface */}
-          {isInCall ? (
-            <div className="flex-1 bg-black p-6 overflow-hidden">
-              {/* Video Grid */}
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 h-full min-h-0">
-                {/* Local Video */}
-                <div className="relative bg-gray-800 rounded-xl overflow-hidden shadow-2xl border-2 border-green-500">
-                  <video
-                    ref={localVideoRef}
-                    autoPlay
-                    muted
-                    playsInline
-                    className="w-full h-full object-cover"
-                  />
-                  <div className="absolute bottom-4 left-4 bg-green-600 bg-opacity-90 text-white px-3 py-2 rounded-lg font-semibold">
-                    📹 You (Local)
-                  </div>
-                  <div className="absolute top-4 right-4 bg-black bg-opacity-50 text-white px-2 py-1 rounded text-xs">
-                    🔴 LIVE
-                  </div>
+          <div className="flex-1 bg-black p-6 overflow-hidden">
+            {/* Video Grid */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 h-full min-h-0">
+              {/* Local Video */}
+              <div className="relative bg-gray-800 rounded-xl overflow-hidden shadow-2xl border-2 border-green-500">
+                <video
+                  ref={localVideoRef}
+                  autoPlay
+                  muted
+                  playsInline
+                  className="w-full h-full object-cover"
+                />
+                <div className="absolute bottom-4 left-4 bg-green-600 bg-opacity-90 text-white px-3 py-2 rounded-lg font-semibold">
+                  📹 You (Local)
                 </div>
+                <div className="absolute top-4 right-4 bg-black bg-opacity-50 text-white px-2 py-1 rounded text-xs">
+                  🔴 LIVE
+                </div>
+              </div>
 
-                {/* Remote Videos */}
-                {participants.map((participantId) => {
-                  const videoRef = remoteVideoRefs.current.get(participantId);
-                  return (
-                    <div key={participantId} className="relative bg-gray-800 rounded-xl overflow-hidden shadow-2xl border-2 border-blue-500">
-                      <video
-                        ref={(el) => {
-                          if (videoRef) videoRef.current = el;
-                        }}
-                        autoPlay
-                        playsInline
-                        className="w-full h-full object-cover"
-                      />
-                      <div className="absolute bottom-4 left-4 bg-blue-600 bg-opacity-90 text-white px-3 py-2 rounded-lg font-semibold">
-                        👤 User {participantId}
-                      </div>
-                      <div className="absolute top-4 right-4 bg-black bg-opacity-50 text-white px-2 py-1 rounded text-xs">
-                        🔴 LIVE
-                      </div>
+              {/* Remote Videos */}
+              {participants.map((participantId) => {
+                const videoRef = remoteVideoRefs.current.get(participantId);
+                return (
+                  <div key={participantId} className="relative bg-gray-800 rounded-xl overflow-hidden shadow-2xl border-2 border-blue-500">
+                    <video
+                      ref={(el) => {
+                        if (videoRef) videoRef.current = el;
+                      }}
+                      autoPlay
+                      playsInline
+                      className="w-full h-full object-cover"
+                    />
+                    <div className="absolute bottom-4 left-4 bg-blue-600 bg-opacity-90 text-white px-3 py-2 rounded-lg font-semibold">
+                      👤 User {participantId}
                     </div>
-                  );
-                })}
-              </div>
+                    <div className="absolute top-4 right-4 bg-black bg-opacity-50 text-white px-2 py-1 rounded text-xs">
+                      🔴 LIVE
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
 
-              {/* Call Controls & Info */}
-              <div className="mt-6 text-center">
-                <div className="bg-gray-800 rounded-lg p-4 inline-block">
-                  <p className="text-white text-lg font-semibold">
-                    👥 Active Participants: {participants.length + 1}
-                  </p>
-                  <p className="text-gray-300 text-sm mt-1">
-                    Video call in progress
-                  </p>
-                </div>
-              </div>
-            </div>
-          ) : (
-            <div className="flex-1 flex items-center justify-center bg-gradient-to-br from-gray-800 to-gray-900">
-              <div className="text-center p-12 bg-gray-800 rounded-2xl shadow-2xl border border-gray-700 max-w-lg">
-                <div className="text-6xl mb-6">🎥</div>
-                <h3 className="text-3xl font-bold text-white mb-6">Ready to Connect</h3>
-                <p className="text-gray-300 text-lg mb-6 leading-relaxed">
-                  Click "Start Video Call" to begin your meeting with other participants
+            {/* Call Controls & Info */}
+            <div className="mt-6 text-center">
+              <div className="bg-gray-800 rounded-lg p-4 inline-block">
+                <p className="text-white text-lg font-semibold">
+                  👥 Active Participants: {participants.length + 1}
                 </p>
-                <div className="bg-gray-700 rounded-lg p-4 mb-6">
-                  <p className="text-white font-semibold text-lg">
-                    👥 Participants in room: {participants.length + 1}
-                  </p>
-                  {participants.length > 0 && (
-                    <p className="text-green-400 text-sm mt-2">
-                      ✅ Other participants are ready to connect
-                    </p>
-                  )}
-                </div>
-                <div className="text-gray-400 text-sm">
-                  💡 Make sure your camera and microphone are ready
-                </div>
+                <p className="text-gray-300 text-sm mt-1">
+                  Video call in progress
+                </p>
               </div>
             </div>
-          )}
+          </div>
         </div>
       )}
     </div>
