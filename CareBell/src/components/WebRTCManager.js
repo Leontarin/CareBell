@@ -54,18 +54,27 @@ class WebRTCManager {
     });
 
     this.peerConnection.ontrack = (event) => {
+      console.log(`Track received from ${this.userId}:`, event.track.kind, event.track.enabled);
+      
       if (!this._remoteStream) {
         this._remoteStream = new MediaStream();
+        console.log('Created new remote stream for', this.userId);
       }
+      
       if (event.streams && event.streams[0]) {
         this._remoteStream = event.streams[0];
+        console.log('Using stream from event for', this.userId, 'tracks:', event.streams[0].getTracks().length);
       } else {
         this._remoteStream.addTrack(event.track);
+        console.log('Added track to remote stream for', this.userId, 'total tracks:', this._remoteStream.getTracks().length);
       }
 
       // Call the callback if provided
       if (this.onRemoteStream) {
+        console.log('Calling onRemoteStream callback for', this.userId);
         this.onRemoteStream(this._remoteStream);
+      } else {
+        console.warn('No onRemoteStream callback set for', this.userId);
       }
 
       if (this.remoteVideoRef.current) {
@@ -73,11 +82,15 @@ class WebRTCManager {
         this.remoteVideoRef.current.play().catch(e => {
           console.log("Autoplay prevented:", e.message);
         });
+        console.log('Set srcObject on video element for', this.userId);
+      } else {
+        console.warn('No remote video ref available for', this.userId);
       }
     };
 
     this.peerConnection.onicecandidate = (event) => {
       if (event.candidate) {
+        console.log(`Sending ICE candidate from ${this.userId} to room ${this.roomId}`);
         this.socket.emit('signal', {
           roomId: this.roomId,
           userId: this.userId,
@@ -86,6 +99,8 @@ class WebRTCManager {
             candidate: event.candidate
           }
         });
+      } else {
+        console.log(`ICE gathering complete for ${this.userId}`);
       }
     };
 
@@ -145,12 +160,19 @@ class WebRTCManager {
   }
 
   async createOffer() {
-    if (this.peerConnection.signalingState !== 'stable') return false;
+    if (this.peerConnection.signalingState !== 'stable') {
+      console.log(`Cannot create offer in state: ${this.peerConnection.signalingState}`);
+      return false;
+    }
+    
+    console.log(`Creating offer from ${this.userId} for room ${this.roomId}`);
     const offer = await this.peerConnection.createOffer({
       offerToReceiveAudio: true,
       offerToReceiveVideo: true
     });
     await this.peerConnection.setLocalDescription(offer);
+    
+    console.log(`Sending offer from ${this.userId} to room ${this.roomId}`);
     this.socket.emit('signal', {
       roomId: this.roomId,
       userId: this.userId,
@@ -172,6 +194,8 @@ class WebRTCManager {
   }
 
   async handleOffer(offer) {
+    console.log(`Handling offer from another user, polite: ${this.polite}, making offer: ${this.makingOffer}`);
+    
     const offerDesc = typeof offer.sdp === 'string' ? offer : { type: 'offer', sdp: offer };
     const ready = !this.makingOffer && (
       this.peerConnection.signalingState === 'stable' ||
@@ -179,14 +203,26 @@ class WebRTCManager {
     );
     const collision = !ready;
     this.ignoreOffer = !this.polite && collision;
-    if (this.ignoreOffer) return false;
+    
+    console.log(`Offer handling - ready: ${ready}, collision: ${collision}, ignoreOffer: ${this.ignoreOffer}`);
+    
+    if (this.ignoreOffer) {
+      console.log('Ignoring offer due to collision and impolite role');
+      return false;
+    }
+    
     if (collision && this.polite) {
+      console.log('Rolling back due to collision (polite)');
       await this.peerConnection.setLocalDescription({ type: 'rollback' });
     }
+    
     await this.peerConnection.setRemoteDescription(offerDesc);
     await this.processQueuedIceCandidates();
+    
     const answer = await this.peerConnection.createAnswer();
     await this.peerConnection.setLocalDescription(answer);
+    
+    console.log(`Sending answer from ${this.userId} to room ${this.roomId}`);
     this.socket.emit('signal', {
       roomId: this.roomId,
       userId: this.userId,
@@ -196,14 +232,21 @@ class WebRTCManager {
   }
 
   async handleAnswer(answer) {
+    // Ignore spurious answers in stable state (fixed bug)
     if (this.peerConnection.signalingState === 'stable') {
-      await this.peerConnection.setLocalDescription({ type: 'rollback' });
-      if (this.isInitiator) await this.createOffer();
+      console.log('Ignoring answer received in stable state');
       return false;
     }
-    if (this.peerConnection.signalingState !== 'have-local-offer') return false;
-    await this.peerConnection.setRemoteDescription(answer);
+    if (this.peerConnection.signalingState !== 'have-local-offer') {
+      console.log(`Cannot handle answer in state: ${this.peerConnection.signalingState}`);
+      return false;
+    }
+    
+    console.log(`Processing answer from another user`);
+    const answerDesc = typeof answer.sdp === 'string' ? answer : { type: 'answer', sdp: answer };
+    await this.peerConnection.setRemoteDescription(answerDesc);
     await this.processQueuedIceCandidates();
+    console.log('Answer processed successfully');
     return true;
   }
 

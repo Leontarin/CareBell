@@ -100,13 +100,12 @@ export default function MeetWithFriends() {
   // 1) Fetch the list of rooms on mount and get participant counts
   useEffect(() => {
     async function fetchRooms() {
-      try {
-        const res = await axios.get(`${API}/rooms`);
+      try {        const res = await axios.get(`${API}/rooms`);
         setRooms(res.data);
-        // Request participant counts for all rooms (use room._id for backend consistency)
+        // Request participant counts for all rooms (use room.name for consistency)
         if (socketRef.current) {
           res.data.forEach(room => {
-            socketRef.current.emit('get-room-participant-count', room._id);
+            socketRef.current.emit('get-room-participant-count', room.name);
           });
         }
       } catch (e) {
@@ -115,17 +114,15 @@ export default function MeetWithFriends() {
     }
     fetchRooms();
   }, []);
-
   // Request participant counts when socket is ready
   useEffect(() => {
     if (socketRef.current && rooms.length > 0) {
       rooms.forEach(room => {
-        socketRef.current.emit('get-room-participant-count', room._id);
+        socketRef.current.emit('get-room-participant-count', room.name);
       });
     }
   }, [rooms]);
-
-  // Handle participants joining/leaving and create WebRTC connections
+    // Handle participants joining/leaving and create WebRTC connections
   useEffect(() => {
     if (!isInCall || !localStream || !joinedRoom || !user?.id) return;
 
@@ -137,10 +134,8 @@ export default function MeetWithFriends() {
       if (participantId === user.id) return; // Skip self
 
       if (!webRTCManagers.has(participantId)) {
-        console.log('Creating WebRTC connection for participant:', participantId, 'from user', user.id);
-
-        // Create new WebRTC connection for this participant
-        const remoteVideoRef = { current: null };
+        console.log('Creating WebRTC connection for participant:', participantId, 'from user', user.id);        // Create new video element ref for this participant
+        const remoteVideoRef = React.createRef();
         remoteVideoRefs.current.set(participantId, remoteVideoRef);
 
         const manager = new WebRTCManager(
@@ -156,7 +151,7 @@ export default function MeetWithFriends() {
           console.log('Connection failed with', participantId);
         };
 
-        // Handle remote stream
+        // Handle remote stream - CRITICAL FIX
         manager.onRemoteStream = (stream) => {
           console.log('Received remote stream from', participantId);
           console.log('Stream tracks:', stream.getTracks().map(t => ({ kind: t.kind, enabled: t.enabled })));
@@ -167,13 +162,16 @@ export default function MeetWithFriends() {
             return newMap;
           });
 
-          // Set the video element source
+          // Set the video element source immediately
           const videoRef = remoteVideoRefs.current.get(participantId);
           if (videoRef && videoRef.current) {
+            console.log('Setting srcObject for video element of participant:', participantId);
             videoRef.current.srcObject = stream;
             videoRef.current.volume = 1.0;
             videoRef.current.muted = false;
             videoRef.current.play().catch(e => console.log('Autoplay prevented:', e));
+          } else {
+            console.warn('Video ref not found for participant:', participantId);
           }
         };
 
@@ -184,8 +182,8 @@ export default function MeetWithFriends() {
           return newMap;
         });
 
-        // Initialize the connection
-        const isInitiator = user.id < participantId;
+        // Initialize the connection - FIXED: proper initiator logic
+        const isInitiator = user.id.localeCompare(participantId) < 0;
         console.log('Initializing connection with', participantId, 'as initiator:', isInitiator);
 
         try {
@@ -355,10 +353,9 @@ export default function MeetWithFriends() {
 
           <div className="w-full max-w-2xl">
             <h3 className="text-white text-xl mb-4">Available Rooms:</h3>
-            <ul className="space-y-3">
-              {rooms.map((r) => {
-                // Use room._id for participant count lookup
-                const participantCount = roomParticipants.get(r._id) || 0;
+            <ul className="space-y-3">              {rooms.map((r) => {
+                // Use room.name for participant count lookup (consistent with backend)
+                const participantCount = roomParticipants.get(r.name) || 0;
                 return (
                   <li
                     key={r._id}
@@ -388,11 +385,10 @@ export default function MeetWithFriends() {
       ) : (
         <div className="w-full h-full flex flex-col bg-gray-900">
           {/* Room Header */}
-          <div className="flex justify-between items-center w-full p-6 bg-gray-800 border-b border-gray-700">
-            <div>
+          <div className="flex justify-between items-center w-full p-6 bg-gray-800 border-b border-gray-700">            <div>
               <h2 className="text-white text-2xl font-bold">🎥 Room: {joinedRoom}</h2>
               <p className="text-gray-300 text-sm mt-1">
-                👥 {participants.length + 1} participant{participants.length !== 0 ? 's' : ''} in call
+                👥 {participants.length} participant{participants.length !== 1 ? 's' : ''} in call
               </p>
             </div>
             <div className="flex gap-3">
@@ -424,21 +420,29 @@ export default function MeetWithFriends() {
                   playsInline
                   className="w-full h-full object-cover"
                 />
-              </div>
-
-              {/* Remote Videos */}
+              </div>              {/* Remote Videos */}
               {participants.filter(pid => pid !== user.id).map((participantId) => {
-                const videoRef = remoteVideoRefs.current.get(participantId);
                 return (
                   <div key={participantId} className="relative bg-gray-800 rounded-xl overflow-hidden shadow-2xl border-2 border-blue-500">
                     <video
                       ref={(el) => {
+                        // Get the existing ref for this participant
+                        const videoRef = remoteVideoRefs.current.get(participantId);
                         if (videoRef) {
                           videoRef.current = el;
-                          // Ensure audio is enabled for remote videos
-                          if (el) {
-                            el.volume = 1.0;
-                            el.muted = false;
+                        }
+                        
+                        // Ensure audio is enabled for remote videos
+                        if (el) {
+                          el.volume = 1.0;
+                          el.muted = false;
+                          
+                          // If we have a stream for this participant, set it
+                          const stream = remoteStreams.get(participantId);
+                          if (stream && el.srcObject !== stream) {
+                            console.log('Setting stream for participant video:', participantId);
+                            el.srcObject = stream;
+                            el.play().catch(e => console.log('Autoplay prevented:', e));
                           }
                         }
                       }}
@@ -458,11 +462,10 @@ export default function MeetWithFriends() {
               })}
             </div>
 
-            {/* Call Controls & Info */}
-            <div className="mt-6 text-center">
+            {/* Call Controls & Info */}            <div className="mt-6 text-center">
               <div className="bg-gray-800 rounded-lg p-4 inline-block">
                 <p className="text-white text-lg font-semibold">
-                  👥 Active Participants: {participants.length + 1}
+                  👥 Active Participants: {participants.length}
                 </p>
                 <p className="text-gray-300 text-sm mt-1">
                   Video call in progress

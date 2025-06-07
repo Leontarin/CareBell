@@ -20,18 +20,19 @@ const roomsRoute = require('./routes/rooms');
 
 const app = express(); 
 const server = https.createServer({ 
-  key: fs.readFileSync('./privkey.pem'), 
-  cert: fs.readFileSync('./fullchain.pem') 
+  key: fs.readFileSync('./localhost+3-key.pem'), 
+  cert: fs.readFileSync('./localhost+3.pem') 
 }, app); 
 
 const io = new Server(server, { 
   cors: { 
     origin: [
-      'https://*.vercel.app',
+      'https://carebell.vercel.app',
       'https://localhost:5173',
       'http://localhost:5173',
       'https://carebell.online',
-      '*'
+      'http://localhost:3000',
+      'https://localhost:3000'
     ], 
     methods: ['GET', 'POST'], 
     credentials: true,
@@ -49,7 +50,19 @@ io.on('connection_error', (err) => {
 
 const PORT = 4443; 
 
-app.use(cors()); 
+app.use(cors({
+  origin: [
+    'https://carebell.vercel.app',
+    'https://localhost:5173',
+    'http://localhost:5173',
+    'https://carebell.online',
+    'http://localhost:3000',
+    'https://localhost:3000'
+  ],
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization']
+})); 
 app.use(express.json()); 
 
 mongoose.connect('mongodb+srv://CareBell:vTDHDu9pHns9HNlw@cluster0.bqe7zge.mongodb.net/CareBell') 
@@ -77,6 +90,6 @@ app.get('/', (req, res) =>{
 require('./sockets')(io); 
 
 server.listen(PORT, () => { 
-  console.log('HTTPS server started on https://carebell.online'); 
+  console.log(`HTTPS server started on https://localhost:${PORT}`); 
 });
 
