@@ -504,16 +504,7 @@ export default function MeetWithFriends() {
                         console.error('Video error for', participantId, ':', e);
                       }}
                     />
-                    <div className="absolute bottom-4 left-4 bg-blue-600 bg-opacity-90 text-white px-3 py-2 rounded-lg font-semibold">
-                      👤 User {participantId}
-                    </div>
-                    <div className="absolute top-4 right-4 bg-black bg-opacity-50 text-white px-2 py-1 rounded text-xs">
-                      🔴 LIVE
-                    </div>
-                    {/* Debug info */}
-                    <div className="absolute top-4 left-4 bg-black bg-opacity-50 text-white px-2 py-1 rounded text-xs">
-                      {stream ? `✅ Stream (${stream.getTracks().length} tracks)` : '❌ No stream'}
-                    </div>
+                  
                   </div>
                 );
               })}
