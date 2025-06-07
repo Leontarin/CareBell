@@ -25,10 +25,12 @@ export default function MeetWithFriends() {
   const localVideoRef = useRef(null);
   const socketRef = useRef(null);
   const remoteVideoRefs = useRef(new Map()); // userId -> videoRef
-
   // Initialize socket connection
   useEffect(() => {
-    const socket = io(API);
+    const socket = io(API, {
+      withCredentials: false, // Match backend credentials: false
+      transports: ['websocket', 'polling']
+    });
     socketRef.current = socket;
 
     if (user?.id) {

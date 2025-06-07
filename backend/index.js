@@ -20,22 +20,15 @@ const roomsRoute = require('./routes/rooms');
 
 const app = express(); 
 const server = https.createServer({ 
-  key: fs.readFileSync('./localhost+3-key.pem'), 
-  cert: fs.readFileSync('./localhost+3.pem') 
+  key: fs.readFileSync('./privkey.pem'), 
+  cert: fs.readFileSync('./fullchain.pem') 
 }, app); 
 
 const io = new Server(server, { 
   cors: { 
-    origin: [
-      'https://carebell.vercel.app',
-      'https://localhost:5173',
-      'http://localhost:5173',
-      'https://carebell.online',
-      'http://localhost:3000',
-      'https://localhost:3000'
-    ], 
+    origin: "*", // Allow all origins
     methods: ['GET', 'POST'], 
-    credentials: true,
+    credentials: false, // Set to false when using wildcard origin
     allowedHeaders: ['Content-Type', 'Authorization']
   }, 
   transports: ['websocket', 'polling'],
@@ -51,15 +44,8 @@ io.on('connection_error', (err) => {
 const PORT = 4443; 
 
 app.use(cors({
-  origin: [
-    'https://carebell.vercel.app',
-    'https://localhost:5173',
-    'http://localhost:5173',
-    'https://carebell.online',
-    'http://localhost:3000',
-    'https://localhost:3000'
-  ],
-  credentials: true,
+  origin: "*", // Allow all origins
+  credentials: false, // Set to false when using wildcard origin
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization']
 })); 
@@ -90,6 +76,6 @@ app.get('/', (req, res) =>{
 require('./sockets')(io); 
 
 server.listen(PORT, () => { 
-  console.log(`HTTPS server started on https://localhost:${PORT}`); 
+  console.log('HTTPS server started on https://belladb.leontari.uk'); 
 });
 
