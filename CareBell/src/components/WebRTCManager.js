@@ -21,6 +21,7 @@ class WebRTCManager {
     this.negotiationLock       = false;
     this.makingOffer           = false;
     this.ignoreOffer           = false;
+    this.isSettingRemoteDesc   = false;
     this.onRemoteStream        = null; // Callback for when remote stream is received
 
     this.iceServers = [
@@ -54,22 +55,36 @@ class WebRTCManager {
     });
 
     this.peerConnection.ontrack = (event) => {
-      console.log(`Track received from ${this.userId}:`, event.track.kind, event.track.enabled);
+      console.log(`Track received from ${this.userId}:`, event.track.kind, event.track.enabled, event.track.readyState);
       
-      if (!this._remoteStream) {
-        this._remoteStream = new MediaStream();
-        console.log('Created new remote stream for', this.userId);
-      }
-      
+      // Use the stream from the event if available
       if (event.streams && event.streams[0]) {
         this._remoteStream = event.streams[0];
         console.log('Using stream from event for', this.userId, 'tracks:', event.streams[0].getTracks().length);
       } else {
+        // Create new stream if needed
+        if (!this._remoteStream) {
+          this._remoteStream = new MediaStream();
+          console.log('Created new remote stream for', this.userId);
+        }
         this._remoteStream.addTrack(event.track);
         console.log('Added track to remote stream for', this.userId, 'total tracks:', this._remoteStream.getTracks().length);
       }
 
-      // Call the callback if provided
+      // Log stream details
+      console.log('Remote stream details:', {
+        userId: this.userId,
+        streamId: this._remoteStream.id,
+        tracks: this._remoteStream.getTracks().map(t => ({
+          kind: t.kind,
+          id: t.id,
+          enabled: t.enabled,
+          readyState: t.readyState,
+          muted: t.muted
+        }))
+      });
+
+      // Call the callback if provided - this is critical for UI updates
       if (this.onRemoteStream) {
         console.log('Calling onRemoteStream callback for', this.userId);
         this.onRemoteStream(this._remoteStream);
@@ -77,12 +92,15 @@ class WebRTCManager {
         console.warn('No onRemoteStream callback set for', this.userId);
       }
 
+      // Set video element source as backup
       if (this.remoteVideoRef.current) {
+        console.log('Setting srcObject on WebRTC manager video element for', this.userId);
         this.remoteVideoRef.current.srcObject = this._remoteStream;
+        this.remoteVideoRef.current.volume = 1.0;
+        this.remoteVideoRef.current.muted = false;
         this.remoteVideoRef.current.play().catch(e => {
           console.log("Autoplay prevented:", e.message);
         });
-        console.log('Set srcObject on video element for', this.userId);
       } else {
         console.warn('No remote video ref available for', this.userId);
       }
@@ -131,10 +149,20 @@ class WebRTCManager {
     };
 
     this.peerConnection.onnegotiationneeded = async () => {
-      if (this.negotiationLock) return;
+      if (this.negotiationLock || this.makingOffer || this.isSettingRemoteDesc) {
+        console.log('Negotiation already in progress or setting remote desc, skipping');
+        return;
+      }
+      if (this.peerConnection.signalingState !== 'stable') {
+        console.log(`Negotiation needed but connection not stable (${this.peerConnection.signalingState}), skipping`);
+        return;
+      }
+      
       this.negotiationLock = true;
+      this.makingOffer = true;
+      
       try {
-        this.makingOffer = true;
+        console.log(`Negotiation needed for ${this.userId}, creating offer`);
         await this.createOffer();
       } catch (e) {
         console.error('Negotiation error:', e);
@@ -145,7 +173,13 @@ class WebRTCManager {
     };
 
     if (isInitiator) {
-      await this.createOffer();
+      // Add a longer delay to ensure everything is set up and avoid race conditions
+      setTimeout(async () => {
+        if (this.peerConnection && this.peerConnection.signalingState === 'stable' && !this.makingOffer) {
+          console.log('Initiator creating initial offer after delay');
+          await this.createOffer();
+        }
+      }, 500);
     }
 
     return true;
@@ -194,60 +228,80 @@ class WebRTCManager {
   }
 
   async handleOffer(offer) {
-    console.log(`Handling offer from another user, polite: ${this.polite}, making offer: ${this.makingOffer}`);
+    console.log(`Handling offer from another user, polite: ${this.polite}, making offer: ${this.makingOffer}, signaling state: ${this.peerConnection.signalingState}`);
     
     const offerDesc = typeof offer.sdp === 'string' ? offer : { type: 'offer', sdp: offer };
-    const ready = !this.makingOffer && (
-      this.peerConnection.signalingState === 'stable' ||
-      this.peerConnection.signalingState === 'have-local-offer'
-    );
-    const collision = !ready;
-    this.ignoreOffer = !this.polite && collision;
     
-    console.log(`Offer handling - ready: ${ready}, collision: ${collision}, ignoreOffer: ${this.ignoreOffer}`);
+    // Perfect negotiation logic
+    const readyForOffer = this.peerConnection.signalingState === 'stable' || this.peerConnection.signalingState === 'have-remote-offer';
+    const offerCollision = !readyForOffer && this.makingOffer;
+    
+    this.ignoreOffer = !this.polite && offerCollision;
+    
+    console.log(`Offer handling - readyForOffer: ${readyForOffer}, offerCollision: ${offerCollision}, ignoreOffer: ${this.ignoreOffer}`);
     
     if (this.ignoreOffer) {
       console.log('Ignoring offer due to collision and impolite role');
       return false;
     }
     
-    if (collision && this.polite) {
-      console.log('Rolling back due to collision (polite)');
-      await this.peerConnection.setLocalDescription({ type: 'rollback' });
+    this.isSettingRemoteDesc = true;
+    
+    try {
+      if (offerCollision && this.polite) {
+        console.log('Rolling back due to collision (polite)');
+        await this.peerConnection.setLocalDescription({ type: 'rollback' });
+        this.makingOffer = false;
+      }
+      
+      await this.peerConnection.setRemoteDescription(offerDesc);
+      console.log('Remote description set successfully');
+      
+      await this.processQueuedIceCandidates();
+      
+      const answer = await this.peerConnection.createAnswer();
+      await this.peerConnection.setLocalDescription(answer);
+      
+      console.log(`Sending answer from ${this.userId} to room ${this.roomId}`);
+      this.socket.emit('signal', {
+        roomId: this.roomId,
+        userId: this.userId,
+        signal: { type: 'answer', sdp: answer }
+      });
+      
+      return true;
+    } catch (error) {
+      console.error('Error handling offer:', error);
+      return false;
+    } finally {
+      this.isSettingRemoteDesc = false;
     }
-    
-    await this.peerConnection.setRemoteDescription(offerDesc);
-    await this.processQueuedIceCandidates();
-    
-    const answer = await this.peerConnection.createAnswer();
-    await this.peerConnection.setLocalDescription(answer);
-    
-    console.log(`Sending answer from ${this.userId} to room ${this.roomId}`);
-    this.socket.emit('signal', {
-      roomId: this.roomId,
-      userId: this.userId,
-      signal: { type: 'answer', sdp: answer }
-    });
-    return true;
   }
 
   async handleAnswer(answer) {
-    // Ignore spurious answers in stable state (fixed bug)
-    if (this.peerConnection.signalingState === 'stable') {
-      console.log('Ignoring answer received in stable state');
-      return false;
-    }
+    // Check if we're expecting an answer
     if (this.peerConnection.signalingState !== 'have-local-offer') {
-      console.log(`Cannot handle answer in state: ${this.peerConnection.signalingState}`);
+      console.log(`Ignoring answer in state: ${this.peerConnection.signalingState}`);
       return false;
     }
     
     console.log(`Processing answer from another user`);
     const answerDesc = typeof answer.sdp === 'string' ? answer : { type: 'answer', sdp: answer };
-    await this.peerConnection.setRemoteDescription(answerDesc);
-    await this.processQueuedIceCandidates();
-    console.log('Answer processed successfully');
-    return true;
+    
+    this.isSettingRemoteDesc = true;
+    
+    try {
+      await this.peerConnection.setRemoteDescription(answerDesc);
+      await this.processQueuedIceCandidates();
+      console.log('Answer processed successfully');
+      return true;
+    } catch (error) {
+      console.error('Error processing answer:', error);
+      return false;
+    } finally {
+      this.isSettingRemoteDesc = false;
+      this.makingOffer = false; // Clear the making offer flag
+    }
   }
 
   async handleIceCandidate(candidate) {

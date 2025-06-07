@@ -151,30 +151,50 @@ export default function MeetWithFriends() {
 
         manager.onConnectionFailed = () => {
           console.log('Connection failed with', participantId);
-        };
-
-        // Handle remote stream - CRITICAL FIX
+        };        // Handle remote stream - CRITICAL FIX
         manager.onRemoteStream = (stream) => {
           console.log('Received remote stream from', participantId);
-          console.log('Stream tracks:', stream.getTracks().map(t => ({ kind: t.kind, enabled: t.enabled })));
+          console.log('Stream tracks:', stream.getTracks().map(t => ({ kind: t.kind, enabled: t.enabled, readyState: t.readyState })));
 
+          // Update remoteStreams state immediately
           setRemoteStreams(prev => {
             const newMap = new Map(prev);
             newMap.set(participantId, stream);
+            console.log('Updated remoteStreams state for', participantId);
             return newMap;
           });
 
-          // Set the video element source immediately
-          const videoRef = remoteVideoRefs.current.get(participantId);
-          if (videoRef && videoRef.current) {
-            console.log('Setting srcObject for video element of participant:', participantId);
-            videoRef.current.srcObject = stream;
-            videoRef.current.volume = 1.0;
-            videoRef.current.muted = false;
-            videoRef.current.play().catch(e => console.log('Autoplay prevented:', e));
-          } else {
-            console.warn('Video ref not found for participant:', participantId);
-          }
+          // Force immediate video element update
+          setTimeout(() => {
+            const videoRef = remoteVideoRefs.current.get(participantId);
+            if (videoRef && videoRef.current) {
+              console.log('Setting srcObject for video element of participant:', participantId);
+              videoRef.current.srcObject = stream;
+              videoRef.current.volume = 1.0;
+              videoRef.current.muted = false;
+              
+              // Add event listeners to debug video playback
+              videoRef.current.onloadedmetadata = () => {
+                console.log('Video metadata loaded for', participantId, 'dimensions:', videoRef.current.videoWidth, 'x', videoRef.current.videoHeight);
+              };
+              
+              videoRef.current.onplay = () => {
+                console.log('Video started playing for', participantId);
+              };
+              
+              videoRef.current.onerror = (e) => {
+                console.error('Video error for', participantId, ':', e);
+              };
+              
+              videoRef.current.play().then(() => {
+                console.log('Video play() succeeded for', participantId);
+              }).catch(e => {
+                console.log('Autoplay prevented for', participantId, ':', e);
+              });
+            } else {
+              console.warn('Video ref not found for participant:', participantId);
+            }
+          }, 100);
         };
 
         // Update managers state
@@ -182,9 +202,7 @@ export default function MeetWithFriends() {
           const newMap = new Map(prev);
           newMap.set(participantId, manager);
           return newMap;
-        });
-
-        // Initialize the connection - FIXED: proper initiator logic
+        });        // Initialize the connection - FIXED: proper initiator logic
         const isInitiator = user.id.localeCompare(participantId) < 0;
         console.log('Initializing connection with', participantId, 'as initiator:', isInitiator);
 
@@ -223,6 +241,39 @@ export default function MeetWithFriends() {
       }
     });
   }, [participants, isInCall, localStream, joinedRoom, user?.id]);
+
+  // Effect to bind remote streams to video elements when streams change
+  useEffect(() => {
+    console.log('Remote streams changed, updating video elements');
+    
+    remoteStreams.forEach((stream, participantId) => {
+      const videoRef = remoteVideoRefs.current.get(participantId);
+      if (videoRef && videoRef.current) {
+        console.log('Binding stream to video element for participant:', participantId);
+        console.log('Stream details:', {
+          id: stream.id,
+          tracks: stream.getTracks().map(t => ({ kind: t.kind, enabled: t.enabled, readyState: t.readyState }))
+        });
+        
+        // Only set if not already set or different stream
+        if (videoRef.current.srcObject !== stream) {
+          videoRef.current.srcObject = stream;
+          videoRef.current.volume = 1.0;
+          videoRef.current.muted = false;
+          
+          videoRef.current.play().then(() => {
+            console.log('Video playback started successfully for', participantId);
+          }).catch(e => {
+            console.log('Autoplay prevented for', participantId, ':', e);
+            // Try to enable playback with user interaction
+            videoRef.current.controls = true;
+          });
+        }
+      } else {
+        console.warn('Video ref not available for participant:', participantId);
+      }
+    });
+  }, [remoteStreams]);
 
   // 2) Create a new room on the backend and immediately join it
   async function createRoom() {
@@ -424,40 +475,44 @@ export default function MeetWithFriends() {
                 />
               </div>              {/* Remote Videos */}
               {participants.filter(pid => pid !== user.id).map((participantId) => {
+                const stream = remoteStreams.get(participantId);
+                
+                // Ensure we have a ref for this participant
+                if (!remoteVideoRefs.current.has(participantId)) {
+                  remoteVideoRefs.current.set(participantId, React.createRef());
+                }
+                
+                const videoRef = remoteVideoRefs.current.get(participantId);
+                
                 return (
                   <div key={participantId} className="relative bg-gray-800 rounded-xl overflow-hidden shadow-2xl border-2 border-blue-500">
                     <video
-                      ref={(el) => {
-                        // Get the existing ref for this participant
-                        const videoRef = remoteVideoRefs.current.get(participantId);
-                        if (videoRef) {
-                          videoRef.current = el;
-                        }
-                        
-                        // Ensure audio is enabled for remote videos
-                        if (el) {
-                          el.volume = 1.0;
-                          el.muted = false;
-                          
-                          // If we have a stream for this participant, set it
-                          const stream = remoteStreams.get(participantId);
-                          if (stream && el.srcObject !== stream) {
-                            console.log('Setting stream for participant video:', participantId);
-                            el.srcObject = stream;
-                            el.play().catch(e => console.log('Autoplay prevented:', e));
-                          }
-                        }
-                      }}
+                      ref={videoRef}
                       autoPlay
                       playsInline
                       controls={false}
+                      volume={1.0}
+                      muted={false}
                       className="w-full h-full object-cover"
+                      onLoadedMetadata={(e) => {
+                        console.log('Video metadata loaded for', participantId, 'dimensions:', e.target.videoWidth, 'x', e.target.videoHeight);
+                      }}
+                      onPlay={() => {
+                        console.log('Video started playing for', participantId);
+                      }}
+                      onError={(e) => {
+                        console.error('Video error for', participantId, ':', e);
+                      }}
                     />
                     <div className="absolute bottom-4 left-4 bg-blue-600 bg-opacity-90 text-white px-3 py-2 rounded-lg font-semibold">
                       👤 User {participantId}
                     </div>
                     <div className="absolute top-4 right-4 bg-black bg-opacity-50 text-white px-2 py-1 rounded text-xs">
                       🔴 LIVE
+                    </div>
+                    {/* Debug info */}
+                    <div className="absolute top-4 left-4 bg-black bg-opacity-50 text-white px-2 py-1 rounded text-xs">
+                      {stream ? `✅ Stream (${stream.getTracks().length} tracks)` : '❌ No stream'}
                     </div>
                   </div>
                 );
