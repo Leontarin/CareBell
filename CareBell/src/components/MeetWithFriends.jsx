@@ -5,9 +5,12 @@ import { io } from "socket.io-client";
 import { API } from "../config";
 import { AppContext } from "../AppContext";
 import { WebRTCManager } from "./WebRTCManager";
+import { useTranslation } from "react-i18next";
 
 export default function MeetWithFriends() {
   const { user } = useContext(AppContext);
+  /* ---- Translation ---- */
+      const { t } = useTranslation();
 
   const [rooms, setRooms] = useState([]);
   const [joinedRoom, setJoinedRoom] = useState(null);
@@ -437,7 +440,7 @@ export default function MeetWithFriends() {
       {/* 5) If no room is joined, show room list + "Create Room" input */}
       {!joinedRoom ? (
         <div className="flex flex-col items-center justify-center h-full p-8">
-          <h2 className="text-white text-3xl mb-8 font-bold">Video Rooms</h2>
+          <h2 className="text-white text-3xl mb-8 font-bold"> {t("MeetWithFriends.Title")}</h2>
 
           <div className="mb-8 flex items-center">
             <input
@@ -451,12 +454,12 @@ export default function MeetWithFriends() {
               className="px-6 py-2 bg-green-600 text-white rounded-r hover:bg-green-700 text-lg font-semibold"
               onClick={createRoom}
             >
-              Create Room
+              {t("MeetWithFriends.createRoom")}
             </button>
           </div>
 
           <div className="w-full max-w-2xl">
-            <h3 className="text-white text-xl mb-4">Available Rooms:</h3>
+            <h3 className="text-white text-xl mb-4">{t("MeetWithFriends.availableRooms")}</h3>
             <ul className="space-y-3">              {rooms.map((r) => {
                 // Use room.name for participant count lookup (consistent with backend)
                 const participantCount = roomParticipants.get(r.name) || 0;
@@ -468,21 +471,21 @@ export default function MeetWithFriends() {
                     <div className="flex flex-col">
                       <span className="text-white text-lg font-medium">{r.name}</span>
                       <span className="text-gray-400 text-sm">
-                        👥 {participantCount} participant{participantCount !== 1 ? 's' : ''} online
+                        👥 {participantCount} {t("MeetWithFriends.participant")}{participantCount !== 1 ? t("MeetWithFriends.s") : ''} {t("MeetWithFriends.online")}
                       </span>
                     </div>
                     <button
                       className="px-6 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 font-semibold transition-colors"
                       onClick={() => joinRoom(r.name)}
                     >
-                      🎥 Join Call
+                      🎥 {t("MeetWithFriends.joinCall")}
                     </button>
                   </li>
                 );
               })}
             </ul>
             {rooms.length === 0 && (
-              <p className="text-gray-400 text-center py-8">No rooms available. Create one to get started!</p>
+              <p className="text-gray-400 text-center py-8">{t("MeetWithFriends.noRooms")}</p>
             )}
           </div>
         </div>
@@ -490,9 +493,9 @@ export default function MeetWithFriends() {
         <div className="w-full h-full flex flex-col bg-gray-900">
           {/* Room Header */}
           <div className="flex justify-between items-center w-full p-6 bg-gray-800 border-b border-gray-700">            <div>
-              <h2 className="text-white text-2xl font-bold">🎥 Room: {joinedRoom}</h2>
+              <h2 className="text-white text-2xl font-bold">🎥 {t("MeetWithFriends.room")} {joinedRoom}</h2>
               <p className="text-gray-300 text-sm mt-1">
-                👥 {participants.length} participant{participants.length !== 1 ? 's' : ''} in call
+                👥 {participants.length} {t("MeetWithFriends.participant")}{participants.length !== 1 ? t("MeetWithFriends.s") : ''} in call
               </p>
             </div>
             <div className="flex gap-3">
@@ -500,13 +503,13 @@ export default function MeetWithFriends() {
                 onClick={stopVideoCall}
                 className="px-6 py-3 bg-red-600 text-white rounded-lg hover:bg-red-700 font-semibold text-lg shadow-lg transition-colors"
               >
-                📞 End Call
+                📞 {t("MeetWithFriends.endCall")}
               </button>
               <button
                 onClick={leaveRoom}
                 className="px-6 py-3 bg-gray-600 text-white rounded-lg hover:bg-gray-700 font-semibold text-lg shadow-lg transition-colors"
               >
-                🚪 Leave Room
+                🚪 {t("MeetWithFriends.leaveRoom")}
               </button>
             </div>
           </div>
@@ -570,10 +573,10 @@ export default function MeetWithFriends() {
             {/* Call Controls & Info */}            <div className="mt-6 text-center">
               <div className="bg-gray-800 rounded-lg p-4 inline-block">
                 <p className="text-white text-lg font-semibold">
-                  👥 Active Participants: {participants.length}
+                  👥 {t("MeetWithFriends.activeParticipants")} {participants.length}
                 </p>
                 <p className="text-gray-300 text-sm mt-1">
-                  Video call in progress
+                  {t("MeetWithFriends.videoCallInProgress")}
                 </p>
               </div>
             </div>

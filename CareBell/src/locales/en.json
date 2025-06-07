@@ -120,8 +120,8 @@
     "SpeakingLabel": "Speaking... (Tap to Stop)",
     "barcodeLabel": "Barcode:",
     "availableFoodsLabel": "Available Foods",
-    "positionLabel": "Position barcode within the red frame",
-    "scanBarcode": "Scan Barcode",
+    "positionLabel": "Position QR code within the red frame",
+    "scanBarcode": "Scan QR",
     "FoodList": "Food List",
     "FoodInfo": "Food Information",
 
@@ -150,9 +150,19 @@
     
   },
   "MeetWithFriends": {
-    "invite": "Invite Friends",
-    "location": "Location",
-    "time": "Time"
+    "activeParticipants": "Active participants:",
+    "videoCallInProgress": "Video call in progress",
+    "leaveRoom":"Leave Room",
+    "endCall":"End Call",
+    "room":"Room:",
+    "noRooms":"No rooms available. Create one to get started!",
+    "joinCall": "Join Call",
+    "online":"online",
+    "s":"s",
+    "participant":"participant",
+    "availableRooms": "Available Rooms:",
+    "createRoom": "Create Room",
+    "Title":"Video Rooms"
   },
   "News": {
     "latestNews": "Latest News",

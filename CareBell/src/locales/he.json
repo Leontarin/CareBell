@@ -119,10 +119,10 @@
     "ingredientsLabel": ":מרכיבים",
     "loadingLabel": "...טוען",
     "SpeakingLabel": "מדבר... (הקש כדי לעצור)",
-    "barcodeLabel": "ברקוד:",
+    "barcodeLabel": "קוד:",
     "availableFoodsLabel": "מאכלים זמינים",
-    "positionLabel": "מקם את הברקוד בתוך המסגרת האדומה",
-    "scanBarcode": "סריקת ברקוד",
+    "positionLabel": "מקם את הQR קוד בתוך המסגרת האדומה",
+    "scanBarcode": "QR סריקת קוד",
     "FoodList": "רשימת מזון",
     "FoodInfo": "מידע על הארוחה",
     "addMeal": "הוסף ארוחה",
@@ -148,9 +148,19 @@
     "dosage": "מינון:"
   },
   "MeetWithFriends": {
-    "invite": "הזמן חברים",
-    "location": "מיקום",
-    "time": "שעה"
+    "activeParticipants": ":משתתפים מחוברים",
+    "videoCallInProgress": "שיחת וידאו בתהליך",
+    "leaveRoom":"צא מהחדר",
+    "endCall":"סיים שיחה",
+    "room":":חדר",
+    "noRooms":"!אין חדרים זמינים, תיצור חדר חדש כדי להתחיל",
+    "joinCall": "הצטרפ/י לשיחה",
+    "online":"מחובר/ים",
+    "s":"ים/",
+    "participant":"משתתף",
+    "availableRooms": ":חדרים זמינים",
+    "createRoom": "צור חדר",
+    "Title":" חדרי וידאו"
   },
   "News": {
     "latestNews": "החדשות האחרונות",

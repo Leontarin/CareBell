@@ -146,9 +146,19 @@
     "dosage": "Annostus"
   },
   "MeetWithFriends": {
-    "invite": "Kutsu ystäviä",
-    "location": "Sijainti",
-    "time": "Aika"
+    "activeParticipants": "Aktiiviset osallistujat:",
+    "videoCallInProgress": "Videopuhelu käynnissä",
+    "leaveRoom":"Poistu huoneesta",
+    "endCall":"Lopeta puhelu",
+    "room":"Huone:",
+    "noRooms":"Ei huoneita saatavilla. Luo yksi aloittaaksesi!",
+    "joinCall": "Liity puheluun",
+    "online":"verkossa",
+    "s":"",
+    "participant":"osallistujia",
+    "availableRooms": "Huoneet:",
+    "createRoom": "Luo huone",
+    "Title":"Videohuoneet"
   },
   "News": {
     "latestNews": "Viimeisimmät uutiset",

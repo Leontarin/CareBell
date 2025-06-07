@@ -146,9 +146,19 @@
     "dosage": "Dosierung"
   },
   "MeetWithFriends": {
-    "invite": "Freunde einladen",
-    "location": "Ort",
-    "time": "Uhrzeit"
+    "activeParticipants": "Aktive Teilnehmer:",
+    "videoCallInProgress": "Videoanruf läuft",
+    "leaveRoom":"Raum verlassen",
+    "endCall":"Anruf beenden",
+    "room":"Zimmer:",
+    "noRooms":"Keine Zimmer verfügbar. Erstellen Sie eins, um loszulegen!",
+    "joinCall": "Nehmen Sie am Anruf teil",
+    "online":"online",
+    "s":"",
+    "participant":"Teilnehmer",
+    "availableRooms": "Verfügbare Zimmer:",
+    "createRoom": "Raum schaffen",
+    "Title":"Videoräume"
   },
   "News": {
     "latestNews": "Neueste Nachrichten",
@@ -157,9 +167,9 @@
   "RightSide": {
     "callContacts":     "Kontakte anrufen",
     "meetWithFriends":  "Treffen mit Freunden",
-    "medicine":         "Medizin",
+    "medicine":         "Medikamente",
     "meals":            "Mahlzeiten",
-    "news":             "Nachricht",
+    "news":             "Nachrichten",
     "exercise":         "Übung",
     "back":             "Zurück",
     "loadingUser":      "Benutzer wird geladen…"

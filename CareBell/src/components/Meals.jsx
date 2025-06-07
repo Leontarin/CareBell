@@ -137,7 +137,7 @@ function Meals() {
       setBarcode(null);
       setError('');
     } else {
-      speakText("Please position the barcode in front of the camera");
+      speakText("Please position the QR code in front of the camera");
     }
   };
 
@@ -243,7 +243,7 @@ function Meals() {
       setLoading(true);
       
       // Voice feedback
-      speakText("Barcode scanned successfully. Looking up food information.");
+      speakText("QR code scanned successfully. Looking up food information.");
 
       try {
         // Fetch food data from API
@@ -285,7 +285,7 @@ function Meals() {
             speakText(createFoodDescription(foundMeal));
           }, 1000);
         } else {
-          setError(`Food with barcode ${scannedCode} was not found in our database.`);
+          setError(`Food with code ${scannedCode} was not found in our database.`);
           setMeal(null);
           speakText("Sorry, this food was not found in our database.");
         }
@@ -364,7 +364,7 @@ function Meals() {
                   }}
                 />
                 <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                  <div className="w-2/3 h-1/4 border-4 border-red-500 border-dashed rounded opacity-70"></div>
+                  <div className="w-3/5 h-3/5 border-4 border-red-500 border-dashed rounded opacity-70 items-center justify-center"></div>
                 </div>
               </div>
               <p className="text-center text-xl mt-4 text-gray-600 font-medium">
