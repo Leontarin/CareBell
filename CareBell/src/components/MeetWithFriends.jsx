@@ -38,10 +38,11 @@ export default function MeetWithFriends() {
     // Listen for room participants updates
     socket.on('room-participants', (participantList) => {
       console.log('Room participants updated:', participantList);
-      console.log('Current user ID:', user?.id);
-      const otherParticipants = participantList.filter(p => p !== user?.id);
-      console.log('Other participants (excluding self):', otherParticipants);
-      setParticipants(otherParticipants);
+      // Always include self in participants for robust connection logic
+      if (user?.id && !participantList.includes(user.id)) {
+        participantList.push(user.id);
+      }
+      setParticipants(participantList);
     });
 
     // Listen for WebRTC signals
@@ -102,11 +103,10 @@ export default function MeetWithFriends() {
       try {
         const res = await axios.get(`${API}/rooms`);
         setRooms(res.data);
-
-        // Request participant counts for all rooms
+        // Request participant counts for all rooms (use room._id for backend consistency)
         if (socketRef.current) {
           res.data.forEach(room => {
-            socketRef.current.emit('get-room-participant-count', room.name);
+            socketRef.current.emit('get-room-participant-count', room._id);
           });
         }
       } catch (e) {
@@ -120,7 +120,7 @@ export default function MeetWithFriends() {
   useEffect(() => {
     if (socketRef.current && rooms.length > 0) {
       rooms.forEach(room => {
-        socketRef.current.emit('get-room-participant-count', room.name);
+        socketRef.current.emit('get-room-participant-count', room._id);
       });
     }
   }, [rooms]);
@@ -356,7 +356,8 @@ export default function MeetWithFriends() {
             <h3 className="text-white text-xl mb-4">Available Rooms:</h3>
             <ul className="space-y-3">
               {rooms.map((r) => {
-                const participantCount = roomParticipants.get(r.name) || 0;
+                // Use room._id for participant count lookup
+                const participantCount = roomParticipants.get(r._id) || 0;
                 return (
                   <li
                     key={r._id}
