@@ -147,11 +147,59 @@ export default function MeetWithFriends() {
           joinedRoom,
           user.id,
           user.id.localeCompare(participantId) > 0 // Use robust polite/impolite assignment
-        );
-
-        manager.onConnectionFailed = () => {
-          console.log('Connection failed with', participantId);
-        };        // Handle remote stream - CRITICAL FIX
+        );        manager.onConnectionFailed = () => {
+          console.log('Connection failed with', participantId, 'attempting retry');
+          
+          // Clean up the failed connection
+          setWebRTCManagers(prev => {
+            const newMap = new Map(prev);
+            newMap.delete(participantId);
+            return newMap;
+          });
+          
+          setRemoteStreams(prev => {
+            const newMap = new Map(prev);
+            newMap.delete(participantId);
+            return newMap;
+          });
+          
+          // Retry connection after a short delay
+          setTimeout(async () => {
+            console.log('Retrying connection with', participantId);
+            
+            // Create new video element ref for this participant
+            const newRemoteVideoRef = React.createRef();
+            remoteVideoRefs.current.set(participantId, newRemoteVideoRef);
+            
+            const newManager = new WebRTCManager(
+              localVideoRef,
+              newRemoteVideoRef,
+              socketRef.current,
+              joinedRoom,
+              user.id,
+              user.id.localeCompare(participantId) > 0
+            );
+            
+            // Set up callbacks again
+            newManager.onConnectionFailed = manager.onConnectionFailed;
+            newManager.onRemoteStream = manager.onRemoteStream;
+            
+            // Update managers state
+            setWebRTCManagers(prev => {
+              const newMap = new Map(prev);
+              newMap.set(participantId, newManager);
+              return newMap;
+            });
+            
+            // Initialize the new connection
+            const isInitiator = user.id.localeCompare(participantId) < 0;
+            try {
+              await newManager.initialize(localStream, isInitiator);
+            } catch (error) {
+              console.error('Failed to initialize retry connection:', error);
+            }
+          }, 2000);
+        };// Handle remote stream - CRITICAL FIX
         manager.onRemoteStream = (stream) => {
           console.log('Received remote stream from', participantId);
           console.log('Stream tracks:', stream.getTracks().map(t => ({ kind: t.kind, enabled: t.enabled, readyState: t.readyState })));
@@ -172,10 +220,13 @@ export default function MeetWithFriends() {
               videoRef.current.srcObject = stream;
               videoRef.current.volume = 1.0;
               videoRef.current.muted = false;
-              
-              // Add event listeners to debug video playback
+                // Add event listeners to debug video playback
               videoRef.current.onloadedmetadata = () => {
-                console.log('Video metadata loaded for', participantId, 'dimensions:', videoRef.current.videoWidth, 'x', videoRef.current.videoHeight);
+                if (videoRef.current && videoRef.current.videoWidth !== undefined && videoRef.current.videoHeight !== undefined) {
+                  console.log('Video metadata loaded for', participantId, 'dimensions:', videoRef.current.videoWidth, 'x', videoRef.current.videoHeight);
+                } else {
+                  console.log('Video metadata loaded for', participantId, 'but dimensions not available yet');
+                }
               };
               
               videoRef.current.onplay = () => {
@@ -464,8 +515,7 @@ export default function MeetWithFriends() {
           <div className="flex-1 bg-black p-6 overflow-hidden">
             {/* Video Grid */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 h-full min-h-0">
-              {/* Local Video */}
-              <div className="relative bg-gray-800 rounded-xl overflow-hidden shadow-2xl border-2 border-green-500">
+              {/* Local Video */}              <div className="relative bg-gray-800 rounded-xl overflow-hidden shadow-2xl border-2 border-green-500">
                 <video
                   ref={localVideoRef}
                   autoPlay
@@ -473,7 +523,13 @@ export default function MeetWithFriends() {
                   playsInline
                   className="w-full h-full object-cover"
                 />
-              </div>              {/* Remote Videos */}
+                <div className="absolute bottom-4 left-4 bg-green-600 bg-opacity-90 text-white px-3 py-2 rounded-lg font-semibold">
+                  👤 You ({user.id})
+                </div>
+                <div className="absolute top-4 right-4 bg-black bg-opacity-50 text-white px-2 py-1 rounded text-xs">
+                  🎥 LOCAL
+                </div>
+              </div>{/* Remote Videos */}
               {participants.filter(pid => pid !== user.id).map((participantId) => {
                 const stream = remoteStreams.get(participantId);
                 
@@ -493,18 +549,29 @@ export default function MeetWithFriends() {
                       controls={false}
                       volume={1.0}
                       muted={false}
-                      className="w-full h-full object-cover"
-                      onLoadedMetadata={(e) => {
-                        console.log('Video metadata loaded for', participantId, 'dimensions:', e.target.videoWidth, 'x', e.target.videoHeight);
+                      className="w-full h-full object-cover"                      onLoadedMetadata={(e) => {
+                        if (e.target && e.target.videoWidth !== undefined && e.target.videoHeight !== undefined) {
+                          console.log('Video metadata loaded for', participantId, 'dimensions:', e.target.videoWidth, 'x', e.target.videoHeight);
+                        } else {
+                          console.log('Video metadata loaded for', participantId, 'but dimensions not available yet');
+                        }
                       }}
                       onPlay={() => {
                         console.log('Video started playing for', participantId);
                       }}
                       onError={(e) => {
                         console.error('Video error for', participantId, ':', e);
-                      }}
-                    />
-                  
+                      }}                    />
+                    <div className="absolute bottom-4 left-4 bg-blue-600 bg-opacity-90 text-white px-3 py-2 rounded-lg font-semibold">
+                      👤 User {participantId}
+                    </div>
+                    <div className="absolute top-4 right-4 bg-black bg-opacity-50 text-white px-2 py-1 rounded text-xs">
+                      🔴 LIVE
+                    </div>
+                    {/* Debug info */}
+                    <div className="absolute top-4 left-4 bg-black bg-opacity-50 text-white px-2 py-1 rounded text-xs">
+                      {stream ? `✅ Stream (${stream.getTracks().length} tracks)` : '❌ No stream'}
+                    </div>
                   </div>
                 );
               })}

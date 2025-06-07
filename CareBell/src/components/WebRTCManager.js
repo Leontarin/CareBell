@@ -29,6 +29,13 @@ class WebRTCManager {
       { urls: 'stun:stun1.l.google.com:19302' },
       { urls: 'stun:stun2.l.google.com:19302' }
     ];
+    
+    this.rtcConfig = {
+      iceServers: this.iceServers,
+      iceCandidatePoolSize: 10,
+      bundlePolicy: 'max-bundle',
+      rtcpMuxPolicy: 'require'
+    };
   }
 
   async initialize(localStream, isInitiator = false) {
@@ -45,10 +52,7 @@ class WebRTCManager {
       }
     }, 15000);
 
-    this.peerConnection = new RTCPeerConnection({
-      iceServers: this.iceServers,
-      iceCandidatePoolSize: 10
-    });
+    this.peerConnection = new RTCPeerConnection(this.rtcConfig);
 
     this.localStream.getTracks().forEach(track => {
       this.peerConnection.addTrack(track, this.localStream);
@@ -187,9 +191,15 @@ class WebRTCManager {
 
   async restartIce() {
     try {
+      console.log('Restarting ICE connection');
       await this.peerConnection.restartIce();
     } catch (e) {
       console.error('ICE restart error:', e);
+      // If ICE restart fails, try to recreate the connection
+      if (this.onConnectionFailed) {
+        console.log('ICE restart failed, triggering connection retry');
+        this.onConnectionFailed();
+      }
     }
   }
 
@@ -272,6 +282,21 @@ class WebRTCManager {
       return true;
     } catch (error) {
       console.error('Error handling offer:', error);
+      
+      // Handle SSL role specific error
+      if (error.message.includes('Failed to set SSL role') || error.message.includes('transport')) {
+        console.log('SSL transport error in offer handling, attempting recovery');
+        try {
+          // Reset connection and let the other peer retry
+          if (this.peerConnection.signalingState !== 'stable') {
+            await this.peerConnection.setLocalDescription({ type: 'rollback' });
+          }
+          return false;
+        } catch (rollbackError) {
+          console.error('Rollback failed:', rollbackError);
+        }
+      }
+      
       return false;
     } finally {
       this.isSettingRemoteDesc = false;
@@ -297,6 +322,18 @@ class WebRTCManager {
       return true;
     } catch (error) {
       console.error('Error processing answer:', error);
+      
+      // Handle SSL role specific error
+      if (error.message.includes('Failed to set SSL role') || error.message.includes('transport')) {
+        console.log('SSL transport error detected, attempting to restart ICE');
+        try {
+          await this.restartIce();
+          return false; // Let ICE restart handle the reconnection
+        } catch (restartError) {
+          console.error('ICE restart failed:', restartError);
+        }
+      }
+      
       return false;
     } finally {
       this.isSettingRemoteDesc = false;
