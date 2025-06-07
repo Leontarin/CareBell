@@ -50,8 +50,12 @@ module.exports = function (io) {
       socket.join(roomId);
       socket.roomId = roomId;
       socket.userId = userId;
-      if (!roomParticipants.has(roomId)) roomParticipants.set(roomId, new Set());
+
+      if (!roomParticipants.has(roomId)) {
+        roomParticipants.set(roomId, new Set());
+      }
       roomParticipants.get(roomId).add(userId);
+
       const currentParticipants = Array.from(roomParticipants.get(roomId));
       console.log(`Room ${roomId} now has participants:`, currentParticipants);
       
@@ -111,7 +115,10 @@ module.exports = function (io) {
         };
         
         // Broadcast to all others in the room except the sender
-        socket.to(roomId).emit('signal', { userId, signal: timestampedSignal });
+        socket.to(roomId).emit('signal', {
+          userId: userId,
+          signal: timestampedSignal
+        });
         
         console.log(`Successfully relayed ${signal.type} signal from ${userId} to room ${roomId}`);
       } catch (error) {
@@ -122,6 +129,8 @@ module.exports = function (io) {
     // Get participant count for a specific room
     socket.on('get-room-participant-count', (roomName) => {
       const count = roomParticipants.has(roomName) ? roomParticipants.get(roomName).size : 0;
+      console.log(`Requested participant count for room ${roomName}: ${count}`);
+      console.log('Current room participants map:', Array.from(roomParticipants.entries()));
       socket.emit('room-participant-count', { roomName, count });
     });
 

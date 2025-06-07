@@ -38,20 +38,33 @@ export default function MeetWithFriends() {
     // Listen for room participants updates
     socket.on('room-participants', (participantList) => {
       console.log('Room participants updated:', participantList);
-      setParticipants(participantList.filter(p => p !== user?.id));
+      console.log('Current user ID:', user?.id);
+      const otherParticipants = participantList.filter(p => p !== user?.id);
+      console.log('Other participants (excluding self):', otherParticipants);
+      setParticipants(otherParticipants);
     });
 
     // Listen for WebRTC signals
-    socket.on('signal', async ({ signal, fromUser }) => {
-      console.log('Received signal from', fromUser, ':', signal.type);
-      const manager = webRTCManagers.get(fromUser);
-      if (manager) {
-        await manager.handleSignal({ signal });
-      }
+    socket.on('signal', async ({ userId, signal }) => {
+      console.log('Received signal from', userId, ':', signal.type);
+
+      // Get the current webRTCManagers state
+      setWebRTCManagers(currentManagers => {
+        const manager = currentManagers.get(userId);
+        if (manager) {
+          manager.handleSignal({ signal }).catch(err => {
+            console.error('Error handling signal:', err);
+          });
+        } else {
+          console.warn('No WebRTC manager found for user:', userId);
+        }
+        return currentManagers;
+      });
     });
 
     // Listen for room participant counts (for room list)
     socket.on('room-participant-count', ({ roomName, count }) => {
+      console.log('Received participant count for room', roomName, ':', count);
       setRoomParticipants(prev => new Map(prev.set(roomName, count)));
     });
 
@@ -91,10 +104,18 @@ export default function MeetWithFriends() {
 
   // Handle participants joining/leaving and create WebRTC connections
   useEffect(() => {
-    if (!isInCall || !localStream || !joinedRoom) return;
+    if (!isInCall || !localStream || !joinedRoom || !user?.id) return;
 
+    console.log('Current participants:', participants);
+    console.log('Current webRTC managers:', Array.from(webRTCManagers.keys()));
+
+    // Create connections for new participants
     participants.forEach(async (participantId) => {
+      if (participantId === user.id) return; // Skip self
+
       if (!webRTCManagers.has(participantId)) {
+        console.log('Creating WebRTC connection for participant:', participantId);
+
         // Create new WebRTC connection for this participant
         const remoteVideoRef = { current: null };
         remoteVideoRefs.current.set(participantId, remoteVideoRef);
@@ -114,38 +135,66 @@ export default function MeetWithFriends() {
 
         // Handle remote stream
         manager.onRemoteStream = (stream) => {
-          setRemoteStreams(prev => new Map(prev.set(participantId, stream)));
-          if (remoteVideoRef.current) {
-            remoteVideoRef.current.srcObject = stream;
+          console.log('Received remote stream from', participantId);
+          setRemoteStreams(prev => {
+            const newMap = new Map(prev);
+            newMap.set(participantId, stream);
+            return newMap;
+          });
+
+          // Set the video element source
+          const videoRef = remoteVideoRefs.current.get(participantId);
+          if (videoRef && videoRef.current) {
+            videoRef.current.srcObject = stream;
+            videoRef.current.play().catch(e => console.log('Autoplay prevented:', e));
           }
         };
 
-        setWebRTCManagers(prev => new Map(prev.set(participantId, manager)));
+        // Update managers state
+        setWebRTCManagers(prev => {
+          const newMap = new Map(prev);
+          newMap.set(participantId, manager);
+          return newMap;
+        });
 
         // Initialize the connection
         const isInitiator = user.id < participantId;
-        await manager.initialize(localStream, isInitiator);
+        console.log('Initializing connection with', participantId, 'as initiator:', isInitiator);
+
+        try {
+          await manager.initialize(localStream, isInitiator);
+        } catch (error) {
+          console.error('Failed to initialize WebRTC connection:', error);
+        }
       }
     });
 
     // Clean up connections for participants who left
-    webRTCManagers.forEach((manager, participantId) => {
+    const currentManagerKeys = Array.from(webRTCManagers.keys());
+    currentManagerKeys.forEach((participantId) => {
       if (!participants.includes(participantId)) {
-        manager.cleanup();
+        console.log('Cleaning up connection for participant who left:', participantId);
+        const manager = webRTCManagers.get(participantId);
+        if (manager) {
+          manager.cleanup();
+        }
+
         setWebRTCManagers(prev => {
           const newMap = new Map(prev);
           newMap.delete(participantId);
           return newMap;
         });
+
         setRemoteStreams(prev => {
           const newMap = new Map(prev);
           newMap.delete(participantId);
           return newMap;
         });
+
         remoteVideoRefs.current.delete(participantId);
       }
     });
-  }, [participants, isInCall, localStream, joinedRoom, user?.id, webRTCManagers]);
+  }, [participants, isInCall, localStream, joinedRoom, user?.id]);
 
   // 2) Create a new room on the backend and immediately join it
   async function createRoom() {
@@ -157,7 +206,9 @@ export default function MeetWithFriends() {
       });
       setNewRoomName("");
       setRooms((prev) => [...prev, data]);
-      setJoinedRoom(data.name);
+
+      // Automatically join the created room
+      await joinRoom(data.name);
     } catch (e) {
       alert("Failed to create room: " + e.message);
     }
@@ -211,11 +262,16 @@ export default function MeetWithFriends() {
         localVideoRef.current.srcObject = stream;
       }
 
-      // Join the room via socket
-      socketRef.current.emit('join-room', {
-        roomId: roomName,
-        userId: user.id
-      });
+      // Join the room via socket (with small delay to ensure socket is ready)
+      console.log('Joining room via socket:', roomName, 'with user ID:', user.id);
+      setTimeout(() => {
+        if (socketRef.current) {
+          socketRef.current.emit('join-room', {
+            roomId: roomName,
+            userId: user.id
+          });
+        }
+      }, 100);
 
     } catch (error) {
       console.error('Error accessing media devices:', error);
