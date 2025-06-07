@@ -62,16 +62,39 @@ export default function MeetWithFriends() {
       });
     });
 
-    // Listen for room participant counts (for room list)
+    // Listen for room participant counts (for room list) - GLOBAL updates
     socket.on('room-participant-count', ({ roomName, count }) => {
       console.log('Received participant count for room', roomName, ':', count);
-      setRoomParticipants(prev => new Map(prev.set(roomName, count)));
+      setRoomParticipants(prev => {
+        const newMap = new Map(prev);
+        newMap.set(roomName, count);
+        return newMap;
+      });
     });
 
     return () => {
       socket.disconnect();
     };
   }, [user?.id]);
+
+  // Request participant counts periodically to keep them updated
+  useEffect(() => {
+    if (!socketRef.current) return;
+
+    const requestCounts = () => {
+      rooms.forEach(room => {
+        socketRef.current.emit('get-room-participant-count', room.name);
+      });
+    };
+
+    // Initial request
+    requestCounts();
+
+    // Request every 5 seconds to keep counts updated
+    const interval = setInterval(requestCounts, 5000);
+
+    return () => clearInterval(interval);
+  }, [rooms]);
 
   // 1) Fetch the list of rooms on mount and get participant counts
   useEffect(() => {
@@ -136,6 +159,8 @@ export default function MeetWithFriends() {
         // Handle remote stream
         manager.onRemoteStream = (stream) => {
           console.log('Received remote stream from', participantId);
+          console.log('Stream tracks:', stream.getTracks().map(t => ({ kind: t.kind, enabled: t.enabled })));
+
           setRemoteStreams(prev => {
             const newMap = new Map(prev);
             newMap.set(participantId, stream);
@@ -146,6 +171,8 @@ export default function MeetWithFriends() {
           const videoRef = remoteVideoRefs.current.get(participantId);
           if (videoRef && videoRef.current) {
             videoRef.current.srcObject = stream;
+            videoRef.current.volume = 1.0;
+            videoRef.current.muted = false;
             videoRef.current.play().catch(e => console.log('Autoplay prevented:', e));
           }
         };
@@ -254,6 +281,8 @@ export default function MeetWithFriends() {
         video: true,
         audio: true
       });
+
+      console.log('Local stream tracks:', stream.getTracks().map(t => ({ kind: t.kind, enabled: t.enabled })));
 
       setLocalStream(stream);
       setIsInCall(true);
@@ -393,12 +422,6 @@ export default function MeetWithFriends() {
                   playsInline
                   className="w-full h-full object-cover"
                 />
-                <div className="absolute bottom-4 left-4 bg-green-600 bg-opacity-90 text-white px-3 py-2 rounded-lg font-semibold">
-                  📹 You (Local)
-                </div>
-                <div className="absolute top-4 right-4 bg-black bg-opacity-50 text-white px-2 py-1 rounded text-xs">
-                  🔴 LIVE
-                </div>
               </div>
 
               {/* Remote Videos */}
@@ -408,10 +431,18 @@ export default function MeetWithFriends() {
                   <div key={participantId} className="relative bg-gray-800 rounded-xl overflow-hidden shadow-2xl border-2 border-blue-500">
                     <video
                       ref={(el) => {
-                        if (videoRef) videoRef.current = el;
+                        if (videoRef) {
+                          videoRef.current = el;
+                          // Ensure audio is enabled for remote videos
+                          if (el) {
+                            el.volume = 1.0;
+                            el.muted = false;
+                          }
+                        }
                       }}
                       autoPlay
                       playsInline
+                      controls={false}
                       className="w-full h-full object-cover"
                     />
                     <div className="absolute bottom-4 left-4 bg-blue-600 bg-opacity-90 text-white px-3 py-2 rounded-lg font-semibold">

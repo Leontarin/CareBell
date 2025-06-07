@@ -42,6 +42,11 @@ module.exports = function (io) {
       setUserSocket(userId, socket.id);
       socket.userId = userId;
       console.log(`User ${userId} registered with socket ${socket.id}`);
+
+      // Send current participant counts for all rooms to the newly connected user
+      roomParticipants.forEach((participants, roomName) => {
+        socket.emit('room-participant-count', { roomName, count: participants.size });
+      });
     });
 
     // User joins a video room
@@ -65,8 +70,9 @@ module.exports = function (io) {
         io.to(roomId).emit('room-participants', currentParticipants);
         console.log(`Notified room ${roomId} of updated participants:`, currentParticipants);
 
-        // Broadcast updated participant count to all clients
+        // Broadcast updated participant count to all clients (not just room participants)
         io.emit('room-participant-count', { roomName: roomId, count: currentParticipants.length });
+        console.log(`Broadcasting participant count for room ${roomId}: ${currentParticipants.length}`);
       }, 100); // 100ms delay
     });
 

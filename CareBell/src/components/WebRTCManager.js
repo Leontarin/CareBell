@@ -90,21 +90,27 @@ class WebRTCManager {
     };
 
     this.peerConnection.oniceconnectionstatechange = () => {
+      console.log(`ICE connection state changed to: ${this.peerConnection.iceConnectionState} for user ${this.userId}`);
       if (this.peerConnection.iceConnectionState === 'connected') {
         if (this.connectionTimeout) {
           clearTimeout(this.connectionTimeout);
           this.connectionTimeout = null;
         }
         this.connectionAttempts = 0;
+        console.log(`WebRTC connection established with user ${this.userId}`);
       } else if (this.peerConnection.iceConnectionState === 'failed') {
+        console.log(`ICE connection failed with user ${this.userId}, restarting ICE`);
         this.restartIce();
       }
     };
 
     this.peerConnection.onconnectionstatechange = () => {
+      console.log(`Connection state changed to: ${this.peerConnection.connectionState} for user ${this.userId}`);
       if (this.peerConnection.connectionState === 'connected') {
         this.connectionAttempts = 0;
+        console.log(`Peer connection fully established with user ${this.userId}`);
       } else if (this.peerConnection.connectionState === 'failed' && this.onConnectionFailed) {
+        console.log(`Peer connection failed with user ${this.userId}`);
         this.onConnectionFailed();
       }
     };
