@@ -210,90 +210,105 @@ export default function MeetWithFriends() {
   // If user is not defined, show a message
   if (!user?.id) {
     return (
-      <div className="w-full h-full bg-black flex items-center justify-center">
-        <h2 className="text-white text-xl">Please log in to use video rooms</h2>
+      <div className="w-full h-full bg-gradient-to-br from-gray-800 to-gray-900 flex items-center justify-center">
+        <div className="text-center p-12 bg-gray-800 rounded-2xl shadow-2xl border border-gray-700">
+          <div className="text-6xl mb-6">🔐</div>
+          <h2 className="text-white text-3xl font-bold mb-4">Authentication Required</h2>
+          <p className="text-gray-300 text-lg">Please log in to access video rooms</p>
+        </div>
       </div>
     );
   }
 
   // Main render
   return (
-    <div className="w-full h-full bg-black relative">
+    <div className="w-full h-full bg-gray-900 relative overflow-hidden">
       {/* 5) If no room is joined, show room list + "Create Room" input */}
       {!joinedRoom ? (
-        <div className="flex flex-col items-center justify-center h-full">
-          <h2 className="text-white text-2xl mb-4">Video Rooms</h2>
+        <div className="flex flex-col items-center justify-center h-full p-8">
+          <h2 className="text-white text-3xl mb-8 font-bold">Video Rooms</h2>
 
-          <div className="mb-4 flex items-center">
+          <div className="mb-8 flex items-center">
             <input
               type="text"
-              className="px-2 py-1 rounded mr-2"
-              placeholder="Room name"
+              className="px-4 py-2 rounded-l border-none outline-none text-lg"
+              placeholder="Enter room name"
               value={newRoomName}
               onChange={(e) => setNewRoomName(e.target.value)}
             />
             <button
-              className="px-4 py-2 bg-green-600 text-white rounded"
+              className="px-6 py-2 bg-green-600 text-white rounded-r hover:bg-green-700 text-lg font-semibold"
               onClick={createRoom}
             >
               Create Room
             </button>
           </div>
 
-          <ul className="text-white w-96">
-            {rooms.map((r) => (
-              <li
-                key={r._id}
-                className="flex justify-between items-center mb-2 bg-gray-800 p-2 rounded"
-              >
-                <span>{r.name}</span>
-                <button
-                  className="px-3 py-1 bg-blue-500 text-white rounded"
-                  onClick={() => joinRoom(r.name)}
+          <div className="w-full max-w-2xl">
+            <h3 className="text-white text-xl mb-4">Available Rooms:</h3>
+            <ul className="space-y-3">
+              {rooms.map((r) => (
+                <li
+                  key={r._id}
+                  className="flex justify-between items-center bg-gray-800 p-4 rounded-lg shadow-lg"
                 >
-                  Join
-                </button>
-              </li>
-            ))}
-          </ul>
+                  <span className="text-white text-lg font-medium">{r.name}</span>
+                  <button
+                    className="px-6 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 font-semibold"
+                    onClick={() => joinRoom(r.name)}
+                  >
+                    Join Room
+                  </button>
+                </li>
+              ))}
+            </ul>
+            {rooms.length === 0 && (
+              <p className="text-gray-400 text-center py-8">No rooms available. Create one to get started!</p>
+            )}
+          </div>
         </div>
       ) : (
-        <div className="w-full h-full flex flex-col">
+        <div className="w-full h-full flex flex-col bg-gray-900">
           {/* Room Header */}
-          <div className="flex justify-between items-center w-full p-4 bg-gray-900">
-            <span className="text-white text-lg">Room: {joinedRoom}</span>
-            <div className="flex gap-2">
+          <div className="flex justify-between items-center w-full p-6 bg-gray-800 border-b border-gray-700">
+            <div>
+              <h2 className="text-white text-2xl font-bold">Room: {joinedRoom}</h2>
+              <p className="text-gray-300 text-sm mt-1">
+                {isInCall ? `${participants.length + 1} participants in call` : 'Ready to start video call'}
+              </p>
+            </div>
+            <div className="flex gap-3">
               {!isInCall ? (
                 <button
                   onClick={startVideoCall}
-                  className="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700"
+                  className="px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 font-semibold text-lg shadow-lg transition-colors"
                 >
-                  Start Video Call
+                  🎥 Start Video Call
                 </button>
               ) : (
                 <button
                   onClick={stopVideoCall}
-                  className="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700"
+                  className="px-6 py-3 bg-red-600 text-white rounded-lg hover:bg-red-700 font-semibold text-lg shadow-lg transition-colors"
                 >
-                  End Call
+                  📞 End Call
                 </button>
               )}
               <button
                 onClick={leaveRoom}
-                className="px-4 py-2 bg-gray-600 text-white rounded hover:bg-gray-700"
+                className="px-6 py-3 bg-gray-600 text-white rounded-lg hover:bg-gray-700 font-semibold text-lg shadow-lg transition-colors"
               >
-                Leave Room
+                🚪 Leave Room
               </button>
             </div>
           </div>
 
           {/* Video Call Interface */}
           {isInCall ? (
-            <div className="flex-1 bg-black p-4">
+            <div className="flex-1 bg-black p-6 overflow-hidden">
               {/* Video Grid */}
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 h-full">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 h-full min-h-0">
                 {/* Local Video */}
-                <div className="relative bg-gray-800 rounded-lg overflow-hidden">
+                <div className="relative bg-gray-800 rounded-xl overflow-hidden shadow-2xl border-2 border-green-500">
                   <video
                     ref={localVideoRef}
                     autoPlay
@@ -301,8 +316,11 @@ export default function MeetWithFriends() {
                     playsInline
                     className="w-full h-full object-cover"
                   />
-                  <div className="absolute bottom-2 left-2 bg-black bg-opacity-50 text-white px-2 py-1 rounded text-sm">
-                    You
+                  <div className="absolute bottom-4 left-4 bg-green-600 bg-opacity-90 text-white px-3 py-2 rounded-lg font-semibold">
+                    📹 You (Local)
+                  </div>
+                  <div className="absolute top-4 right-4 bg-black bg-opacity-50 text-white px-2 py-1 rounded text-xs">
+                    🔴 LIVE
                   </div>
                 </div>
 
@@ -310,7 +328,7 @@ export default function MeetWithFriends() {
                 {participants.map((participantId) => {
                   const videoRef = remoteVideoRefs.current.get(participantId);
                   return (
-                    <div key={participantId} className="relative bg-gray-800 rounded-lg overflow-hidden">
+                    <div key={participantId} className="relative bg-gray-800 rounded-xl overflow-hidden shadow-2xl border-2 border-blue-500">
                       <video
                         ref={(el) => {
                           if (videoRef) videoRef.current = el;
@@ -319,29 +337,50 @@ export default function MeetWithFriends() {
                         playsInline
                         className="w-full h-full object-cover"
                       />
-                      <div className="absolute bottom-2 left-2 bg-black bg-opacity-50 text-white px-2 py-1 rounded text-sm">
-                        User {participantId}
+                      <div className="absolute bottom-4 left-4 bg-blue-600 bg-opacity-90 text-white px-3 py-2 rounded-lg font-semibold">
+                        👤 User {participantId}
+                      </div>
+                      <div className="absolute top-4 right-4 bg-black bg-opacity-50 text-white px-2 py-1 rounded text-xs">
+                        🔴 LIVE
                       </div>
                     </div>
                   );
                 })}
               </div>
 
-              {/* Call Info */}
-              <div className="mt-4 text-center text-white">
-                <p>Participants: {participants.length + 1}</p>
+              {/* Call Controls & Info */}
+              <div className="mt-6 text-center">
+                <div className="bg-gray-800 rounded-lg p-4 inline-block">
+                  <p className="text-white text-lg font-semibold">
+                    👥 Active Participants: {participants.length + 1}
+                  </p>
+                  <p className="text-gray-300 text-sm mt-1">
+                    Video call in progress
+                  </p>
+                </div>
               </div>
             </div>
           ) : (
-            <div className="flex-1 flex items-center justify-center bg-gray-100">
-              <div className="text-center">
-                <h3 className="text-xl font-semibold mb-4">Ready to start video call</h3>
-                <p className="text-gray-600 mb-4">
-                  Click "Start Video Call" to begin the meeting
+            <div className="flex-1 flex items-center justify-center bg-gradient-to-br from-gray-800 to-gray-900">
+              <div className="text-center p-12 bg-gray-800 rounded-2xl shadow-2xl border border-gray-700 max-w-lg">
+                <div className="text-6xl mb-6">🎥</div>
+                <h3 className="text-3xl font-bold text-white mb-6">Ready to Connect</h3>
+                <p className="text-gray-300 text-lg mb-6 leading-relaxed">
+                  Click "Start Video Call" to begin your meeting with other participants
                 </p>
-                <p className="text-sm text-gray-500">
-                  Participants in room: {participants.length + 1}
-                </p>
+                <div className="bg-gray-700 rounded-lg p-4 mb-6">
+                  <p className="text-white font-semibold text-lg">
+                    👥 Participants in room: {participants.length + 1}
+                  </p>
+                  {participants.length > 0 && (
+                    <p className="text-green-400 text-sm mt-2">
+                      ✅ Other participants are ready to connect
+                    </p>
+                  )}
+                </div>
+                <div className="text-gray-400 text-sm">
+                  💡 Make sure your camera and microphone are ready
+                </div>
               </div>
             </div>
           )}
