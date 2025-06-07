@@ -149,7 +149,7 @@ export default function MeetWithFriends() {
           socketRef.current,
           joinedRoom,
           user.id,
-          user.id < participantId // Use consistent polite/impolite assignment
+          user.id.localeCompare(participantId) > 0 // Use robust polite/impolite assignment
         );
 
         manager.onConnectionFailed = () => {
@@ -203,7 +203,8 @@ export default function MeetWithFriends() {
         console.log('Cleaning up connection for participant who left:', participantId);
         const manager = webRTCManagers.get(participantId);
         if (manager) {
-          manager.cleanup();
+          if (typeof manager.destroy === 'function') manager.destroy();
+          else if (typeof manager.cleanup === 'function') manager.cleanup();
         }
 
         setWebRTCManagers(prev => {
@@ -426,7 +427,7 @@ export default function MeetWithFriends() {
               </div>
 
               {/* Remote Videos */}
-              {participants.map((participantId) => {
+              {participants.filter(pid => pid !== user.id).map((participantId) => {
                 const videoRef = remoteVideoRefs.current.get(participantId);
                 return (
                   <div key={participantId} className="relative bg-gray-800 rounded-xl overflow-hidden shadow-2xl border-2 border-blue-500">
