@@ -27,8 +27,9 @@ import Exercise          from "./Exercise";
 
 export default function RightSide() {
   const { t } = useTranslation();
-  const { user } = useContext(AppContext);
+  const { user, bellaFullscreen } = useContext(AppContext);
   const navigate = useNavigate();
+  if (bellaFullscreen) return null;
   const { pathname } = useLocation();
   const segment = pathname.split("/").pop();
 

@@ -8,7 +8,9 @@
     "stop": "הפסק שיחה",
     "confirmSaved": "בסדר, שמרתי: {{title}}.",
     "reminderPrefix": "תזכורת:",
-    "noReminders": "אין לך תזכורות שמורות."
+    "noReminders": "אין לך תזכורות שמורות.",
+    "fullscreen": "מסך מלא",
+    "exitFullscreen": "צא ממסך מלא"
   },
   "Calendar": {
     "Mon": "שני",

@@ -8,7 +8,9 @@
     "stop": "Lopeta puhelu",
     "confirmSaved": "Tallensin: {{title}}.",
     "reminderPrefix": "MUISTUTUS:",
-    "noReminders": "Sinulla ei ole tallennettuja muistutuksia."
+    "noReminders": "Sinulla ei ole tallennettuja muistutuksia.",
+    "fullscreen": "Kokoruutu",
+    "exitFullscreen": "Poistu kokoruudusta"
   },
   "Calendar": {
     "Mon": "maanantai",
