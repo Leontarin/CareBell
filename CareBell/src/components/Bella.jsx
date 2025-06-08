@@ -1,7 +1,7 @@
 // src/components/Bella.jsx
 //test
 import React, { useEffect, useState, useRef, useContext } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import Vapi from '@vapi-ai/web';
 import { FaPhone, FaPhoneSlash, FaExpand, FaCompress } from 'react-icons/fa';
 import bella_img from '../resources/Grafik3a.png';
@@ -13,6 +13,7 @@ export default function Bella() {
   const { t, i18n } = useTranslation();
   const { user, bellaFullscreen, setBellaFullscreen } = useContext(AppContext);
   const navigate   = useNavigate();
+  const location   = useLocation();
 
   const [callStatus, setCallStatus] = useState('ready');   // 'ready' | 'calling' | 'in-call'
   const [messages, setMessages]     = useState([]);
@@ -163,7 +164,7 @@ export default function Bella() {
           break;
 
         case 'open_menu':
-          navigate(slot, { replace: true });
+          navigate(slot, { replace: location.pathname !== '/' });
           setBellaFullscreen(false);
           await vapi.send({
             type: 'add-message',
