@@ -357,6 +357,21 @@ export default function Bella() {
           </div>
         </div>
       )}
+      <button onClick={toggleCall} className={btnClass}>
+        <Icon className="mr-2 text-xl"/>
+        {callLabel}
+      </button>
+      <button
+        onClick={() => setBellaFullscreen(!bellaFullscreen)}
+        className={`${btnClass} mt-2`}
+      >
+        {bellaFullscreen ? (
+          <FaCompress className="mr-2 text-xl" />
+        ) : (
+          <FaExpand className="mr-2 text-xl" />
+        )}
+        {bellaFullscreen ? t('Bella.exitFullscreen') : t('Bella.fullscreen')}
+      </button>
     </div>
   );
 }
