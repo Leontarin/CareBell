@@ -163,7 +163,8 @@ export default function Bella() {
           break;
 
         case 'open_menu':
-          navigate(slot);
+          setBellaFullscreen(false);
+          navigate(`/${slot}`);
           await vapi.send({
             type: 'add-message',
             message: { role: 'system', content: `Say "Opening ${slot.replace('-', ' ')}"` }
@@ -270,40 +271,91 @@ export default function Bella() {
   `;
 
   return (
-    <div className="flex flex-col items-center w-full">
-      {isChatOpen ? (
-        <>
-          <div id="bella-img" className="rounded-full overflow-hidden border-[5px] border-blue-800 mb-2 w-24 h-24">
-            <img src={bella_img} alt="Bella" className="w-full h-full object-cover" />
-          </div>
-          <button onClick={()=>setIsChatOpen(false)} className={chatBtnClass}>
-            {t('Bella.closeChat')}
-          </button>
-          <div ref={chatRef}
-               className="w-full max-w-md p-4 bg-white rounded-lg shadow overflow-y-auto mb-4 space-y-3"
-               style={{maxHeight:'300px'}}>
-            {messages.map((m,i)=>(
-              <div key={i} className={`flex ${m.speaker==='assistant'?'justify-start':'justify-end'}`}>
-                <div className={`px-4 py-2 rounded-lg ${m.speaker==='assistant'?'bg-blue-900 text-white':'bg-gray-300 text-black'}`}
-                     style={{fontSize:'18px',lineHeight:'1.4'}}>
+    <div
+      className={`w-full flex ${
+        bellaFullscreen ? 'flex-row items-start' : 'flex-col items-center'
+      }`}
+    >
+      <div
+        className={`${
+          bellaFullscreen ? 'w-1/3 flex flex-col items-center pr-4' : 'flex flex-col items-center w-full'
+        }`}
+      >
+        {isChatOpen ? (
+          <>
+            <div
+              id="bella-img"
+              className={`rounded-full overflow-hidden border-[5px] border-blue-800 mb-2 ${
+                bellaFullscreen ? 'w-56 h-56' : 'w-24 h-24'
+              }`}
+            >
+              <img src={bella_img} alt="Bella" className="w-full h-full object-cover" />
+            </div>
+            <button onClick={() => setIsChatOpen(false)} className={chatBtnClass}>
+              {t('Bella.closeChat')}
+            </button>
+          </>
+        ) : (
+          <>
+            <div
+              id="bella-img"
+              className={`rounded-full overflow-hidden border-[5px] border-blue-800 mb-4 ${
+                bellaFullscreen ? 'w-72 h-72 ml-4' : 'w-48 h-48'
+              }`}
+            >
+              <img src={bella_img} alt="Bella" className="w-full h-full object-cover" />
+            </div>
+            {messages.length > 0 && (
+              <button onClick={() => setIsChatOpen(true)} className={chatBtnClass}>
+                {t('Bella.openChat')}
+              </button>
+            )}
+          </>
+        )}
+        <button onClick={toggleCall} className={btnClass}>
+          <Icon className="mr-2 text-xl"/>
+          {callLabel}
+        </button>
+        <button
+          onClick={() => setBellaFullscreen(!bellaFullscreen)}
+          className={`${btnClass} mt-2`}
+      >
+        {bellaFullscreen ? (
+          <FaCompress className="mr-2 text-xl" />
+        ) : (
+          <FaExpand className="mr-2 text-xl" />
+        )}
+        {bellaFullscreen ? t('Bella.exitFullscreen') : t('Bella.fullscreen')}
+      </button>
+      </div>
+
+      {isChatOpen && (
+        <div
+          className={`${
+            bellaFullscreen ? 'w-2/3' : 'w-full'
+          } flex flex-col`}
+        >
+          <div
+            ref={chatRef}
+            className={`p-4 bg-white rounded-lg shadow overflow-y-auto mb-4 space-y-3 ${
+              bellaFullscreen ? 'h-[60vh]' : ''
+            }`}
+            style={{ maxHeight: bellaFullscreen ? 'none' : '300px' }}
+          >
+            {messages.map((m, i) => (
+              <div key={i} className={`flex ${m.speaker === 'assistant' ? 'justify-start' : 'justify-end'}`}>
+                <div
+                  className={`px-4 py-2 rounded-lg ${
+                    m.speaker === 'assistant' ? 'bg-blue-900 text-white' : 'bg-gray-300 text-black'
+                  }`}
+                  style={{ fontSize: '18px', lineHeight: '1.4' }}
+                >
                   {m.text}
                 </div>
               </div>
             ))}
           </div>
-        </>
-      ):(
-        <>
-          <div id="bella-img"
-               className="rounded-full overflow-hidden border-[5px] border-blue-800 mb-4 w-48 h-48">
-            <img src={bella_img} alt="Bella" className="w-full h-full object-cover" />
-          </div>
-          {messages.length>0 && (
-            <button onClick={()=>setIsChatOpen(true)} className={chatBtnClass}>
-              {t('Bella.openChat')}
-            </button>
-          )}
-        </>
+        </div>
       )}
       <button onClick={toggleCall} className={btnClass}>
         <Icon className="mr-2 text-xl"/>
