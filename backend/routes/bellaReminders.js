@@ -5,6 +5,22 @@ const axios = require('axios');
 const router = express.Router();
 const BellaReminder = require('../models/bellaReminder');
 
+function canonicalize(text) {
+  return text
+    .toLowerCase()
+    .replace(/[.!?]/g, '')
+    .replace(/^(hi|hello|hey)[,\s]+/, '')
+    .replace(/\bmy name is\b/, 'i am')
+    .replace(/\bi'm\b/, 'i am')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+function looksLikeFact(text) {
+  const t = text.toLowerCase();
+  return /(my name is|i\s+(?:am|m|have|was|was born|live|work))/i.test(t);
+}
+
 const HF_API_URL = 'https://api-inference.huggingface.co/models/joeddav/xlm-roberta-large-xnli';
 const HF_TOKEN = process.env.HF_API_TOKEN;
 
@@ -12,7 +28,18 @@ const HF_TOKEN = process.env.HF_API_TOKEN;
 router.post('/addReminder', async (req, res) => {
   try {
     const { userId, title, description, reminderTime, isImportant } = req.body;
-    const newReminder = new BellaReminder({ userId, title, description, reminderTime, isImportant });
+    const canonical = canonicalize(description || title);
+    const exists = await BellaReminder.findOne({ userId, canonical });
+    if (exists) return res.status(409).json({ error: 'Duplicate reminder' });
+
+    const newReminder = new BellaReminder({
+      userId,
+      title,
+      description,
+      reminderTime,
+      isImportant,
+      canonical
+    });
     const savedReminder = await newReminder.save();
     return res.status(201).json(savedReminder);
   } catch (error) {
@@ -69,17 +96,20 @@ router.post('/analyze', async (req, res) => {
     const topLabel = labels[0];
     console.log(`→ topLabel: ${topLabel} (score ${scores[0].toFixed(3)})`);
 
-    // If the top label is 'personal fact', save it
-    if (topLabel === 'personal fact') {
+    const canonical = canonicalize(text);
+
+    // If the top label is 'personal fact' or our heuristics match, save it
+    if (topLabel === 'personal fact' || looksLikeFact(text)) {
       const title = text.split(/,|\./)[0].trim();
-      const exists = await BellaReminder.findOne({ userId, title });
+      const exists = await BellaReminder.findOne({ userId, canonical });
       if (!exists) {
         const reminder = await BellaReminder.create({
           userId,
           title,
           description: text,
           reminderTime: new Date(),
-          isImportant: true
+          isImportant: true,
+          canonical
         });
         return res.status(201).json({ saved: true, reminder });
       }

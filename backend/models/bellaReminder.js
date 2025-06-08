@@ -15,6 +15,11 @@ const bellaReminderSchema = new mongoose.Schema({
         type: String,
         required: true
     },
+    canonical: {
+        type: String,
+        default: null,
+        index: true
+    },
     reminderTime: {
         type: Date,
         required: true
@@ -25,6 +30,6 @@ const bellaReminderSchema = new mongoose.Schema({
     }
 });
 
-bellaReminderSchema.index({ userId: 1 });
+bellaReminderSchema.index({ userId: 1, canonical: 1 });
 
 module.exports = mongoose.model('BellaReminder', bellaReminderSchema);
