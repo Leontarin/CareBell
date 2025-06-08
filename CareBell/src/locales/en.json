@@ -8,7 +8,9 @@
     "stop": "Stop Call",
     "confirmSaved": "Okay, I saved: {{title}}.",
     "reminderPrefix": "REMINDER:",
-    "noReminders": "You have no saved reminders."
+    "noReminders": "You have no saved reminders.",
+    "fullscreen": "Fullscreen",
+    "exitFullscreen": "Exit Fullscreen"
   },
   "Calendar": {
     "Mon": "Mon",

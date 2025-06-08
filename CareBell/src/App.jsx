@@ -26,6 +26,7 @@ export async function fetchJson(url) {
 export default function App() {
 
   const [user, setUser] = useState(null);
+  const [bellaFullscreen, setBellaFullscreen] = useState(false);
 
   useEffect(() => {
     //Set first user as default user
@@ -42,7 +43,7 @@ export default function App() {
   }, []);
 
   return (
-    <AppContext.Provider value={{user, setUser}}>
+    <AppContext.Provider value={{user, setUser, bellaFullscreen, setBellaFullscreen}}>
     <BrowserRouter>
       <div
         className="
