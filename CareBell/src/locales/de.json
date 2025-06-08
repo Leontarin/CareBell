@@ -8,7 +8,9 @@
     "stop": "Anruf beenden",
     "confirmSaved": "Okay, ich habe gespeichert: {{title}}.",
     "reminderPrefix": "ERINNERUNG:",
-    "noReminders": "Du hast keine gespeicherten Erinnerungen."
+    "noReminders": "Du hast keine gespeicherten Erinnerungen.",
+    "fullscreen": "Vollbild",
+    "exitFullscreen": "Vollbild verlassen"
   },
   "Calendar": {
     "Mon": "Montag",

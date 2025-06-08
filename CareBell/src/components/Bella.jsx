@@ -3,7 +3,7 @@
 import React, { useEffect, useState, useRef, useContext } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Vapi from '@vapi-ai/web';
-import { FaPhone, FaPhoneSlash } from 'react-icons/fa';
+import { FaPhone, FaPhoneSlash, FaExpand, FaCompress } from 'react-icons/fa';
 import bella_img from '../resources/Grafik3a.png';
 import { useTranslation } from 'react-i18next';
 import { AppContext } from '../AppContext';
@@ -11,7 +11,7 @@ import { API } from '../config';
 
 export default function Bella() {
   const { t, i18n } = useTranslation();
-  const { user }   = useContext(AppContext);
+  const { user, bellaFullscreen, setBellaFullscreen } = useContext(AppContext);
   const navigate   = useNavigate();
 
   const [callStatus, setCallStatus] = useState('ready');   // 'ready' | 'calling' | 'in-call'
@@ -96,6 +96,7 @@ export default function Bella() {
     vapi.on('call-start', async () => {
       setCallStatus('in-call');
       setIsChatOpen(true);
+      setBellaFullscreen(true);
       if (!user?.id) return;
       try {
         const res = await fetch(`${API}/bellaReminders/user/${user.id}`);
@@ -110,7 +111,10 @@ export default function Bella() {
       } catch (e) { console.error(e); }
     });
 
-    vapi.on('call-end', () => setCallStatus('ready'));
+    vapi.on('call-end', () => {
+      setCallStatus('ready');
+      setBellaFullscreen(false);
+    });
 
     vapi.on('message', async msg => {
       if (msg.type !== 'transcript') return;
@@ -304,6 +308,17 @@ export default function Bella() {
       <button onClick={toggleCall} className={btnClass}>
         <Icon className="mr-2 text-xl"/>
         {callLabel}
+      </button>
+      <button
+        onClick={() => setBellaFullscreen(!bellaFullscreen)}
+        className={`${btnClass} mt-2`}
+      >
+        {bellaFullscreen ? (
+          <FaCompress className="mr-2 text-xl" />
+        ) : (
+          <FaExpand className="mr-2 text-xl" />
+        )}
+        {bellaFullscreen ? t('Bella.exitFullscreen') : t('Bella.fullscreen')}
       </button>
     </div>
   );
