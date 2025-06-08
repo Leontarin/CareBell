@@ -163,7 +163,7 @@ export default function Bella() {
           break;
 
         case 'open_menu':
-          navigate(slot);
+          navigate(`/${slot}`, { replace: true });
           await vapi.send({
             type: 'add-message',
             message: { role: 'system', content: `Say "Opening ${slot.replace('-', ' ')}"` }
