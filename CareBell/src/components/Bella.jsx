@@ -98,16 +98,48 @@ export default function Bella() {
       setCallStatus('in-call');
       setIsChatOpen(true);
       setBellaFullscreen(true);
+      //Provide bella with all available meals
+      try {
+        const foodRes = await fetch(`${API}/foods`);
+        if (foodRes.ok) {
+          const foods = await foodRes.json();
+          for (let f of foods) {
+            const ingredients = Array.isArray(f.ingredients) ? f.ingredients.join(', ') : '';
+            await vapi.send({ //send bella a message as system
+              type: 'add-message',
+              message: {
+                role: 'system',
+                content: `Please remember this meal, add it to our list of available meals: ${f.name}. ${f.description}. Ingredients: ${ingredients}. `
+              }
+            });
+          }
+        }
+      } catch(e) {
+        console.error(e);
+      }
+      //Provide bella with all reminders of a user
       if (!user?.id) return;
       try {
         const res = await fetch(`${API}/bellaReminders/user/${user.id}`);
         if (!res.ok) throw new Error(res.statusText);
         const rems = await res.json();
         for (let r of rems) {
-          await vapi.send({
+          await vapi.send({ //send bella a message as system
             type: 'add-message',
             message: { role: 'system', content: `Remember: ${r.description}` }
           });
+        }
+      } catch (e) { console.error(e); }
+      try {
+        const res = await fetch(`${API}/medications/${user.id}`);
+        if (!res.ok) throw new Error(res.statusText);
+        const meds = await res.json();
+        for (let m of meds) {
+          await vapi.send({ //send bella a message as system
+            type: 'add-message',
+            message: { role: 'system', content: `This is one of the medications in the user's list: ${m.name}, the dosage is ${m.dosage} and they need to take it every ${m.frequency} hours. the last time it was taken was ${m.lastTaken}, and the next time is ${m.nextDue}, when asked when do I need to take it, please calculate in how many hours do I have to take it` }
+          });
+          console.log(m)
         }
       } catch (e) { console.error(e); }
     });
