@@ -7,7 +7,7 @@ const cors = require('cors');
 const userRoute         = require('../routes/users');
 const contactRoute      = require('../routes/contacts');
 const foodRoute         = require('../routes/foods');
-const medicationRoute   = require('../routes/medications');
+const medicationRoute   = require('../routes/medications');z
 const bellaReminderRoute = require('../routes/bellaReminders');
 const newsRoute         = require('../routes/news');
 const exercisesRoute    = require('../routes/exercises');
@@ -24,7 +24,7 @@ app.use(cors({
 app.use(express.json());
 
 // ─── Database ─────────────────────────────────────────────────────────────────
-mongoose.connect('process.env.MONGODB_URI')
+mongoose.connect(process.env.MONGODB_URI)
   .then(() => console.log('✅ Connected to MongoDB'))
   .catch(err => console.error('❌ Could not connect to MongoDB:', err));
 
