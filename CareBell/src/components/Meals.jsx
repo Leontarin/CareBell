@@ -307,157 +307,190 @@ function Meals() {
     setActiveTab('list');
   };
 
-  return (
-    <div className="p-4 max-w-4xl mx-auto bg-white shadow-lg rounded-lg">
-      <h1 className="text-4xl font-bold mb-8 text-center text-blue-800">{t("Meals.FoodInfo")}</h1>
-      
-      {/* Main Tab Navigation - Large, easy to press buttons */}
-      <div className="flex mb-8">
+
+}
+return (
+  <div className="bg-gradient-to-br from-blue-50 to-blue-100 rounded-2xl overflow-hidden min-h-screen">
+    <div className="bg-white shadow-lg p-8 border-b-4 border-blue-200">
+      <h1 className="text-5xl font-bold text-center text-blue-900 flex items-center justify-center">
+        <span className="mr-4 text-6xl">🍽️</span>
+        {t("Meals.FoodInfo")}
+      </h1>
+    </div>
+
+    <div className="p-8">
+      {/* Enhanced Main Tab Navigation */}
+      <div className="flex mb-8 bg-white rounded-3xl p-2 shadow-xl border-2 border-blue-200">
         <button
           onClick={() => setActiveTab('list')}
-          className={`flex-1 py-4 text-2xl font-bold rounded-tl-lg rounded-bl-lg ${
+          className={`flex-1 py-6 text-2xl font-bold rounded-2xl transition-all duration-300 flex items-center justify-center ${
             activeTab === 'list' 
-              ? 'bg-blue-600 text-white' 
-              : 'bg-gray-200 text-gray-700'
+              ? 'bg-gradient-to-r from-blue-600 to-blue-700 text-white shadow-lg transform scale-105' 
+              : 'text-blue-600 hover:bg-blue-50'
           }`}
         >
+          <span className="mr-3 text-3xl">📋</span>
           {t("Meals.FoodList")}
         </button>
         <button
           onClick={() => setActiveTab('scanner')}
-          className={`flex-1 py-4 text-2xl font-bold rounded-tr-lg rounded-br-lg ${
+          className={`flex-1 py-6 text-2xl font-bold rounded-2xl transition-all duration-300 flex items-center justify-center ${
             activeTab === 'scanner' 
-              ? 'bg-blue-600 text-white' 
-              : 'bg-gray-200 text-gray-700'
+              ? 'bg-gradient-to-r from-blue-600 to-blue-700 text-white shadow-lg transform scale-105' 
+              : 'text-blue-600 hover:bg-blue-50'
           }`}
         >
+          <span className="mr-3 text-3xl">📷</span>
           {t("Meals.scanBarcode")}
         </button>
       </div>
       
-      {/* Scanner View */}
+      {/* Enhanced Scanner View */}
       {activeTab === 'scanner' && (
-        <div className="mb-6">
-          <button
-            onClick={toggleScanner}
-            className={`w-full flex items-center justify-center px-6 py-5 rounded-lg text-2xl font-bold mb-6 ${
-              scanning ? "bg-red-500 text-white" : "bg-green-500 text-white"
-            }`}
-          >
-            <span className="mr-3 text-3xl" role="img" aria-hidden="true">📷</span>
-            {scanning ? "Stop Camera" : "Start Camera"}
-          </button>
+        <div className="mb-8">
+          <div className="bg-white rounded-3xl p-8 shadow-xl border-2 border-blue-200">
+            <button
+              onClick={toggleScanner}
+              className={`w-full flex items-center justify-center px-8 py-6 rounded-2xl text-3xl font-bold mb-8 shadow-xl hover:shadow-2xl transform hover:scale-105 transition-all duration-200 ${
+                scanning 
+                  ? "bg-gradient-to-r from-red-600 to-red-700 hover:from-red-500 hover:to-red-600 text-white" 
+                  : "bg-gradient-to-r from-green-600 to-green-700 hover:from-green-500 hover:to-green-600 text-white"
+              }`}
+            >
+              <span className="mr-4 text-4xl">📷</span>
+              {scanning ? "Stop Camera" : "Start Camera"}
+            </button>
 
-          {scanning && (
-            <div className="relative mb-8">
-              <div className="border-4 border-blue-400 rounded-lg overflow-hidden">
-                <BarcodeScannerComponent
-                  width="100%"
-                  height={350}
-                  onUpdate={handleDetected}
-                  facingMode="environment"
-                  delay={300}
-                  videoConstraints={{
-                    facingMode: "environment",
-                    width: { ideal: 1280 },
-                    height: { ideal: 720 }
-                  }}
-                />
-                <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                  <div className="w-3/5 h-3/5 border-4 border-red-500 border-dashed rounded opacity-70 items-center justify-center"></div>
+            {scanning && (
+              <div className="relative">
+                <div className="border-4 border-blue-400 rounded-3xl overflow-hidden shadow-2xl">
+                  <BarcodeScannerComponent
+                    width="100%"
+                    height={400}
+                    onUpdate={handleDetected}
+                    facingMode="environment"
+                    delay={300}
+                    videoConstraints={{
+                      facingMode: "environment",
+                      width: { ideal: 1280 },
+                      height: { ideal: 720 }
+                    }}
+                  />
+                  <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                    <div className="w-3/5 h-3/5 border-4 border-red-500 border-dashed rounded-2xl opacity-80"></div>
+                  </div>
+                </div>
+                <div className="bg-blue-600 text-white p-4 rounded-b-2xl text-center">
+                  <p className="text-2xl font-bold">
+                    <span className="mr-3">🎯</span>
+                    {t("Meals.positionLabel")}
+                  </p>
                 </div>
               </div>
-              <p className="text-center text-xl mt-4 text-gray-600 font-medium">
-                {t("Meals.positionLabel")}
-              </p>
-            </div>
-          )}
+            )}
+          </div>
         </div>
       )}
       
-      {/* Meals List View */}
+      {/* Enhanced Meals List View */}
       {activeTab === 'list' && !meal && (
         <div>
-          {/* Search Box - Large and easy to use */}
-          <div className="mb-6">
+          {/* Enhanced Search Box */}
+          <div className="mb-8 bg-white rounded-3xl p-6 shadow-xl border-2 border-blue-200">
             <div className="relative">
               <input
                 type="text"
                 placeholder="Search for food by name..."
                 value={searchTerm}
                 onChange={handleSearch}
-                className="w-full px-5 py-4 text-xl border-2 border-gray-300 rounded-lg focus:border-blue-500 focus:outline-none"
+                className="w-full px-8 py-6 text-2xl border-3 border-blue-300 focus:border-blue-600 focus:ring-4 focus:ring-blue-200 rounded-2xl shadow-lg transition-all duration-200 pr-20"
                 aria-label="Search for food"
               />
-              <div className="absolute right-4 top-1/2 transform -translate-y-1/2 text-2xl text-gray-500">
+              <div className="absolute right-6 top-1/2 transform -translate-y-1/2 text-4xl text-blue-500">
                 🔍
               </div>
             </div>
           </div>
           
-          <h2 className="text-3xl font-bold mb-6 text-gray-800">{t("Meals.availableFoodsLabel")}</h2>
-          
-          {loading ? (
-            <div className="flex justify-center py-8">
-              <div className="animate-spin rounded-full h-16 w-16 border-b-4 border-blue-500"></div>
-            </div>
-          ) : filteredMeals.length === 0 ? (
-            <p className="text-xl text-center py-8 text-gray-500">
-              {searchTerm ? "No foods match your search" : "No foods found in the database"}
-            </p>
-          ) : (
-            <ul className="space-y-6">
-              {filteredMeals.map((food) => (
-                <li 
-                  key={food._id} 
-                  className="border border-gray-200 rounded-lg overflow-hidden shadow-md hover:shadow-lg transition-shadow"
-                >
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    {/* Food Image */}
-                    <div className="md:col-span-1">
-                      <img 
-                        src={food.imageURL || "https://via.placeholder.com/300x200?text=Food+Image"} 
-                        alt={food.name} 
-                        className="w-full h-48 md:h-full object-cover"
-                        onError={(e) => {
-                          e.target.src = "https://via.placeholder.com/300x200?text=Food+Image";
-                        }}
-                      />
-                    </div>
-                    
-                    {/* Food Details */}
-                    <div className="md:col-span-2 p-5">
-                      <div className="bg-gray-50 p-4 rounded-t-md -mx-5 -mt-5">
-                        <h3 className="text-2xl font-bold text-gray-800">{food.name}</h3>
-                        <p className="text-gray-500 mt-1">{t("Meals.barcodeLabel")} {food.barcode}</p>
+          <div className="bg-white rounded-3xl p-8 shadow-xl border-2 border-blue-200">
+            <h2 className="text-4xl font-bold mb-8 text-blue-900 text-center flex items-center justify-center">
+              <span className="mr-4 text-5xl">🍽️</span>
+              {t("Meals.availableFoodsLabel")}
+            </h2>
+            
+            {loading ? (
+              <div className="flex flex-col justify-center items-center py-16">
+                <div className="animate-spin rounded-full h-20 w-20 border-6 border-blue-500 border-t-transparent mb-6"></div>
+                <p className="text-2xl text-gray-600 font-bold">{t("Meals.loadingLabel")}</p>
+              </div>
+            ) : filteredMeals.length === 0 ? (
+              <div className="text-center py-16">
+                <div className="text-6xl mb-4">🔍</div>
+                <p className="text-2xl text-gray-600 font-bold">
+                  {searchTerm ? "No foods match your search" : "No foods found in the database"}
+                </p>
+              </div>
+            ) : (
+              <div className="space-y-8">
+                {filteredMeals.map((food) => (
+                  <div 
+                    key={food._id} 
+                    className="bg-gradient-to-r from-blue-50 to-blue-100 border-3 border-blue-200 hover:border-blue-400 rounded-3xl overflow-hidden shadow-xl hover:shadow-2xl transform hover:scale-[1.02] transition-all duration-300"
+                  >
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                      {/* Enhanced Food Image */}
+                      <div className="md:col-span-1">
+                        <img 
+                          src={food.imageURL || "https://via.placeholder.com/300x200?text=Food+Image"} 
+                          alt={food.name} 
+                          className="w-full h-64 md:h-full object-cover"
+                          onError={(e) => {
+                            e.target.src = "https://via.placeholder.com/300x200?text=Food+Image";
+                          }}
+                        />
                       </div>
                       
-                      <div className="mt-4">
-                        <p className="text-lg text-gray-700 mb-4 line-clamp-2">{food.description}</p>
+                      {/* Enhanced Food Details */}
+                      <div className="md:col-span-2 p-8">
+                        <div className="bg-white rounded-2xl p-6 mb-6 shadow-lg border-2 border-blue-200">
+                          <h3 className="text-3xl font-bold text-blue-900 flex items-center">
+                            <span className="mr-3 text-4xl">🍽️</span>
+                            {food.name}
+                          </h3>
+                          <p className="text-xl text-blue-600 mt-2 font-semibold">
+                            <span className="mr-2">🏷️</span>
+                            {t("Meals.barcodeLabel")} {food.barcode}
+                          </p>
+                        </div>
                         
-                        <div className="flex flex-col sm:flex-row gap-3 justify-between items-center">
+                        <div className="mb-6">
+                          <p className="text-xl text-gray-800 leading-relaxed line-clamp-3">{food.description}</p>
+                        </div>
+                        
+                        <div className="flex flex-col sm:flex-row gap-4">
                           <button
                             onClick={() => selectMeal(food)}
-                            className="w-full sm:w-15 px-3 py-1 bg-blue-600 text-white text-lg font-semibold rounded-lg hover:bg-blue-700 transition-colors"
+                            className="flex-1 px-6 py-4 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-500 hover:to-blue-600 text-white text-xl font-bold rounded-2xl shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-200"
                           >
-                            {t("Exercise.viewDetails")}
+                            <span className="mr-3 text-2xl">👁️</span>
+                            {t("Exercise.view_details")}
                           </button>
                           
                           {speaking ? (
                             <button
                               onClick={stopSpeaking}
-                              className="w-full sm:w-auto flex items-center justify-center px-5 py-3 rounded-lg text-lg font-semibold bg-yellow-500 text-white"
+                              className="flex-1 flex items-center justify-center px-6 py-4 rounded-2xl text-xl font-bold bg-gradient-to-r from-yellow-500 to-yellow-600 hover:from-yellow-400 hover:to-yellow-500 text-white shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-200"
                               aria-label="Stop the speech"
                             >
-                              <span className="mr-2 text-xl">🔇</span>
+                              <span className="mr-3 text-2xl">🔇</span>
                               {t("Meals.SpeakingLabel")}
                             </button>
                           ) : (
                             <button
                               onClick={() => speakText(createFoodDescription(food))}
-                              className="w-full sm:w-15 flex items-center justify-center px-3 py-1 rounded-lg text-lg font-semibold bg-green-600 text-white"
+                              className="flex-1 flex items-center justify-center px-6 py-4 rounded-2xl text-xl font-bold bg-gradient-to-r from-green-600 to-green-700 hover:from-green-500 hover:to-green-600 text-white shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-200"
                             >
-                              <span className="mr-2 text-xl">🔊</span>
+                              <span className="mr-3 text-2xl">🔊</span>
                               {t("Exercise.read")}
                             </button>
                           )}
@@ -465,101 +498,126 @@ function Meals() {
                       </div>
                     </div>
                   </div>
-                </li>
-              ))}
-            </ul>
-          )}
+                ))}
+              </div>
+            )}
+          </div>
         </div>
       )}
       
-      {/* Loading Indicator */}
+      {/* Enhanced Loading Indicator */}
       {loading && (
-        <div className="flex flex-col items-center justify-center my-8 py-6">
-          <div className="animate-spin rounded-full h-16 w-16 border-b-4 border-blue-500 mb-4"></div>
-          <p className="text-2xl text-gray-600">{t("Meals.loadingLabel")}</p>
+        <div className="flex flex-col items-center justify-center py-16 bg-white rounded-3xl shadow-xl border-2 border-blue-200">
+          <div className="animate-spin rounded-full h-20 w-20 border-6 border-blue-500 border-t-transparent mb-6"></div>
+          <p className="text-3xl text-gray-600 font-bold">{t("Meals.loadingLabel")}</p>
         </div>
       )}
       
-      {/* Error Message */}
+      {/* Enhanced Error Message */}
       {error && (
-        <div className="bg-red-100 border-l-8 border-red-600 text-red-700 p-6 rounded-lg mb-6 text-xl">
-          <h3 className="font-bold text-2xl mb-2">Error</h3>
-          <p>{error}</p>
+        <div className="bg-gradient-to-r from-red-100 to-red-200 border-4 border-red-400 text-red-800 p-8 rounded-3xl shadow-xl">
+          <div className="text-center">
+            <div className="text-6xl mb-4">⚠️</div>
+            <h3 className="font-bold text-3xl mb-4">Error</h3>
+            <p className="text-xl">{error}</p>
+          </div>
         </div>
       )}
       
-      {/* Selected Meal Details */}
+      {/* Enhanced Selected Meal Details */}
       {meal && (
-        <div className="bg-green-50 p-8 mt-8 rounded-lg border-l-8 border-green-500 shadow-lg">
-          {/* Food Image in detail view */}
+        <div className="bg-gradient-to-r from-green-50 to-green-100 border-4 border-green-400 rounded-3xl shadow-2xl overflow-hidden">
+          {/* Enhanced Food Image in detail view */}
           {meal.imageURL && (
-            <div className="mb-6">
+            <div className="relative">
               <img 
                 src={meal.imageURL} 
                 alt={meal.name} 
-                className="w-full max-w-md mx-auto rounded-lg shadow-md"
+                className="w-full h-96 object-cover"
                 onError={(e) => {
                   e.target.style.display = 'none';
                 }}
               />
+              <div className="absolute inset-0 bg-gradient-to-t from-black from-10% to-transparent"></div>
+              <div className="absolute bottom-6 left-6 text-white">
+                <h2 className="text-5xl font-bold mb-2">{meal.name}</h2>
+                <p className="text-2xl font-semibold">
+                  <span className="mr-2">🏷️</span>
+                  {t("Meals.barcodeLabel")} {meal.barcode}
+                </p>
+              </div>
             </div>
           )}
           
-          <div className="flex justify-between items-start">
-            <div className="flex-1">
-              <h2 className="text-3xl font-bold text-gray-800 mb-2">{meal.name}</h2>
-              <p className="text-gray-600 text-xl mb-4">{t("Meals.barcodeLabel")} {meal.barcode}</p>
+          <div className="p-8">
+            {!meal.imageURL && (
+              <div className="text-center mb-8">
+                <div className="text-6xl mb-4">🍽️</div>
+                <h2 className="text-5xl font-bold text-green-900 mb-4">{meal.name}</h2>
+                <p className="text-2xl text-green-700 font-semibold">
+                  <span className="mr-2">🏷️</span>
+                  {t("Meals.barcodeLabel")} {meal.barcode}
+                </p>
+              </div>
+            )}
+            
+            <div className="flex justify-end mb-8">
+              {speaking ? (
+                <button
+                  onClick={stopSpeaking}
+                  className="flex items-center px-8 py-4 rounded-2xl text-2xl font-bold bg-gradient-to-r from-yellow-500 to-yellow-600 hover:from-yellow-400 hover:to-yellow-500 text-white shadow-xl hover:shadow-2xl transform hover:scale-105 transition-all duration-200"
+                  aria-label="Stop the speech"
+                >
+                  <span className="mr-3 text-3xl">🔇</span>
+                  {t("Meals.SpeakingLabel")}
+                </button>
+              ) : (
+                <button
+                  onClick={() => speakText(createFoodDescription(meal))}
+                  className="flex items-center px-8 py-4 rounded-2xl text-2xl font-bold bg-gradient-to-r from-green-600 to-green-700 hover:from-green-500 hover:to-green-600 text-white shadow-xl hover:shadow-2xl transform hover:scale-105 transition-all duration-200"
+                >
+                  <span className="mr-3 text-3xl">🔊</span>
+                  {t("Exercise.read")}
+                </button>
+              )}
             </div>
             
-            {speaking ? (
+            <div className="bg-white rounded-3xl p-8 mb-8 shadow-xl border-2 border-green-200">
+              <h3 className="text-3xl font-bold text-green-900 mb-6 flex items-center">
+                <span className="mr-3 text-4xl">📝</span>
+                {t("Exercise.descriptionLabel")}
+              </h3>
+              <p className="text-2xl text-gray-800 leading-relaxed">{meal.description}</p>
+            </div>
+            
+            <div className="bg-white rounded-3xl p-8 shadow-xl border-2 border-green-200">
+              <h3 className="text-3xl font-bold text-green-900 mb-6 flex items-center">
+                <span className="mr-3 text-4xl">🥬</span>
+                {t("Meals.ingredientsLabel")}
+              </h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {meal.ingredients.map((item, idx) => (
+                  <div key={idx} className="flex items-center py-4 px-6 bg-green-50 rounded-2xl border-2 border-green-200 shadow-md">
+                    <span className="mr-4 text-green-600 text-3xl">✓</span>
+                    <span className="text-xl font-semibold text-green-900">{item}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+            
+            <div className="mt-8 text-center">
               <button
-                onClick={stopSpeaking}
-                className="flex items-center px-5 py-3 rounded-lg text-xl font-semibold bg-yellow-500 text-white"
-                aria-label="Stop the speech"
+                onClick={backToList}
+                className="px-8 py-4 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-500 hover:to-blue-600 text-white text-2xl font-bold rounded-2xl shadow-xl hover:shadow-2xl transform hover:scale-105 transition-all duration-200"
               >
-                <span className="mr-2 text-2xl">🔇</span>
-                {t("Meals.SpeakingLabel")}
+                <span className="mr-3 text-3xl">← </span>
+                {t("Meals.backToList")}
               </button>
-            ) : (
-              <button
-                onClick={() => speakText(createFoodDescription(meal))}
-                className="flex items-center px-5 py-3 rounded-lg text-xl font-semibold bg-green-600 text-white"
-              >
-                <span className="mr-2 text-2xl">🔊</span>
-                {t("Exercise.read")}
-              </button>
-            )}
-          </div>
-          
-          <div className="my-6">
-            <h3 className="text-2xl font-semibold text-gray-800 mb-3">{t("Exercise.descriptionLabel")}</h3>
-            <p className="text-xl text-gray-700 leading-relaxed">{meal.description}</p>
-          </div>
-          
-          <div className="mt-6">
-            <h3 className="text-2xl font-semibold text-gray-800 mb-3">{t("Meals.ingredientsLabel")}</h3>
-            <ul className="bg-white rounded-lg p-5 border border-gray-100 shadow-sm">
-              {meal.ingredients.map((item, idx) => (
-                <li key={idx} className="py-3 text-xl border-b border-gray-100 last:border-0 flex items-center">
-                  <span className="mr-3 text-green-500 text-2xl">✓</span>
-                  {item}
-                </li>
-              ))}
-            </ul>
-          </div>
-          
-          <div className="mt-8 flex justify-center">
-            <button
-              onClick={backToList}
-              className="px-6 py-3 bg-blue-600 text-white text-xl font-semibold rounded-lg hover:bg-blue-700 transition-colors"
-            >
-              {t("Meals.backToList")}
-            </button>
+            </div>
           </div>
         </div>
-      )}
-    </div>
-  );
-}
-
+     )}
+   </div>
+ </div>
+);
 export default Meals;
