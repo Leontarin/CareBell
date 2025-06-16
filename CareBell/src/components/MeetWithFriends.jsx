@@ -578,7 +578,7 @@ export default function MeetWithFriends() {
               })}
             </div>
 
-            {/* Call Controls & Info */}            <div className="mt-6 text-center">
+            {/* Call Controls & Info*/}            <div className="mt-6 text-center">
               <div className="bg-gray-800 rounded-lg p-4 inline-block">
                 <p className="text-white text-lg font-semibold">
                   👥 {t("MeetWithFriends.activeParticipants")} {participants.length}
