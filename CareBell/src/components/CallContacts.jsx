@@ -52,7 +52,6 @@ export default function CallContacts() {
   const handleBulkDelete = () => {
     if (selectedIds.size === 0) return;
     setMenuOpen(false);
-    // uses translation with interpolation for count
     if (!window.confirm(t("CallContacts.confirmBulkDelete", { count: selectedIds.size })))
       return;
     Promise.all(
@@ -90,193 +89,175 @@ export default function CallContacts() {
   };
 
   if (loading)
-    return <p className="text-center py-8">{t("CallContacts.loading")}</p>;
+    return <p className="text-center py-4 text-sm">{t("CallContacts.loading")}</p>;
   if (error)
     return (
-      <p className="text-center text-red-600 py-8">
+      <p className="text-center text-red-600 py-4 text-sm">
         {t("CallContacts.error", { message: error })}
       </p>
     );
-return (
-  <div className="h-full flex flex-col bg-gradient-to-br from-blue-50 to-blue-100 rounded-2xl overflow-hidden">
-    {/* Enhanced Header */}
-    <div className="bg-white shadow-lg p-6 border-b-4 border-blue-200">
-      <div className="flex flex-col lg:flex-row items-center gap-4 max-w-4xl mx-auto">
-        <div className="flex-1 relative">
-          <input
-            type="text"
-            value={query}
-            onChange={e => setQuery(e.target.value)}
-            placeholder={t("CallContacts.searchPlaceholder")}
-            className="w-full rounded-2xl border-3 border-blue-300 focus:border-blue-600 focus:ring-4 focus:ring-blue-200 text-xl px-6 py-4 pr-16 shadow-lg transition-all duration-200"
-          />
-          <div className="absolute right-4 top-1/2 transform -translate-y-1/2 text-3xl text-blue-500">
-            🔍
+
+  return (
+    <div className="h-full flex flex-col bg-gray-50">
+      {/* Compact Header */}
+      <div className="bg-white shadow-sm p-3 border-b border-gray-200">
+        <div className="flex items-center gap-3">
+          <div className="flex-1 relative">
+            <input
+              type="text"
+              value={query}
+              onChange={e => setQuery(e.target.value)}
+              placeholder={t("CallContacts.searchPlaceholder")}
+              className="w-full rounded-lg border border-gray-300 focus:border-blue-500 focus:ring-1 focus:ring-blue-200 text-sm px-3 py-2 pr-8"
+            />
+            <div className="absolute right-2 top-1/2 transform -translate-y-1/2 text-gray-400">
+              🔍
+            </div>
+          </div>
+          
+          {!isAdding && (
+            <button
+              onClick={() => setIsAdding(true)}
+              className="bg-blue-600 hover:bg-blue-700 text-white font-medium text-sm rounded-lg px-4 py-2 whitespace-nowrap"
+            >
+              + {t("CallContacts.addContact")}
+            </button>
+          )}
+          
+          {/* Bulk delete button */}
+          <div className="relative">
+            <button
+              onClick={() => setMenuOpen(o => !o)}
+              className="bg-red-500 hover:bg-red-600 text-white p-2 rounded-lg"
+            >
+              🗑️
+            </button>
+            {menuOpen && (
+              <div className="absolute mt-1 right-0 bg-white border border-gray-200 rounded-lg shadow-lg z-10">
+                <button
+                  onClick={handleBulkDelete}
+                  disabled={selectedIds.size === 0}
+                  className="w-full text-left px-3 py-2 text-sm text-red-600 hover:bg-red-50 rounded-lg disabled:opacity-50"
+                >
+                  {t("CallContacts.deleteSelected")}
+                </button>
+              </div>
+            )}
           </div>
         </div>
-        
-        {!isAdding && (
-          <button
-            onClick={() => setIsAdding(true)}
-            className="bg-gradient-to-r from-blue-900 to-blue-800 hover:from-blue-800 hover:to-blue-700 text-white font-bold text-xl rounded-2xl px-8 py-4 shadow-xl hover:shadow-2xl transform hover:scale-105 transition-all duration-200 whitespace-nowrap"
-          >
-            <span className="mr-3 text-2xl">👤</span>
-            {t("CallContacts.addContact")}
-          </button>
-        )}
-        
-        {/* Enhanced Bulk menu trigger */}
-        <div className="relative">
-          <button
-            onClick={() => setMenuOpen(o => !o)}
-            className="bg-red-500 hover:bg-red-600 text-white p-4 rounded-2xl font-bold focus:outline-none shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-200"
-          >
-            <span className="text-2xl">🗑️</span>
-          </button>
-          {menuOpen && (
-            <div className="absolute mt-2 right-0 bg-white border-2 border-red-200 rounded-xl shadow-2xl z-10 min-w-[200px]">
-              <button
-                onClick={handleBulkDelete}
-                disabled={selectedIds.size === 0}
-                className="w-full text-left px-6 py-4 text-lg text-red-700 font-bold hover:bg-red-50 rounded-xl transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                🗑️ {t("CallContacts.deleteSelected")}
-              </button>
-            </div>
-          )}
-        </div>
       </div>
-    </div>
 
-    {/* Enhanced Add form */}
-    {isAdding && (
-      <div className="p-6 bg-white mx-6 mt-6 rounded-2xl shadow-2xl border-2 border-blue-200">
-        <div className="max-w-2xl mx-auto space-y-6">
-          <h3 className="text-2xl font-bold text-blue-900 text-center mb-6">
-            <span className="mr-3">👤</span>
-            {t("CallContacts.addContact")}
-          </h3>
-          
-          {[
-            {
-              lbl: t("CallContacts.fullNameLabel"),
-              name: "fullName",
-              placeholder: t("CallContacts.fullNamePlaceholder"),
-              icon: "👤"
-            },
-            {
-              lbl: t("CallContacts.phoneNumberLabel"),
-              name: "phoneNumber",
-              placeholder: t("CallContacts.phoneNumberPlaceholder"),
-              icon: "📞"
-            },
-            {
-              lbl: t("CallContacts.relationshipLabel"),
-              name: "relationship",
-              placeholder: t("CallContacts.relationshipPlaceholder"),
-              icon: "👥"
-            }
-          ].map(f => (
-            <div key={f.name} className="space-y-2">
-              <label className="flex items-center text-xl font-bold text-gray-800">
-                <span className="mr-3 text-2xl">{f.icon}</span>
-                {f.lbl}
-              </label>
+      {/* Add form - Compact */}
+      {isAdding && (
+        <div className="p-3 bg-white mx-3 mt-3 rounded-lg shadow-sm border border-gray-200">
+          <div className="space-y-3">
+            <h3 className="text-base font-semibold text-gray-800">
+              {t("CallContacts.addContact")}
+            </h3>
+            
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
               <input
-                name={f.name}
-                value={form[f.name]}
+                name="fullName"
+                value={form.fullName}
                 onChange={handleChange}
-                placeholder={f.placeholder}
-                className="w-full rounded-2xl border-3 border-blue-300 focus:border-blue-600 focus:ring-4 focus:ring-blue-200 text-xl px-6 py-4 shadow-lg transition-all duration-200"
+                placeholder={t("CallContacts.fullNamePlaceholder")}
+                className="rounded-lg border border-gray-300 focus:border-blue-500 text-sm px-3 py-2"
+              />
+              <input
+                name="phoneNumber"
+                value={form.phoneNumber}
+                onChange={handleChange}
+                placeholder={t("CallContacts.phoneNumberPlaceholder")}
+                className="rounded-lg border border-gray-300 focus:border-blue-500 text-sm px-3 py-2"
+              />
+              <input
+                name="relationship"
+                value={form.relationship}
+                onChange={handleChange}
+                placeholder={t("CallContacts.relationshipPlaceholder")}
+                className="rounded-lg border border-gray-300 focus:border-blue-500 text-sm px-3 py-2"
               />
             </div>
-          ))}
-          
-          <div className="flex justify-center gap-6 pt-4">
-            <button
-              onClick={() => {
-                setIsAdding(false);
-                setForm({ fullName: "", phoneNumber: "", relationship: "" });
-              }}
-              className="px-8 py-4 rounded-2xl bg-gray-300 hover:bg-gray-400 text-gray-800 text-xl font-bold shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-200"
-            >
-              {t("CallContacts.cancel")}
-            </button>
-            <button
-              onClick={handleSave}
-              disabled={saving}
-              className="px-8 py-4 rounded-2xl bg-gradient-to-r from-green-600 to-green-500 hover:from-green-500 hover:to-green-400 text-white text-xl font-bold disabled:opacity-60 shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-200 disabled:transform-none"
-            >
-              <span className="mr-3">💾</span>
-              {saving ? t("CallContacts.saving") : t("CallContacts.save")}
-            </button>
+            
+            <div className="flex justify-end gap-2">
+              <button
+                onClick={() => {
+                  setIsAdding(false);
+                  setForm({ fullName: "", phoneNumber: "", relationship: "" });
+                }}
+                className="px-4 py-2 rounded-lg bg-gray-200 hover:bg-gray-300 text-gray-700 text-sm font-medium"
+              >
+                {t("CallContacts.cancel")}
+              </button>
+              <button
+                onClick={handleSave}
+                disabled={saving}
+                className="px-4 py-2 rounded-lg bg-green-600 hover:bg-green-700 text-white text-sm font-medium disabled:opacity-60"
+              >
+                {saving ? t("CallContacts.saving") : t("CallContacts.save")}
+              </button>
+            </div>
           </div>
         </div>
-      </div>
-    )}
+      )}
 
-    {/* Enhanced Contacts list */}
-    <div className="flex-1 overflow-y-auto p-6">
-      <div className="max-w-2xl mx-auto space-y-6">
-        {visibleContacts.map(c => (
-          <div
-            key={c._id}
-            className="bg-white rounded-3xl shadow-xl border-2 border-blue-100 hover:border-blue-300 hover:shadow-2xl transform hover:scale-[1.02] transition-all duration-300 overflow-hidden"
-          >
-            <div className="p-6">
-              <div className="flex items-center gap-4">
+      {/* Contacts list - Compact grid */}
+      <div className="flex-1 overflow-y-auto p-3">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+          {visibleContacts.map(c => (
+            <div
+              key={c._id}
+              className="bg-white rounded-lg shadow-sm border border-gray-200 hover:shadow-md transition-shadow p-3"
+            >
+              <div className="flex items-start gap-3">
                 {menuOpen && (
                   <input
                     type="checkbox"
                     checked={selectedIds.has(c._id)}
                     onChange={() => toggleSelect(c._id)}
-                    className="h-6 w-6 text-blue-600 rounded-lg border-2 border-blue-300"
+                    className="mt-1 h-4 w-4 text-blue-600 rounded border-gray-300"
                   />
                 )}
                 
-                {/* Contact Avatar */}
-                <div className="bg-gradient-to-br from-blue-400 to-blue-600 rounded-full w-16 h-16 flex items-center justify-center text-white text-2xl font-bold shadow-lg">
+                {/* Compact Avatar */}
+                <div className="bg-blue-500 rounded-full w-10 h-10 flex items-center justify-center text-white text-sm font-medium flex-shrink-0">
                   {c.fullName.charAt(0).toUpperCase()}
                 </div>
                 
-                <div className="flex-1">
-                  <h3 className="text-2xl font-bold text-gray-900 mb-1">
+                <div className="flex-1 min-w-0">
+                  <h3 className="text-sm font-semibold text-gray-900 truncate">
                     {c.fullName}
                   </h3>
                   {c.relationship && (
-                    <p className="text-lg text-blue-600 font-semibold mb-2">
-                      👥 {c.relationship}
+                    <p className="text-xs text-gray-600 truncate">
+                      {c.relationship}
                     </p>
                   )}
-                  <p className="text-lg text-gray-600 mb-4">
-                    📞 {c.phoneNumber}
+                  <p className="text-xs text-gray-500 mt-1">
+                    {c.phoneNumber}
                   </p>
                   
                   
                   <a
                     href={`tel:${c.phoneNumber}`}
-                    className="inline-flex items-center justify-center text-xl font-bold text-white bg-gradient-to-r from-green-600 to-green-500 hover:from-green-500 hover:to-green-400 rounded-2xl py-3 px-8 shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-200"
+                    className="inline-flex items-center mt-2 text-xs font-medium text-white bg-green-600 hover:bg-green-700 rounded-md px-3 py-1.5"
                   >
-                    <span className="mr-3 text-2xl">📞</span>
-                    {t("CallContacts.call")}
+                    📞 {t("CallContacts.call")}
                   </a>
                 </div>
               </div>
             </div>
-          </div>
-        ))}
+          ))}
+        </div>
 
         {visibleContacts.length === 0 && (
-          <div className="text-center py-12 bg-white rounded-3xl shadow-lg border-2 border-gray-200">
-            <div className="text-6xl mb-4">🔍</div>
-            <p className="text-2xl text-gray-600 font-semibold">
+          <div className="text-center py-8 bg-white rounded-lg">
+            <p className="text-sm text-gray-600">
               {t("CallContacts.noMatch")}
             </p>
           </div>
         )}
       </div>
     </div>
-  </div>
-);
-  
+  );
 }
