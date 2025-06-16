@@ -42,37 +42,27 @@ export default function App() {
     loadInitUser();
   }, []);
 
-  return (
-    <AppContext.Provider value={{user, setUser, bellaFullscreen, setBellaFullscreen}}>
-    <BrowserRouter>
+return (
+  <AppContext.Provider value={{user, setUser, bellaFullscreen, setBellaFullscreen}}>
+  <BrowserRouter>
+    <div
+      className="w-screen h-screen flex flex-col overflow-hidden"
+      style={{ fontSize: "var(--font-size-base,18px)" }}
+    >
+      {/* Header at fixed height */}
+      <Header />
+
+      {/* Main content takes remaining height, no page scroll */}
       <div
-        className="
-          w-full max-w-screen-lg mx-auto
-          p-4
-          h-screen          /* exactly viewport height */
-          flex flex-col
-        "
-        style={{ fontSize: "var(--font-size-base,22px)" }}
+        id="mainContent"
+        className="flex-1 flex flex-row gap-2 overflow-hidden px-2"
+        style={{ height: 'calc(100vh - 120px)' }}
       >
-        {/* 1) Header at fixed height */}
-        <Header />
-
-        {/* 2) Main content takes remaining height, no page scroll */}
-        <div
-          id="mainContent"
-          className="
-            flex-1               /* fill remaining height */
-            flex flex-col md:flex-row gap-2
-            overflow-hidden      /* hide any overflow—scroll in children only */
-          "
-        >
-          <LeftSide />
-
-          {/* RightSide now will be h-full and scroll internally */}
-          <RightSide />
-        </div>
+        <LeftSide />
+        <RightSide />
       </div>
-    </BrowserRouter>
-    </AppContext.Provider>
-  );
+    </div>
+  </BrowserRouter>
+  </AppContext.Provider>
+);
 }

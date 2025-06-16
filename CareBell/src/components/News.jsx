@@ -125,64 +125,146 @@ export default function News() {
 
   const retryFetch = () => fetchTodaysNews();
 
-  return (
-    <div className="p-4 max-w-4xl mx-auto bg-white shadow-lg rounded-lg">
-      <h1 className="text-4xl font-bold mb-8 text-center text-blue-800">Heute Nachrichten</h1>
+ return (
+  <div className="bg-gradient-to-br from-blue-50 to-blue-100 rounded-2xl overflow-hidden min-h-screen">
+    <div className="bg-white shadow-lg p-8 border-b-4 border-blue-200">
+      <h1 className="text-5xl font-bold text-center text-blue-900 flex items-center justify-center">
+        <span className="mr-4 text-6xl">📰</span>
+        Heute Nachrichten
+      </h1>
+    </div>
+
+    <div className="p-8">
       {loading ? (
-        <div className="flex flex-col items-center justify-center py-12">
-          <div className="animate-spin rounded-full h-16 w-16 border-b-4 border-blue-500 mb-4"></div>
-          <p className="text-xl text-gray-600">Nachrichten werden geladen...</p>
+        <div className="flex flex-col items-center justify-center py-16 bg-white rounded-3xl shadow-xl border-2 border-blue-200">
+          <div className="animate-spin rounded-full h-20 w-20 border-6 border-blue-500 border-t-transparent mb-6"></div>
+          <p className="text-2xl text-gray-600 font-bold">Nachrichten werden geladen...</p>
         </div>
       ) : error ? (
-        <div className="bg-red-100 border-l-8 border-red-600 text-red-700 p-6 rounded-lg mb-6 text-xl">
-          <h3 className="font-bold text-2xl mb-2">Fehler</h3>
-          <p className="mb-4">{error}</p>
-          <button onClick={retryFetch} className="mt-4 px-5 py-3 bg-blue-600 text-white text-lg font-semibold rounded-lg hover:bg-blue-700 transition-colors">
-            Erneut versuchen
-          </button>
+        <div className="bg-gradient-to-r from-red-100 to-red-200 border-4 border-red-400 text-red-800 p-8 rounded-3xl shadow-xl">
+          <div className="text-center">
+            <div className="text-6xl mb-4">⚠️</div>
+            <h3 className="font-bold text-3xl mb-4">Fehler</h3>
+            <p className="text-xl mb-6">{error}</p>
+            <button 
+              onClick={retryFetch} 
+              className="px-8 py-4 bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-500 hover:to-blue-400 text-white text-xl font-bold rounded-2xl shadow-xl hover:shadow-2xl transform hover:scale-105 transition-all duration-200"
+            >
+              <span className="mr-3 text-2xl">🔄</span>
+              Erneut versuchen
+            </button>
+          </div>
         </div>
       ) : (
         <div>
-          <div className="mb-6 flex justify-between items-center">
-            <p className="text-lg text-gray-600">{news.length} Artikel für heute gefunden</p>
-            <button onClick={stopSpeaking} className={`px-5 py-3 rounded-lg text-lg font-semibold ${speaking ? 'bg-red-500 text-white' : 'bg-gray-300 text-gray-500'}`} disabled={!speaking}>
-              <span className="mr-2 text-xl">🔇</span>Vorlesen stoppen
-            </button>
+          {/* Enhanced Header with controls */}
+          <div className="mb-8 bg-white rounded-3xl p-6 shadow-xl border-2 border-blue-200">
+            <div className="flex justify-between items-center">
+              <div className="flex items-center">
+                <span className="text-3xl mr-3">📊</span>
+                <p className="text-2xl text-blue-700 font-bold">
+                  {news.length} Artikel für heute gefunden
+                </p>
+              </div>
+              <button 
+                onClick={stopSpeaking} 
+                className={`px-6 py-3 rounded-2xl text-xl font-bold shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-200 ${
+                  speaking 
+                    ? 'bg-gradient-to-r from-red-500 to-red-600 hover:from-red-400 hover:to-red-500 text-white' 
+                    : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                }`} 
+                disabled={!speaking}
+              >
+                <span className="mr-3 text-2xl">🔇</span>
+                Vorlesen stoppen
+              </button>
+            </div>
           </div>
-          <ul className="space-y-6">
+
+          {/* Enhanced News List */}
+          <div className="space-y-8">
             {news.map((article, idx) => (
-              <li key={idx} className={`border ${currentArticleIndex===idx?'border-yellow-500 border-2':'border-gray-200'} rounded-lg overflow-hidden shadow-md hover:shadow-lg transition-shadow`}>
-                <div className="p-5 bg-gray-50 flex justify-between items-center">
-                  <div>
-                    <h3 className="text-2xl font-bold text-gray-800">{article.title}</h3>
-                    <p className="text-gray-500 mt-1">Quelle: {article.source} | {formatDate(article.published_at)}</p>
+              <div 
+                key={idx} 
+                className={`bg-white border-3 border-blue-200 hover:border-blue-400 rounded-3xl overflow-hidden shadow-xl hover:shadow-2xl transform hover:scale-[1.01] transition-all duration-300 ${
+                  currentArticleIndex === idx ? 'ring-4 ring-yellow-400 border-yellow-400' : ''
+                }`}
+              >
+                {/* Enhanced Article Header */}
+                <div className="bg-gradient-to-r from-blue-600 to-blue-700 text-white p-6">
+                  <div className="flex justify-between items-start">
+                    <div className="flex-1">
+                      <h3 className="text-3xl font-bold mb-3 leading-tight">{article.title}</h3>
+                      <div className="flex items-center text-blue-100 text-lg">
+                        <span className="mr-2 text-xl">🏢</span>
+                        <span className="font-semibold mr-4">Quelle: {article.source}</span>
+                        <span className="mr-2 text-xl">📅</span>
+                        <span>{formatDate(article.published_at)}</span>
+                      </div>
+                    </div>
+                    
+                    <div className="ml-6">
+                      {currentArticleIndex === idx && speaking ? (
+                        <button 
+                          onClick={stopSpeaking} 
+                          className="flex items-center px-6 py-3 rounded-2xl text-xl font-bold bg-gradient-to-r from-yellow-500 to-yellow-600 hover:from-yellow-400 hover:to-yellow-500 text-white shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-200"
+                        >
+                          <span className="mr-3 text-2xl">🔇</span>
+                          Stoppen
+                        </button>
+                      ) : (
+                        <button 
+                          onClick={() => speakText(createNewsDescription(article), idx)} 
+                          className="flex items-center px-6 py-3 rounded-2xl text-xl font-bold bg-gradient-to-r from-green-600 to-green-700 hover:from-green-500 hover:to-green-600 text-white shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-200"
+                        >
+                          <span className="mr-3 text-2xl">🔊</span>
+                          Vorlesen
+                        </button>
+                      )}
+                    </div>
                   </div>
-                  {currentArticleIndex===idx && speaking ? (
-                    <button onClick={stopSpeaking} className="flex items-center px-4 py-2 rounded-lg text-lg font-semibold bg-yellow-500 text-white">
-                      <span className="mr-2 text-xl">🔇</span>Stoppen
-                    </button>
-                  ) : (
-                    <button onClick={() => speakText(createNewsDescription(article), idx)} className="flex items-center px-4 py-2 rounded-lg text-lg font-semibold bg-green-600 text-white">
-                      <span className="mr-2 text-xl">🔊</span>Vorlesen
-                    </button>
-                  )}
                 </div>
-                <div className="p-5 bg-white">
+
+                {/* Enhanced Article Content */}
+                <div className="p-8">
+                  {/* Enhanced Article Image */}
                   {article.image && (
-                    <img src={article.image} alt={article.title} className="w-full h-auto rounded-lg mb-4" onError={e => { e.target.style.display = 'none'; }} />
+                    <div className="mb-6">
+                      <img 
+                        src={article.image} 
+                        alt={article.title} 
+                        className="w-full rounded-2xl shadow-lg border-2 border-blue-200" 
+                        onError={e => { 
+                          e.target.style.display = 'none'; 
+                        }} 
+                      />
+                    </div>
                   )}
-                  <p className="text-lg text-gray-700 mb-4">{article.description}</p>
+                  
+                  <div className="bg-blue-50 rounded-2xl p-6 mb-6 border-2 border-blue-200">
+                    <p className="text-2xl text-gray-800 leading-relaxed">{article.description}</p>
+                  </div>
+                  
                   {article.url && (
-                    <a href={article.url} target="_blank" rel="noopener noreferrer" className="inline-block px-4 py-2 bg-blue-600 text-white text-lg font-semibold rounded-lg hover:bg-blue-700 transition-colors">
-                      Weiterlesen
-                    </a>
+                    <div className="text-center">
+                      <a 
+                        href={article.url} 
+                        target="_blank" 
+                        rel="noopener noreferrer" 
+                        className="inline-flex items-center px-8 py-4 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-500 hover:to-blue-600 text-white text-xl font-bold rounded-2xl shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-200"
+                      >
+                        <span className="mr-3 text-2xl">📖</span>
+                        Weiterlesen
+                      </a>
+                    </div>
                   )}
                 </div>
-              </li>
+              </div>
             ))}
-          </ul>
+          </div>
         </div>
       )}
     </div>
-  );
+  </div>
+);
 }

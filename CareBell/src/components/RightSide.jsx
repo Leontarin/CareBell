@@ -35,12 +35,12 @@ export default function RightSide() {
 
   // Menu definitions with translation keys
   const MENU_BUTTONS = [
-    { key: "callContacts",     icon: FaPhone,    to: "call-contacts"     },
-    { key: "meetWithFriends",  icon: FaUsers,    to: "meet-with-friends" },
-    { key: "medicine",         icon: FaPills,    to: "medicine"          },
-    { key: "meals",            icon: FaUtensils, to: "meals"             },
-    { key: "news",             icon: FaNewspaper,to: "news"              },
-    { key: "exercise",         icon: FaDumbbell, to: "exercise"          },
+    { key: "callContacts",     icon: FaPhone,     to: "call-contacts"     },
+    { key: "meetWithFriends",  icon: FaUsers,     to: "meet-with-friends" },
+    { key: "medicine",         icon: FaPills,     to: "medicine"          },
+    { key: "meals",            icon: FaUtensils,  to: "meals"             },
+    { key: "news",             icon: FaNewspaper, to: "news"              },
+    { key: "exercise",         icon: FaDumbbell,  to: "exercise"          },
   ];
 
   const TITLES = {
@@ -55,61 +55,92 @@ export default function RightSide() {
   const titleKey = TITLES[segment];
   const title = titleKey ? t(`RightSide.${titleKey}`) : "";
 
-  const heightClass = "h-[75vh]";
-  const widthClass  = "w-[48vw]";
+  const heightClass = "h-full";
+  const widthClass  = "w-full";
 
   if (!user) {
     return (
-      <div className={`${widthClass} ${heightClass} px-4 flex items-center justify-center`}>
+      <div className={`${widthClass} ${heightClass} px-4 flex items-center justify-center overflow-hidden`}>
         <p className="text-xl">{t("RightSide.loadingUser")}</p>
       </div>
     );
   }
 
   return (
-    <div id="rightSide" className={`${widthClass} ${heightClass} px-4 overflow-hidden`}>
+    <div id="rightSide" className={`${widthClass} ${heightClass} px-2 overflow-hidden`}>
       <Routes>
-        {/* Main menu */}
+        {/* Main menu - No scroll */}
         <Route
           index
           element={
-            <div className="grid grid-cols-2 gap-6 p-6">
-              {MENU_BUTTONS.map(({ key, icon: Icon, to }) => (
-                <Link
-                  key={to}
-                  to={to}
-                  className="flex flex-col items-center justify-center border-2 border-blue-900 rounded-xl p-6 hover:bg-blue-100 transition whitespace-nowrap"
-                >
-                  <Icon className="text-4xl mb-2 text-blue-900" />
-                  <span className="text-lg font-semibold text-blue-900">
-                    {t(`RightSide.${key}`)}
-                  </span>
-                </Link>
-              ))}
+            <div className="h-full flex flex-col p-4 overflow-hidden">
+              <div className="flex-1 grid grid-cols-3 grid-rows-3 gap-4 overflow-hidden">
+                {MENU_BUTTONS.map(({ key, icon: Icon, to }) => (
+                  <Link
+                    key={to}
+                    to={to}
+                    className="group relative flex flex-col items-center justify-center border-3 border-blue-900 rounded-2xl p-4 bg-white hover:bg-blue-50 hover:shadow-xl hover:scale-105 transition-all duration-300 ease-in-out whitespace-nowrap shadow-lg overflow-hidden"
+                  >
+                    {/* Icon with background circle */}
+                    <div className="bg-blue-100 rounded-full p-3 mb-3 group-hover:bg-blue-200 transition-colors duration-300">
+                      <Icon className="text-3xl text-blue-900" />
+                    </div>
+                    
+                    {/* Text with better typography */}
+                    <span className="text-lg font-bold text-blue-900 text-center leading-tight">
+                      {t(`RightSide.${key}`)}
+                    </span>
+                    
+                    {/* Subtle arrow indicator */}
+                    <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                      <svg className="w-4 h-4 text-blue-600" fill="currentColor" viewBox="0 0 20 20">
+                        <path fillRule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 111.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clipRule="evenodd" />
+                      </svg>
+                    </div>
+                  </Link>
+                ))}
+              </div>
             </div>
           }
         />
 
-        {/* Sub-pages */}
+        {/* Sub-pages - No scroll */}
         <Route element={
-          <div className="flex flex-col h-full min-h-0 bg-slate-400 p-4">
-            {/* Toolbar */}
-            <div className="flex items-center mb-4">
-              <button
-                onClick={() => navigate(-1)}
-                className="flex items-center gap-2 px-3 py-2 bg-white border-2 border-blue-900 rounded-lg text-blue-900 font-semibold hover:bg-blue-50 transition"
-              >
-                <FaArrowLeft /> {t("RightSide.back")}
-              </button>
-              <h2 className="ml-4 text-2xl font-bold text-gray-800 whitespace-nowrap">
-                {title}
-              </h2>
+          <div className="flex flex-col h-full min-h-0 bg-gradient-to-br from-slate-300 to-slate-400 overflow-hidden">
+            {/* Compact Toolbar for tablet */}
+            <div className="bg-white shadow-lg border-b-2 border-blue-900 px-4 py-2 flex-none">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <button
+                    onClick={() => navigate(-1)}
+                    className="group flex items-center gap-2 px-4 py-2 bg-blue-900 border-2 border-blue-900 rounded-xl text-white font-bold text-sm hover:bg-blue-800 hover:shadow-lg transform hover:scale-105 transition-all duration-200"
+                  >
+                    <FaArrowLeft className="text-sm group-hover:animate-pulse" /> 
+                    {t("RightSide.back")}
+                  </button>
+                  
+                  <div className="w-px h-6 bg-blue-300"></div>
+                  
+                  <h2 className="text-xl font-bold text-blue-900 whitespace-nowrap tracking-wide">
+                    {title}
+                  </h2>
+                </div>
+                
+                <div className="flex items-center gap-2 text-blue-700">
+                  <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+                  <span className="text-xs font-medium">Active</span>
+                </div>
+              </div>
             </div>
 
-            {/* Content */}
-            <div className="flex-1 overflow-y-auto min-w-0">
-              <div className="w-full p-2">
-                <Outlet />
+            {/* Content Area - Scrollable only inside */}
+            <div className="flex-1 overflow-hidden p-2">
+              <div className="h-full bg-white rounded-xl shadow-xl border border-gray-200 overflow-hidden">
+                <div className="h-full overflow-y-auto">
+                  <div className="p-4">
+                    <Outlet />
+                  </div>
+                </div>
               </div>
             </div>
           </div>

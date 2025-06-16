@@ -97,72 +97,89 @@ export default function CallContacts() {
         {t("CallContacts.error", { message: error })}
       </p>
     );
-
-  return (
-    <div className="h-full flex flex-col bg-slate-400 p-4 overflow-y-auto">
-      {/* Header: Search, Add, and Bulk Menu */}
-      <div className="flex items-center mb-6 max-w-md mx-auto">
-        <input
-          type="text"
-          value={query}
-          onChange={e => setQuery(e.target.value)}
-          placeholder={t("CallContacts.searchPlaceholder")}
-          className="flex-1 rounded-md border-2 border-blue-900 focus:border-blue-700 focus:ring-blue-700 text-base px-4 py-2"
-        />
+return (
+  <div className="h-full flex flex-col bg-gradient-to-br from-blue-50 to-blue-100 rounded-2xl overflow-hidden">
+    {/* Enhanced Header */}
+    <div className="bg-white shadow-lg p-6 border-b-4 border-blue-200">
+      <div className="flex flex-col lg:flex-row items-center gap-4 max-w-4xl mx-auto">
+        <div className="flex-1 relative">
+          <input
+            type="text"
+            value={query}
+            onChange={e => setQuery(e.target.value)}
+            placeholder={t("CallContacts.searchPlaceholder")}
+            className="w-full rounded-2xl border-3 border-blue-300 focus:border-blue-600 focus:ring-4 focus:ring-blue-200 text-xl px-6 py-4 pr-16 shadow-lg transition-all duration-200"
+          />
+          <div className="absolute right-4 top-1/2 transform -translate-y-1/2 text-3xl text-blue-500">
+            🔍
+          </div>
+        </div>
+        
         {!isAdding && (
           <button
             onClick={() => setIsAdding(true)}
-            className="ml-3 bg-blue-900 hover:bg-blue-700 text-white font-semibold text-sm rounded-lg px-4 py-2 transition"
+            className="bg-gradient-to-r from-blue-900 to-blue-800 hover:from-blue-800 hover:to-blue-700 text-white font-bold text-xl rounded-2xl px-8 py-4 shadow-xl hover:shadow-2xl transform hover:scale-105 transition-all duration-200 whitespace-nowrap"
           >
+            <span className="mr-3 text-2xl">👤</span>
             {t("CallContacts.addContact")}
           </button>
         )}
-        {/* Bulk menu trigger */}
-        <button
-          onClick={() => setMenuOpen(o => !o)}
-          className="ml-auto ml-4 text-blue-900 p-5 font-semibold focus:outline-none"
-        >
-          <span className="text-xl">🗑️</span>
-        </button>
-        {menuOpen && (
-          <div className="absolute mt-20 right-96 transform translate-x-4/5 bg-white border border-gray-200 rounded-md shadow-lg z-10">
-            <ul className="py-1">
-              <li>
-                <button
-                  onClick={handleBulkDelete}
-                  disabled={selectedIds.size === 0}
-                  className="text-left px-4 py-2 text-sm text-gray-900 font-semibold hover:bg-red-300"
-                >
-                  {t("CallContacts.deleteSelected")}
-                </button>
-              </li>
-            </ul>
-          </div>
-        )}
+        
+        {/* Enhanced Bulk menu trigger */}
+        <div className="relative">
+          <button
+            onClick={() => setMenuOpen(o => !o)}
+            className="bg-red-500 hover:bg-red-600 text-white p-4 rounded-2xl font-bold focus:outline-none shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-200"
+          >
+            <span className="text-2xl">🗑️</span>
+          </button>
+          {menuOpen && (
+            <div className="absolute mt-2 right-0 bg-white border-2 border-red-200 rounded-xl shadow-2xl z-10 min-w-[200px]">
+              <button
+                onClick={handleBulkDelete}
+                disabled={selectedIds.size === 0}
+                className="w-full text-left px-6 py-4 text-lg text-red-700 font-bold hover:bg-red-50 rounded-xl transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                🗑️ {t("CallContacts.deleteSelected")}
+              </button>
+            </div>
+          )}
+        </div>
       </div>
+    </div>
 
-      {/* Add form */}
-      {isAdding && (
-        <div className="mb-6 max-w-md mx-auto bg-white rounded-2xl shadow-md p-3 space-y-1">
+    {/* Enhanced Add form */}
+    {isAdding && (
+      <div className="p-6 bg-white mx-6 mt-6 rounded-2xl shadow-2xl border-2 border-blue-200">
+        <div className="max-w-2xl mx-auto space-y-6">
+          <h3 className="text-2xl font-bold text-blue-900 text-center mb-6">
+            <span className="mr-3">👤</span>
+            {t("CallContacts.addContact")}
+          </h3>
+          
           {[
             {
               lbl: t("CallContacts.fullNameLabel"),
               name: "fullName",
-              placeholder: t("CallContacts.fullNamePlaceholder")
+              placeholder: t("CallContacts.fullNamePlaceholder"),
+              icon: "👤"
             },
             {
               lbl: t("CallContacts.phoneNumberLabel"),
               name: "phoneNumber",
-              placeholder: t("CallContacts.phoneNumberPlaceholder")
+              placeholder: t("CallContacts.phoneNumberPlaceholder"),
+              icon: "📞"
             },
             {
               lbl: t("CallContacts.relationshipLabel"),
               name: "relationship",
-              placeholder: t("CallContacts.relationshipPlaceholder")
+              placeholder: t("CallContacts.relationshipPlaceholder"),
+              icon: "👥"
             }
           ].map(f => (
-            <div key={f.name}>
-              <label className="block text-base font-semibold text-gray-700">
+            <div key={f.name} className="space-y-2">
+              <label className="flex items-center text-xl font-bold text-gray-800">
+                <span className="mr-3 text-2xl">{f.icon}</span>
                 {f.lbl}
               </label>
               <input
@@ -170,66 +187,96 @@ export default function CallContacts() {
                 value={form[f.name]}
                 onChange={handleChange}
                 placeholder={f.placeholder}
-                className="mt-1 w-full rounded-md border-2 border-blue-900 focus:border-blue-700 focus:ring-blue-700 text-base px-3 py-2"
+                className="w-full rounded-2xl border-3 border-blue-300 focus:border-blue-600 focus:ring-4 focus:ring-blue-200 text-xl px-6 py-4 shadow-lg transition-all duration-200"
               />
             </div>
           ))}
-          <div className="flex justify-end gap-3">
+          
+          <div className="flex justify-center gap-6 pt-4">
             <button
               onClick={() => {
                 setIsAdding(false);
                 setForm({ fullName: "", phoneNumber: "", relationship: "" });
               }}
-              className="px-4 py-2 rounded-lg bg-gray-300 hover:bg-gray-400 text-sm transition"
+              className="px-8 py-4 rounded-2xl bg-gray-300 hover:bg-gray-400 text-gray-800 text-xl font-bold shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-200"
             >
               {t("CallContacts.cancel")}
             </button>
             <button
               onClick={handleSave}
               disabled={saving}
-              className="px-4 py-2 rounded-lg bg-blue-900 hover:bg-blue-700 text-white text-sm font-semibold disabled:opacity-60 transition"
+              className="px-8 py-4 rounded-2xl bg-gradient-to-r from-green-600 to-green-500 hover:from-green-500 hover:to-green-400 text-white text-xl font-bold disabled:opacity-60 shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-200 disabled:transform-none"
             >
+              <span className="mr-3">💾</span>
               {saving ? t("CallContacts.saving") : t("CallContacts.save")}
             </button>
           </div>
         </div>
-      )}
+      </div>
+    )}
 
-      {/* Contacts list with selection */}
-      <div className="grid gap-6 max-w-md mx-auto">
+    {/* Enhanced Contacts list */}
+    <div className="flex-1 overflow-y-auto p-6">
+      <div className="max-w-2xl mx-auto space-y-6">
         {visibleContacts.map(c => (
-          <label
+          <div
             key={c._id}
-            className="relative bg-white rounded-3xl shadow-md p-6 flex items-center gap-3"
+            className="bg-white rounded-3xl shadow-xl border-2 border-blue-100 hover:border-blue-300 hover:shadow-2xl transform hover:scale-[1.02] transition-all duration-300 overflow-hidden"
           >
-            {menuOpen && (
-              <input
-                type="checkbox"
-                checked={selectedIds.has(c._id)}
-                onChange={() => toggleSelect(c._id)}
-                className="h-5 w-5"
-              />
-            )}
-            <div className={`${menuOpen ? "ml-2 flex-1" : "flex-1"}`}>
-              <div className="text-lg font-medium text-gray-900">
-                {c.fullName} {c.relationship && `(${c.relationship})`}
+            <div className="p-6">
+              <div className="flex items-center gap-4">
+                {menuOpen && (
+                  <input
+                    type="checkbox"
+                    checked={selectedIds.has(c._id)}
+                    onChange={() => toggleSelect(c._id)}
+                    className="h-6 w-6 text-blue-600 rounded-lg border-2 border-blue-300"
+                  />
+                )}
+                
+                {/* Contact Avatar */}
+                <div className="bg-gradient-to-br from-blue-400 to-blue-600 rounded-full w-16 h-16 flex items-center justify-center text-white text-2xl font-bold shadow-lg">
+                  {c.fullName.charAt(0).toUpperCase()}
+                </div>
+                
+                <div className="flex-1">
+                  <h3 className="text-2xl font-bold text-gray-900 mb-1">
+                    {c.fullName}
+                  </h3>
+                  {c.relationship && (
+                    <p className="text-lg text-blue-600 font-semibold mb-2">
+                      👥 {c.relationship}
+                    </p>
+                  )}
+                  <p className="text-lg text-gray-600 mb-4">
+                    📞 {c.phoneNumber}
+                  </p>
+                  
+                  
+                  <a
+                    href={`tel:${c.phoneNumber}`}
+                    className="inline-flex items-center justify-center text-xl font-bold text-white bg-gradient-to-r from-green-600 to-green-500 hover:from-green-500 hover:to-green-400 rounded-2xl py-3 px-8 shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-200"
+                  >
+                    <span className="mr-3 text-2xl">📞</span>
+                    {t("CallContacts.call")}
+                  </a>
+                </div>
               </div>
-              <a
-                href={`tel:${c.phoneNumber}`}
-                className="mt-2 inline-block text-sm font-semibold text-white bg-blue-900 hover:bg-blue-700 rounded-lg py-2 px-4 transition"
-              >
-                {t("CallContacts.call")}
-              </a>
             </div>
-          </label>
+          </div>
         ))}
 
         {visibleContacts.length === 0 && (
-          <p className="text-center text-gray-700">
-            {t("CallContacts.noMatch")}
-          </p>
+          <div className="text-center py-12 bg-white rounded-3xl shadow-lg border-2 border-gray-200">
+            <div className="text-6xl mb-4">🔍</div>
+            <p className="text-2xl text-gray-600 font-semibold">
+              {t("CallContacts.noMatch")}
+            </p>
+          </div>
         )}
       </div>
     </div>
-  );
+  </div>
+);
+  
 }

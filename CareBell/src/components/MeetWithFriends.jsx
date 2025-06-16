@@ -434,163 +434,265 @@ export default function MeetWithFriends() {
     );
   }
 
-  // Main render
   return (
-    <div className="w-full h-full bg-gray-900 relative overflow-hidden">
-      {/* 5) If no room is joined, show room list + "Create Room" input */}
-      {!joinedRoom ? (
-        <div className="flex flex-col items-center justify-center h-full p-8">
-          <h2 className="text-white text-3xl mb-8 font-bold"> {t("MeetWithFriends.Title")}</h2>
+  <div className="w-full h-full bg-gradient-to-br from-gray-800 to-gray-900 relative overflow-hidden rounded-2xl">
+    {/* Enhanced user authentication check */}
+    {!user?.id ? (
+      <div className="w-full h-full flex items-center justify-center p-8">
+        <div className="text-center bg-gradient-to-br from-gray-700 to-gray-800 rounded-3xl shadow-2xl border-4 border-gray-600 p-12">
+          <div className="text-8xl mb-8">🔐</div>
+          <h2 className="text-white text-4xl font-bold mb-6">Authentication Required</h2>
+          <p className="text-gray-300 text-2xl leading-relaxed">Please log in to access video rooms</p>
+        </div>
+      </div>
+    ) : !joinedRoom ? (
+      /* Enhanced Room List View */
+      <div className="flex flex-col items-center justify-center h-full p-8">
+        <div className="bg-white rounded-3xl shadow-2xl border-4 border-blue-200 p-8 w-full max-w-6xl">
+          <h2 className="text-white text-5xl mb-12 font-bold text-center bg-gradient-to-r from-blue-600 to-blue-700 rounded-2xl p-8 flex items-center justify-center">
+            <span className="mr-4 text-6xl">🎥</span>
+            {t("MeetWithFriends.Title")}
+          </h2>
 
-          <div className="mb-8 flex items-center">
-            <input
-              type="text"
-              className="px-4 py-2 rounded-l border-none outline-none text-lg"
-              placeholder="Enter room name"
-              value={newRoomName}
-              onChange={(e) => setNewRoomName(e.target.value)}
-            />
-            <button
-              className="px-6 py-2 bg-green-600 text-white rounded-r hover:bg-green-700 text-lg font-semibold"
-              onClick={createRoom}
-            >
-              {t("MeetWithFriends.createRoom")}
-            </button>
+          {/* Enhanced Create Room Section */}
+          <div className="mb-12 bg-gradient-to-r from-green-50 to-green-100 rounded-3xl p-8 border-4 border-green-200 shadow-xl">
+            <h3 className="text-3xl font-bold text-green-900 mb-6 text-center flex items-center justify-center">
+              <span className="mr-3 text-4xl">➕</span>
+              Create New Room
+            </h3>
+            <div className="flex flex-col md:flex-row items-center gap-6">
+              <div className="flex-1">
+                <input
+                  type="text"
+                  className="w-full px-6 py-4 rounded-2xl border-3 border-green-300 focus:border-green-600 focus:ring-4 focus:ring-green-200 text-xl font-semibold shadow-lg transition-all duration-200"
+                  placeholder="Enter room name"
+                  value={newRoomName}
+                  onChange={(e) => setNewRoomName(e.target.value)}
+                />
+              </div>
+              <button
+                className="px-8 py-4 bg-gradient-to-r from-green-600 to-green-700 hover:from-green-500 hover:to-green-600 text-white rounded-2xl font-bold text-xl shadow-xl hover:shadow-2xl transform hover:scale-105 transition-all duration-200 whitespace-nowrap"
+                onClick={createRoom}
+              >
+                <span className="mr-3 text-2xl">🏗️</span>
+                {t("MeetWithFriends.createRoom")}
+              </button>
+            </div>
           </div>
 
-          <div className="w-full max-w-2xl">
-            <h3 className="text-white text-xl mb-4">{t("MeetWithFriends.availableRooms")}</h3>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-  {rooms.map((r) => {
-    const participantCount = roomParticipants.get(r.name) || 0;
-    return (
-      <div
-        key={r._id}
-        className="flex flex-col justify-between bg-[#2b2b2f] border border-gray-700 rounded-xl p-6 shadow-md hover:shadow-xl transition duration-300"
-        style={{ minHeight: '200px' }}
-      >
-        {/*Title and the name of the room*/}
-        <div>
-          <h4 className="text-white text-xl font-semibold mb-1">
-            {r.name}
-          </h4>
-          <p className="text-gray-400 text-sm">
-            👥 {participantCount} {t("MeetWithFriends.participant")}
-            {participantCount !== 1 ? t("MeetWithFriends.s") : ""} {t("MeetWithFriends.online")}
-          </p>
-        </div>
+          {/* Enhanced Available Rooms */}
+          <div className="w-full">
+            <h3 className="text-4xl font-bold text-blue-900 mb-8 text-center flex items-center justify-center">
+              <span className="mr-3 text-5xl">🏠</span>
+              {t("MeetWithFriends.availableRooms")}
+            </h3>
+            
+            {rooms.length === 0 ? (
+              <div className="text-center py-16 bg-blue-50 rounded-3xl border-4 border-blue-200">
+                <div className="text-6xl mb-6">🏠</div>
+                <p className="text-2xl text-blue-700 font-bold">
+                  {t("MeetWithFriends.noRooms")}
+                </p>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
+                {rooms.map((r) => {
+                  const participantCount = roomParticipants.get(r.name) || 0;
+                  return (
+                    <div
+                      key={r._id}
+                      className="bg-gradient-to-br from-blue-50 to-blue-100 border-3 border-blue-200 hover:border-blue-400 rounded-3xl shadow-xl hover:shadow-2xl transform hover:scale-105 transition-all duration-300 overflow-hidden"
+                    >
+                      <div className="p-8 flex flex-col justify-between h-64">
+                        {/* Room Header */}
+                        <div className="text-center">
+                          <div className="text-5xl mb-4">🏠</div>
+                          <h4 className="text-2xl font-bold text-blue-900 mb-3">
+                            {r.name}
+                          </h4>
+                          <div className="bg-white rounded-2xl p-3 border-2 border-blue-200 shadow-md">
+                            <p className="text-lg font-semibold text-blue-700 flex items-center justify-center">
+                              <span className="mr-2 text-xl">👥</span>
+                              {participantCount} {t("MeetWithFriends.participant")}
+                              {participantCount !== 1 ? t("MeetWithFriends.s") : ""} {t("MeetWithFriends.online")}
+                            </p>
+                          </div>
+                        </div>
 
-        {/*Entrance button*/}
-        <button
-          onClick={() => joinRoom(r.name)}
-          className="mt-4 bg-[#4f46e5] hover:bg-[#4338ca] text-white font-semibold py-2 px-4 rounded-lg text-center transition-all"
-        >
-          🎥 {t("MeetWithFriends.joinCall")}
-        </button>
-      </div>
-    );
-  })}
-</div>
-
-            {rooms.length === 0 && (
-              <p className="text-gray-400 text-center py-8">{t("MeetWithFriends.noRooms")}</p>
+                        {/* Join Button */}
+                        <button
+                          onClick={() => joinRoom(r.name)}
+                          className="w-full bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-500 hover:to-blue-600 text-white font-bold text-xl py-4 px-6 rounded-2xl shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-200"
+                        >
+                          <span className="mr-3 text-2xl">🎥</span>
+                          {t("MeetWithFriends.joinCall")}
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
             )}
           </div>
         </div>
-      ) : (
-        <div className="w-full h-full flex flex-col bg-gray-900">
-          {/* Room Header */}
-          <div className="flex justify-between items-center w-full p-6 bg-gray-800 border-b border-gray-700">            <div>
-              <h2 className="text-white text-2xl font-bold">🎥 {t("MeetWithFriends.room")} {joinedRoom}</h2>
-              <p className="text-gray-300 text-sm mt-1">
-                👥 {participants.length} {t("MeetWithFriends.participant")}{participants.length !== 1 ? t("MeetWithFriends.s") : ''} in call
-              </p>
+      </div>
+    ) : (
+      /* Enhanced Video Call Interface */
+      <div className="w-full h-full flex flex-col bg-gradient-to-br from-gray-800 to-gray-900">
+        {/* Enhanced Room Header */}
+        <div className="bg-gradient-to-r from-blue-900 to-blue-800 shadow-2xl border-b-4 border-blue-600 px-8 py-6">
+          <div className="flex justify-between items-center">
+            <div>
+              <h2 className="text-white text-4xl font-bold flex items-center">
+                <span className="mr-4 text-5xl">🎥</span>
+                {t("MeetWithFriends.room")} {joinedRoom}
+              </h2>
+              <div className="mt-2 bg-white bg-opacity-20 rounded-2xl px-4 py-2 inline-block">
+                <p className="text-blue-100 text-lg font-semibold flex items-center">
+                  <span className="mr-2 text-xl">👥</span>
+                  {participants.length} {t("MeetWithFriends.participant")}{participants.length !== 1 ? t("MeetWithFriends.s") : ''} in call
+                </p>
+              </div>
             </div>
-            <div className="flex gap-3">
+            
+            <div className="flex gap-4">
               <button
                 onClick={stopVideoCall}
-                className="px-6 py-3 bg-red-600 text-white rounded-lg hover:bg-red-700 font-semibold text-lg shadow-lg transition-colors"
+                className="px-8 py-4 bg-gradient-to-r from-red-600 to-red-700 hover:from-red-500 hover:to-red-600 text-white rounded-2xl font-bold text-xl shadow-xl hover:shadow-2xl transform hover:scale-105 transition-all duration-200"
               >
-                📞 {t("MeetWithFriends.endCall")}
+                <span className="mr-3 text-2xl">📞</span>
+                {t("MeetWithFriends.endCall")}
               </button>
               <button
                 onClick={leaveRoom}
-                className="px-6 py-3 bg-gray-600 text-white rounded-lg hover:bg-gray-700 font-semibold text-lg shadow-lg transition-colors"
+                className="px-8 py-4 bg-gradient-to-r from-gray-600 to-gray-700 hover:from-gray-500 hover:to-gray-600 text-white rounded-2xl font-bold text-xl shadow-xl hover:shadow-2xl transform hover:scale-105 transition-all duration-200"
               >
-                🚪 {t("MeetWithFriends.leaveRoom")}
+                <span className="mr-3 text-2xl">🚪</span>
+                {t("MeetWithFriends.leaveRoom")}
               </button>
             </div>
           </div>
+        </div>
 
-          {/* Video Call Interface */}
-          <div className="flex-1 bg-black p-6 overflow-hidden">
-            {/* Video Grid */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 h-full min-h-0">
-              {/* Local Video */}              <div className="relative bg-gray-800 rounded-xl overflow-hidden shadow-2xl border-2 border-green-500">
-                <video
-                  ref={localVideoRef}
-                  autoPlay
-                  muted
-                  playsInline
-                  className="w-full h-full object-cover"
-                />
+        {/* Enhanced Video Call Interface */}
+        <div className="flex-1 bg-black p-8 overflow-hidden">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 h-full min-h-0">
+            {/* Enhanced Local Video */}
+            <div className="relative bg-gradient-to-br from-gray-700 to-gray-800 rounded-3xl overflow-hidden shadow-2xl border-4 border-green-400">
+              <video
+                ref={localVideoRef}
+                autoPlay
+                muted
+                playsInline
+                className="w-full h-full object-cover"
+              />
               
-              </div>{/* Remote Videos */}
-              {participants.filter(pid => pid !== user.id).map((participantId) => {
-                const stream = remoteStreams.get(participantId);
-                
-                // Ensure we have a ref for this participant
-                if (!remoteVideoRefs.current.has(participantId)) {
-                  remoteVideoRefs.current.set(participantId, React.createRef());
-                }
-                
-                const videoRef = remoteVideoRefs.current.get(participantId);
-                
-                return (
-                  <div key={participantId} className="relative bg-gray-800 rounded-xl overflow-hidden shadow-2xl border-2 border-blue-500">
-                    <video
-                      ref={videoRef}
-                      autoPlay
-                      playsInline
-                      controls={false}
-                      volume={1.0}
-                      muted={false}
-                      className="w-full h-full object-cover"                      onLoadedMetadata={(e) => {
-                        if (e.target && e.target.videoWidth !== undefined && e.target.videoHeight !== undefined) {
-                          console.log('Video metadata loaded for', participantId, 'dimensions:', e.target.videoWidth, 'x', e.target.videoHeight);
-                        } else {
-                          console.log('Video metadata loaded for', participantId, 'but dimensions not available yet');
-                        }
-                      }}
-                      onPlay={() => {
-                        console.log('Video started playing for', participantId);
-                      }}
-                      onError={(e) => {
-                        console.error('Video error for', participantId, ':', e);
-                      }}                    />
-                   
-                    {/* Debug info */}
-                    <div className="absolute top-4 left-4 bg-black bg-opacity-50 text-white px-2 py-1 rounded text-xs">
-                      {stream ? `✅ Stream (${stream.getTracks().length} tracks)` : '❌ No stream'}
-                    </div>
-                  </div>
-                );
-              })}
+              {/* Enhanced Local Video Overlay */}
+              <div className="absolute inset-0 bg-gradient-to-t from-black from-10% to-transparent"></div>
+              <div className="absolute bottom-4 left-4 right-4">
+                <div className="bg-green-500 bg-opacity-90 rounded-2xl px-4 py-2 text-center">
+                  <p className="text-white font-bold text-lg flex items-center justify-center">
+                    <span className="mr-2 text-xl">👤</span>
+                    You (Local)
+                  </p>
+                </div>
+              </div>
+              
+              {/* Connection Status Indicator */}
+              <div className="absolute top-4 right-4">
+                <div className="bg-green-500 w-4 h-4 rounded-full animate-pulse shadow-lg"></div>
+              </div>
             </div>
 
-            {/* Call Controls & Info*/}            <div className="mt-6 text-center">
-              <div className="bg-gray-800 rounded-lg p-4 inline-block">
-                <p className="text-white text-lg font-semibold">
-                  👥 {t("MeetWithFriends.activeParticipants")} {participants.length}
-                </p>
-                <p className="text-gray-300 text-sm mt-1">
-                  {t("MeetWithFriends.videoCallInProgress")}
-                </p>
+            {/* Enhanced Remote Videos */}
+            {participants.filter(pid => pid !== user.id).map((participantId) => {
+              const stream = remoteStreams.get(participantId);
+              
+              if (!remoteVideoRefs.current.has(participantId)) {
+                remoteVideoRefs.current.set(participantId, React.createRef());
+              }
+              
+              const videoRef = remoteVideoRefs.current.get(participantId);
+              
+              return (
+                <div key={participantId} className="relative bg-gradient-to-br from-gray-700 to-gray-800 rounded-3xl overflow-hidden shadow-2xl border-4 border-blue-400">
+                  <video
+                    ref={videoRef}
+                    autoPlay
+                    playsInline
+                    controls={false}
+                    volume={1.0}
+                    muted={false}
+                    className="w-full h-full object-cover"
+                    onLoadedMetadata={(e) => {
+                      if (e.target && e.target.videoWidth !== undefined && e.target.videoHeight !== undefined) {
+                        console.log('Video metadata loaded for', participantId, 'dimensions:', e.target.videoWidth, 'x', e.target.videoHeight);
+                      }
+                    }}
+                    onPlay={() => {
+                      console.log('Video started playing for', participantId);
+                    }}
+                    onError={(e) => {
+                      console.error('Video error for', participantId, ':', e);
+                    }}
+                  />
+                  
+                  {/* Enhanced Remote Video Overlay */}
+                  <div className="absolute inset-0 bg-gradient-to-t from-black from-10% to-transparent"></div>
+                  <div className="absolute bottom-4 left-4 right-4">
+                    <div className="bg-blue-500 bg-opacity-90 rounded-2xl px-4 py-2 text-center">
+                      <p className="text-white font-bold text-lg flex items-center justify-center">
+                        <span className="mr-2 text-xl">👤</span>
+                        Participant {participantId.slice(-4)}
+                      </p>
+                    </div>
+                  </div>
+                  
+                  {/* Enhanced Connection Status */}
+                  <div className="absolute top-4 left-4 bg-black bg-opacity-60 rounded-2xl px-3 py-1">
+                    <div className="flex items-center text-white text-sm font-semibold">
+                      <div className={`w-3 h-3 rounded-full mr-2 ${stream ? 'bg-green-500 animate-pulse' : 'bg-red-500'}`}></div>
+                      {stream ? `✅ Connected` : '❌ Connecting...'}
+                    </div>
+                  </div>
+                  
+                  {/* No Stream Placeholder */}
+                  {!stream && (
+                    <div className="absolute inset-0 flex items-center justify-center bg-gray-800 bg-opacity-80">
+                      <div className="text-center text-white">
+                        <div className="text-4xl mb-4">⏳</div>
+                        <p className="text-xl font-bold">Connecting...</p>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+
+          {/* Enhanced Call Status Info */}
+          <div className="mt-8 text-center">
+            <div className="bg-gradient-to-r from-gray-700 to-gray-800 rounded-2xl p-6 inline-block shadow-xl border-2 border-gray-600">
+              <div className="flex items-center justify-center gap-8">
+                <div className="text-center">
+                  <p className="text-white text-2xl font-bold flex items-center justify-center">
+                    <span className="mr-3 text-3xl">👥</span>
+                    {t("MeetWithFriends.activeParticipants")} {participants.length}
+                  </p>
+                </div>
+                <div className="w-px h-8 bg-gray-500"></div>
+                <div className="text-center">
+                  <p className="text-green-400 text-xl font-semibold flex items-center justify-center">
+                    <span className="mr-2 text-2xl">🎥</span>
+                    {t("MeetWithFriends.videoCallInProgress")}
+                  </p>
+                </div>
               </div>
             </div>
           </div>
         </div>
-      )}
-    </div>
-  );
+      </div>
+    )}
+  </div>
+);
 }
