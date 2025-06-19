@@ -1,31 +1,65 @@
-const mongoose = require('mongoose');
+const mongoose = require("mongoose");
 
-const foodSchema = new mongoose.Schema({
-    barcode:{
-        type: String,
-        required: true,
+const foodSchema = new mongoose.Schema(
+  {
+    barcode: {
+      type: String,
+      required: true,
     },
-    name:{
-        type: String,
-        required: true
+    imageURL: {
+      type: String,
+      default: null,
     },
-    description:{
-        type: String,
-        required: true
+    id: {
+      type: Number,
+      required: true,
     },
-    ingredients:{
-        type: [String],
-        required: true
+    date: {
+      type: String,
+      required: true,
     },
-    imageURL:{
-        type: String,
-        required: false,  // Making it optional since existing foods might not have photos
-        default: null
-    }
-}, {
-    timestamps: true  // Adds createdAt and updatedAt automatically
-});
+    category: {
+      type: String,
+      required: true,
+    },
+    dish: {
+      type: String,
+      required: true,
+    },
+    description: {
+      type: String,
+      default: null,
+    },
+    additives: {
+      type: [String],
+      default: [],
+    },
+    allergens: {
+      type: [String],
+      default: [],
+    },
+    pictograms: {
+      type: [String],
+      default: [],
+    },
+    diabeticFriendly: {
+      type: Boolean,
+      required: true,
+    },
+    contains_R: Boolean,
+    contains_S: Boolean,
+    contains_G: Boolean,
+    contains_M: Boolean,
+    contains_A: Boolean,
+    contains_W: Boolean,
+    contains_K: Boolean,
+    contains_Y: Boolean,
+  },
+  {
+    timestamps: true,
+  }
+);
 
 foodSchema.index({ barcode: 1 });
 
-module.exports = mongoose.model('Foods', foodSchema);
+module.exports = mongoose.model("Food", foodSchema);

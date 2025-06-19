@@ -1,56 +1,71 @@
-const express = require('express');
+const express = require("express");
 const router = express.Router();
-const User = require('../models/user');
+const User = require("../models/user");
 
-router.get('/', async (req, res) => {
-    const users = await User.find();
-    res.json(users);
+router.get("/", async (req, res) => {
+  const users = await User.find();
+  res.json(users);
 });
 
-router.get('/others', async (req, res) => {
-    const excludeId = req.query.excludeId;
+router.get("/others", async (req, res) => {
+  const { excludeId } = req.query;
+  if (!excludeId) return res.status(400).json({ message: "Missing excludeId" });
 
-    if (!excludeId) {
-        return res.status(400).json({ message: 'Missing excludeId query parameter' });
-    }
-
-    try {
-        const users = await User.find({ id: { $ne: excludeId } });
-        res.json(users);
-    } catch (error) {
-        res.status(500).json({ message: error.message });
-    }
+  const users = await User.find({ id: { $ne: excludeId } });
+  res.json(users);
 });
 
-router.get('/:id', async (req, res) => {
-    try {
-        const user = await User.findOne({ id: req.params.id });
-
-        if (!user) {
-            return res.status(404).json({ message: 'User not found' });
-        }
-
-        res.json(user);
-    } catch (error) {
-        res.status(500).json({ message: error.message });
-    }
+router.get("/:id", async (req, res) => {
+  try {
+    const user = await User.findOne({ id: req.params.id });
+    if (!user) return res.status(404).json({ message: "Not found" });
+    res.json(user);
+  } catch (e) {
+    res.status(500).json({ message: e.message });
+  }
 });
 
-router.post('/addUser', async (req, res) => {
-    const { id, fullName, phoneNumber, address, dateOfBirth, gender, allergies } = req.body;
+router.post("/addUser", async (req, res) => {
+  const {
+    id,
+    fullName,
+    phoneNumber,
+    address,
+    dateOfBirth,
+    gender,
+    R,
+    S,
+    G,
+    M,
+    A,
+    W,
+    K,
+    Y,
+  } = req.body;
 
-    const newUser = new User({
-        id,
-        fullName,
-        phoneNumber,
-        address,
-        dateOfBirth,
-        gender,
-        allergies
-    });
+  const newUser = new User({
+    id,
+    fullName,
+    phoneNumber,
+    address,
+    dateOfBirth,
+    gender,
+    R,
+    S,
+    G,
+    M,
+    A,
+    W,
+    K,
+    Y,
+  });
 
-    const savedUser = await newUser.save();
-    res.status(201).json(savedUser);
+  try {
+    const saved = await newUser.save();
+    res.status(201).json(saved);
+  } catch (e) {
+    res.status(400).json({ message: e.message });
+  }
 });
 
 module.exports = router;
