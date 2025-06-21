@@ -245,7 +245,7 @@ function Exercise() {
   };
 
   return (
-    <div className="p-4 max-w-6xl mx-auto bg-white shadow-lg rounded-lg">
+    <div className="p-4 max-w-6xl mx-auto bg-white dark:bg-gray-800 shadow-lg rounded-lg dark:text-gray-100">
       <h1 className="text-4xl font-bold mb-8 text-center text-blue-800">
         {t("Exercise.Library")}
       </h1>
@@ -415,7 +415,7 @@ function Exercise() {
       {/* Exercise Detail Modal */}
       {selectedExercise && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-lg max-w-3xl w-full max-h-[90vh] overflow-y-auto">
+          <div className="bg-white dark:bg-gray-800 rounded-lg max-w-3xl w-full max-h-[90vh] overflow-y-auto dark:text-gray-100">
             <div className="p-6">
               <div className="flex justify-between items-center mb-4">
                 <h2 className="text-3xl font-bold text-gray-800">{selectedExercise.name}</h2>

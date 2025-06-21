@@ -120,7 +120,7 @@ export default function Medication() {
 
       {/* ADD FORM */}
       {isAdding && (
-        <div className="max-w-md mx-auto bg-white rounded-2xl shadow-md p-6 mb-6 space-y-6">
+        <div className="max-w-md mx-auto bg-white dark:bg-gray-800 rounded-2xl shadow-md p-6 mb-6 space-y-6 dark:text-gray-100">
           {[
             { lbl: t("Medication.MedicationName"), name: "name",        placeholder: "Aspirin" },
             { lbl: t("Medication.dosage"),          name: "dosage",      placeholder: "100 mg" },
@@ -160,7 +160,7 @@ export default function Medication() {
         {meds.map((m, i) => {
           const canTake = !m.taken && isWithinWindow(m.nextDue);
           return (
-            <div key={m._id} className="bg-white rounded-2xl shadow-md p-6 flex flex-col gap-3">
+            <div key={m._id} className="bg-white dark:bg-gray-800 rounded-2xl shadow-md p-6 flex flex-col gap-3 dark:text-gray-100">
               <div className="text-xl font-semibold text-gray-900">{m.name}</div>
               <div className="text-gray-700 text-sm">{t("Medication.dosage")} {m.dosage}</div>
               {m.frequency && <div className="text-gray-700 text-sm">{t("Medication.frequency")} {m.frequency} {t("Medication.hours")}</div>}

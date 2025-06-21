@@ -125,7 +125,7 @@ export default function CallContacts() {
           <span className="text-xl">🗑️</span>
         </button>
         {menuOpen && (
-          <div className="absolute mt-20 right-96 transform translate-x-4/5 bg-white border border-gray-200 rounded-md shadow-lg z-10">
+          <div className="absolute mt-20 right-96 transform translate-x-4/5 bg-white dark:bg-gray-700 border border-gray-200 rounded-md shadow-lg z-10">
             <ul className="py-1">
               <li>
                 <button
@@ -143,7 +143,7 @@ export default function CallContacts() {
 
       {/* Add form */}
       {isAdding && (
-        <div className="mb-6 max-w-md mx-auto bg-white rounded-2xl shadow-md p-3 space-y-1">
+        <div className="mb-6 max-w-md mx-auto bg-white dark:bg-gray-800 rounded-2xl shadow-md p-3 space-y-1 dark:text-gray-100">
           {[
             {
               lbl: t("CallContacts.fullNameLabel"),
@@ -200,7 +200,7 @@ export default function CallContacts() {
         {visibleContacts.map(c => (
           <label
             key={c._id}
-            className="relative bg-white rounded-3xl shadow-md p-6 flex items-center gap-3"
+            className="relative bg-white dark:bg-gray-800 rounded-3xl shadow-md p-6 flex items-center gap-3 dark:text-gray-100"
           >
             {menuOpen && (
               <input
