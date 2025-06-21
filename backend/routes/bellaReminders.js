@@ -5,7 +5,7 @@ const axios = require('axios');
 const router = express.Router();
 const BellaReminder = require('../models/bellaReminder');
 
-const HF_API_URL = 'https://api-inference.huggingface.co/models/joeddav/xlm-roberta-large-xnli';
+const HF_API_URL = process.env.HF_API_URL;
 const HF_TOKEN = process.env.HF_API_TOKEN;
 
 // 1) Manually add a reminder
