@@ -99,7 +99,7 @@ export default function CallContacts() {
     );
 
   return (
-    <div className="h-full flex flex-col bg-slate-400 p-4 overflow-y-auto">
+    <div className="h-full flex flex-col bg-slate-400 dark:bg-gray-700 p-4 overflow-y-auto">
       {/* Header: Search, Add, and Bulk Menu */}
       <div className="flex items-center mb-6 max-w-md mx-auto">
         <input
@@ -107,12 +107,12 @@ export default function CallContacts() {
           value={query}
           onChange={e => setQuery(e.target.value)}
           placeholder={t("CallContacts.searchPlaceholder")}
-          className="flex-1 rounded-md border-2 border-blue-900 focus:border-blue-700 focus:ring-blue-700 text-base px-4 py-2"
+          className="flex-1 rounded-md border-2 border-blue-900 dark:border-blue-300 focus:border-blue-700 focus:ring-blue-700 text-base px-4 py-2 bg-white dark:bg-gray-800 dark:text-gray-100"
         />
         {!isAdding && (
           <button
             onClick={() => setIsAdding(true)}
-            className="ml-3 bg-blue-900 hover:bg-blue-700 text-white font-semibold text-sm rounded-lg px-4 py-2 transition"
+          className="ml-3 bg-blue-900 hover:bg-blue-700 text-white font-semibold text-sm rounded-lg px-4 py-2 transition"
           >
             {t("CallContacts.addContact")}
           </button>
@@ -120,18 +120,18 @@ export default function CallContacts() {
         {/* Bulk menu trigger */}
         <button
           onClick={() => setMenuOpen(o => !o)}
-          className="ml-auto ml-4 text-blue-900 p-5 font-semibold focus:outline-none"
+          className="ml-auto ml-4 text-blue-900 dark:text-blue-200 p-5 font-semibold focus:outline-none"
         >
           <span className="text-xl">🗑️</span>
         </button>
         {menuOpen && (
-          <div className="absolute mt-20 right-96 transform translate-x-4/5 bg-white border border-gray-200 rounded-md shadow-lg z-10">
+          <div className="absolute mt-20 right-96 transform translate-x-4/5 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-md shadow-lg z-10">
             <ul className="py-1">
               <li>
                 <button
                   onClick={handleBulkDelete}
                   disabled={selectedIds.size === 0}
-                  className="text-left px-4 py-2 text-sm text-gray-900 font-semibold hover:bg-red-300"
+                  className="text-left px-4 py-2 text-sm text-gray-900 dark:text-gray-100 font-semibold hover:bg-red-300 dark:hover:bg-red-600"
                 >
                   {t("CallContacts.deleteSelected")}
                 </button>
@@ -143,7 +143,7 @@ export default function CallContacts() {
 
       {/* Add form */}
       {isAdding && (
-        <div className="mb-6 max-w-md mx-auto bg-white rounded-2xl shadow-md p-3 space-y-1">
+        <div className="mb-6 max-w-md mx-auto bg-white dark:bg-gray-800 rounded-2xl shadow-md p-3 space-y-1">
           {[
             {
               lbl: t("CallContacts.fullNameLabel"),
@@ -162,7 +162,7 @@ export default function CallContacts() {
             }
           ].map(f => (
             <div key={f.name}>
-              <label className="block text-base font-semibold text-gray-700">
+              <label className="block text-base font-semibold text-gray-700 dark:text-gray-200">
                 {f.lbl}
               </label>
               <input
@@ -170,7 +170,7 @@ export default function CallContacts() {
                 value={form[f.name]}
                 onChange={handleChange}
                 placeholder={f.placeholder}
-                className="mt-1 w-full rounded-md border-2 border-blue-900 focus:border-blue-700 focus:ring-blue-700 text-base px-3 py-2"
+                className="mt-1 w-full rounded-md border-2 border-blue-900 dark:border-blue-300 focus:border-blue-700 focus:ring-blue-700 text-base px-3 py-2 bg-white dark:bg-gray-800 dark:text-gray-100"
               />
             </div>
           ))}
@@ -200,7 +200,7 @@ export default function CallContacts() {
         {visibleContacts.map(c => (
           <label
             key={c._id}
-            className="relative bg-white rounded-3xl shadow-md p-6 flex items-center gap-3"
+            className="relative bg-white dark:bg-gray-800 rounded-3xl shadow-md p-6 flex items-center gap-3"
           >
             {menuOpen && (
               <input
@@ -211,7 +211,7 @@ export default function CallContacts() {
               />
             )}
             <div className={`${menuOpen ? "ml-2 flex-1" : "flex-1"}`}>
-              <div className="text-lg font-medium text-gray-900">
+              <div className="text-lg font-medium text-gray-900 dark:text-gray-100">
                 {c.fullName} {c.relationship && `(${c.relationship})`}
               </div>
               <a
@@ -225,7 +225,7 @@ export default function CallContacts() {
         ))}
 
         {visibleContacts.length === 0 && (
-          <p className="text-center text-gray-700">
+          <p className="text-center text-gray-700 dark:text-gray-300">
             {t("CallContacts.noMatch")}
           </p>
         )}

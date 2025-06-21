@@ -104,7 +104,7 @@ export default function Medication() {
   if (error)   return <p className="text-center text-red-600">{error}</p>;
 
   return (
-    <div className="min-h-screen bg-slate-400 p-6">
+    <div className="min-h-screen bg-slate-400 dark:bg-gray-700 p-6">
       {/* HEADER */}
       <div className="flex items-center justify-between mb-8">
         
@@ -120,21 +120,21 @@ export default function Medication() {
 
       {/* ADD FORM */}
       {isAdding && (
-        <div className="max-w-md mx-auto bg-white rounded-2xl shadow-md p-6 mb-6 space-y-6">
+        <div className="max-w-md mx-auto bg-white dark:bg-gray-800 rounded-2xl shadow-md p-6 mb-6 space-y-6">
           {[
             { lbl: t("Medication.MedicationName"), name: "name",        placeholder: "Aspirin" },
             { lbl: t("Medication.dosage"),          name: "dosage",      placeholder: "100 mg" },
             { lbl: t("Medication.frequencyHours"), name: "frequency",   placeholder: "8" },
           ].map((f) => (
             <div key={f.name}>
-              <label className="block text-lg font-semibold text-gray-700">{f.lbl}</label>
+              <label className="block text-lg font-semibold text-gray-700 dark:text-gray-200">{f.lbl}</label>
               <input
                 name={f.name}
                 value={form[f.name]}
                 onChange={handleChange}
                 placeholder={f.placeholder}
-                className="mt-2 w-full rounded-md border-2 border-blue-900
-                           focus:border-blue-700 focus:ring-blue-700 text-lg px-4 py-3"
+                className="mt-2 w-full rounded-md border-2 border-blue-900 dark:border-blue-300
+                           focus:border-blue-700 focus:ring-blue-700 text-lg px-4 py-3 bg-white dark:bg-gray-800 dark:text-gray-100"
               />
             </div>
           ))}
@@ -160,15 +160,15 @@ export default function Medication() {
         {meds.map((m, i) => {
           const canTake = !m.taken && isWithinWindow(m.nextDue);
           return (
-            <div key={m._id} className="bg-white rounded-2xl shadow-md p-6 flex flex-col gap-3">
-              <div className="text-xl font-semibold text-gray-900">{m.name}</div>
-              <div className="text-gray-700 text-sm">{t("Medication.dosage")} {m.dosage}</div>
-              {m.frequency && <div className="text-gray-700 text-sm">{t("Medication.frequency")} {m.frequency} {t("Medication.hours")}</div>}
-              <div className="text-gray-900 text-sm font-semibold">
+            <div key={m._id} className="bg-white dark:bg-gray-800 rounded-2xl shadow-md p-6 flex flex-col gap-3">
+              <div className="text-xl font-semibold text-gray-900 dark:text-gray-100">{m.name}</div>
+              <div className="text-gray-700 dark:text-gray-300 text-sm">{t("Medication.dosage")} {m.dosage}</div>
+              {m.frequency && <div className="text-gray-700 dark:text-gray-300 text-sm">{t("Medication.frequency")} {m.frequency} {t("Medication.hours")}</div>}
+              <div className="text-gray-900 dark:text-gray-100 text-sm font-semibold">
                 {t("Medication.lastTaken")}&nbsp;{m.lastTaken ? new Date(m.lastTaken).toLocaleString() : "Never"}
               </div>
               {m.nextDue && (
-                <div className="text-gray-900 text-sm font-semibold">
+                <div className="text-gray-900 dark:text-gray-100 text-sm font-semibold">
                   {t("Medication.nextDue")}&nbsp;{new Date(m.nextDue).toLocaleString()}
                 </div>
               )}
@@ -177,7 +177,7 @@ export default function Medication() {
               {confirmDeleteId === m._id ? (
                 /* delete confirm */
                 <div className="flex flex-col gap-3">
-                  <span className="text-gray-800">{t("Medication.deleteLabel")} <b>{m.name}</b>?</span>
+                  <span className="text-gray-800 dark:text-gray-200">{t("Medication.deleteLabel")} <b>{m.name}</b>?</span>
                   <div className="flex gap-4">
                     <button onClick={() => confirmDelete(m._id)} className="flex-1 bg-gray-600 hover:bg-red-500 text-white py-2 rounded-lg text-lg">
                       {t("Medication.yesDelete")}
@@ -190,7 +190,7 @@ export default function Medication() {
               ) : confirmTakeId === m._id ? (
                 /* take confirm */
                 <div className="flex flex-col gap-3">
-                  <span className="text-gray-800">{t("Medication.Confirmation")} <b>{m.name}</b>?</span>
+                  <span className="text-gray-800 dark:text-gray-200">{t("Medication.Confirmation")} <b>{m.name}</b>?</span>
                   <div className="flex gap-4">
                     <button
                       onClick={() => {

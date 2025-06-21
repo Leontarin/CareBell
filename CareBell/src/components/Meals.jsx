@@ -308,7 +308,7 @@ function Meals() {
   };
 
   return (
-    <div className="p-4 max-w-4xl mx-auto bg-white shadow-lg rounded-lg">
+    <div className="p-4 max-w-4xl mx-auto bg-white dark:bg-gray-800 shadow-lg rounded-lg">
       <h1 className="text-4xl font-bold mb-8 text-center text-blue-800">{t("Meals.FoodInfo")}</h1>
       
       {/* Main Tab Navigation - Large, easy to press buttons */}
@@ -427,9 +427,9 @@ function Meals() {
                     
                     {/* Food Details */}
                     <div className="md:col-span-2 p-5">
-                      <div className="bg-gray-50 p-4 rounded-t-md -mx-5 -mt-5">
-                        <h3 className="text-2xl font-bold text-gray-800">{food.name}</h3>
-                        <p className="text-gray-500 mt-1">{t("Meals.barcodeLabel")} {food.barcode}</p>
+                      <div className="bg-gray-50 dark:bg-gray-700 p-4 rounded-t-md -mx-5 -mt-5">
+                        <h3 className="text-2xl font-bold text-gray-800 dark:text-gray-100">{food.name}</h3>
+                        <p className="text-gray-500 dark:text-gray-300 mt-1">{t("Meals.barcodeLabel")} {food.barcode}</p>
                       </div>
                       
                       <div className="mt-4">

@@ -11,7 +11,7 @@ import { API } from "../config";
 
 export default function SettingsModal({ onClose }) {
   const { t, i18n } = useTranslation();
-  const { user, setUser } = useContext(AppContext);
+  const { user, setUser, darkMode, setDarkMode } = useContext(AppContext);
 
   const [scale, setScale] = useState(
     parseFloat(localStorage.getItem("fontScale")) || 1
@@ -52,15 +52,15 @@ export default function SettingsModal({ onClose }) {
 
   return (
     <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
-      <div className="w-[95%] max-w-md bg-white rounded-3xl shadow-xl p-8 relative">
+      <div className="w-[95%] max-w-md bg-white dark:bg-gray-800 rounded-3xl shadow-xl p-8 relative">
         <button
           onClick={onClose}
-          className="absolute top-4 left-4 text-2xl text-gray-600 hover:text-gray-800"
+          className="absolute top-4 left-4 text-2xl text-gray-600 hover:text-gray-800 dark:text-gray-300"
         >
           ×
         </button>
 
-        <h2 className="text-3xl font-bold text-blue-800 mb-8">
+        <h2 className="text-3xl font-bold text-blue-800 dark:text-blue-200 mb-8">
           {t("SettingsModal.title")}
         </h2>
 
@@ -82,6 +82,25 @@ export default function SettingsModal({ onClose }) {
             />
             <span className="text-5xl font-bold">A</span>
           </div>
+        </section>
+
+        {/* DARK MODE */}
+        <section className="mb-8">
+          <h3 className="text-xl font-semibold mb-3">
+            {t("SettingsModal.darkMode")}
+          </h3>
+          <label className="inline-flex items-center cursor-pointer">
+            <span className="mr-3 text-lg">{darkMode ? "On" : "Off"}</span>
+            <input
+              type="checkbox"
+              checked={darkMode}
+              onChange={(e) => setDarkMode(e.target.checked)}
+              className="sr-only peer"
+            />
+            <div
+              className="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer dark:bg-gray-700 peer-checked:bg-blue-600"
+            ></div>
+          </label>
         </section>
 
         {/* VOLUME */}
@@ -150,7 +169,7 @@ export default function SettingsModal({ onClose }) {
               </h3>
 
               {loadingUsers ? (
-                <p className="text-gray-600">{t("SettingsModal.loading")}</p>
+                <p className="text-gray-600 dark:text-gray-300">{t("SettingsModal.loading")}</p>
               ) : (
                 <select
                   value={user?.id || ""}

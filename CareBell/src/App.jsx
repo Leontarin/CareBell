@@ -27,6 +27,16 @@ export default function App() {
 
   const [user, setUser] = useState(null);
   const [bellaFullscreen, setBellaFullscreen] = useState(false);
+  const [darkMode, setDarkMode] = useState(
+    localStorage.getItem('darkMode') === 'true'
+  );
+
+  useEffect(() => {
+    const root = document.documentElement;
+    if (darkMode) root.classList.add('dark');
+    else root.classList.remove('dark');
+    localStorage.setItem('darkMode', darkMode);
+  }, [darkMode]);
 
   useEffect(() => {
     //Set first user as default user
@@ -43,7 +53,7 @@ export default function App() {
   }, []);
 
   return (
-    <AppContext.Provider value={{user, setUser, bellaFullscreen, setBellaFullscreen}}>
+    <AppContext.Provider value={{user, setUser, bellaFullscreen, setBellaFullscreen, darkMode, setDarkMode}}>
     <BrowserRouter>
       <div
         className="
@@ -51,6 +61,7 @@ export default function App() {
           p-4
           h-screen          /* exactly viewport height */
           flex flex-col
+          bg-white dark:bg-gray-900 dark:text-gray-100
         "
         style={{ fontSize: "var(--font-size-base,22px)" }}
       >

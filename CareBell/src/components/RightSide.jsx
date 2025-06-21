@@ -78,10 +78,10 @@ export default function RightSide() {
                 <Link
                   key={to}
                   to={to}
-                  className="flex flex-col items-center justify-center border-2 border-blue-900 rounded-xl p-6 hover:bg-blue-100 transition whitespace-nowrap"
+                  className="flex flex-col items-center justify-center border-2 border-blue-900 dark:border-blue-300 rounded-xl p-6 hover:bg-blue-100 dark:hover:bg-blue-900/30 transition whitespace-nowrap"
                 >
-                  <Icon className="text-4xl mb-2 text-blue-900" />
-                  <span className="text-lg font-semibold text-blue-900">
+                  <Icon className="text-4xl mb-2 text-blue-900 dark:text-blue-200" />
+                  <span className="text-lg font-semibold text-blue-900 dark:text-blue-200">
                     {t(`RightSide.${key}`)}
                   </span>
                 </Link>
@@ -92,16 +92,16 @@ export default function RightSide() {
 
         {/* Sub-pages */}
         <Route element={
-          <div className="flex flex-col h-full min-h-0 bg-slate-400 p-4">
+          <div className="flex flex-col h-full min-h-0 bg-slate-400 dark:bg-gray-700 p-4">
             {/* Toolbar */}
             <div className="flex items-center mb-4">
               <button
                 onClick={() => navigate(-1)}
-                className="flex items-center gap-2 px-3 py-2 bg-white border-2 border-blue-900 rounded-lg text-blue-900 font-semibold hover:bg-blue-50 transition"
+                className="flex items-center gap-2 px-3 py-2 bg-white dark:bg-gray-800 border-2 border-blue-900 dark:border-blue-300 rounded-lg text-blue-900 dark:text-blue-200 font-semibold hover:bg-blue-50 dark:hover:bg-blue-900/30 transition"
               >
                 <FaArrowLeft /> {t("RightSide.back")}
               </button>
-              <h2 className="ml-4 text-2xl font-bold text-gray-800 whitespace-nowrap">
+              <h2 className="ml-4 text-2xl font-bold text-gray-800 dark:text-gray-100 whitespace-nowrap">
                 {title}
               </h2>
             </div>
