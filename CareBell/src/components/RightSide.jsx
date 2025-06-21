@@ -67,7 +67,7 @@ export default function RightSide() {
   }
 
   return (
-    <div id="rightSide" className={`${widthClass} ${heightClass} px-4 overflow-hidden`}>
+    <div id="rightSide" className={`${widthClass} ${heightClass} px-4 overflow-hidden dark:text-gray-100`}>
       <Routes>
         {/* Main menu */}
         <Route
@@ -92,7 +92,7 @@ export default function RightSide() {
 
         {/* Sub-pages */}
         <Route element={
-          <div className="flex flex-col h-full min-h-0 bg-slate-400 p-4">
+          <div className="flex flex-col h-full min-h-0 bg-slate-400 dark:bg-gray-800 p-4">
             {/* Toolbar */}
             <div className="flex items-center mb-4">
               <button

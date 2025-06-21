@@ -126,7 +126,7 @@ export default function News() {
   const retryFetch = () => fetchTodaysNews();
 
   return (
-    <div className="p-4 max-w-4xl mx-auto bg-white shadow-lg rounded-lg">
+    <div className="p-4 max-w-4xl mx-auto bg-white dark:bg-gray-800 shadow-lg rounded-lg dark:text-gray-100">
       <h1 className="text-4xl font-bold mb-8 text-center text-blue-800">Heute Nachrichten</h1>
       {loading ? (
         <div className="flex flex-col items-center justify-center py-12">
@@ -167,7 +167,7 @@ export default function News() {
                     </button>
                   )}
                 </div>
-                <div className="p-5 bg-white">
+                <div className="p-5 bg-white dark:bg-gray-700">
                   {article.image && (
                     <img src={article.image} alt={article.title} className="w-full h-auto rounded-lg mb-4" onError={e => { e.target.style.display = 'none'; }} />
                   )}

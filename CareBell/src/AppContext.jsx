@@ -5,4 +5,6 @@ export const AppContext = React.createContext({
   setUser: () => {},
   bellaFullscreen: false,
   setBellaFullscreen: () => {},
+  darkMode: false,
+  setDarkMode: () => {},
 });

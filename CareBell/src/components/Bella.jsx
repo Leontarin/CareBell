@@ -348,7 +348,7 @@ export default function Bella() {
       {isChatOpen && (
         <div
           ref={chatRef}
-          className={`${bellaFullscreen ? 'flex-1' : 'w-full max-w-md'} p-4 bg-white rounded-lg shadow overflow-y-auto mb-4 space-y-3`}
+          className={`${bellaFullscreen ? 'flex-1' : 'w-full max-w-md'} p-4 bg-white dark:bg-gray-800 rounded-lg shadow overflow-y-auto mb-4 space-y-3 dark:text-gray-100`}
           style={{ maxHeight: bellaFullscreen ? '70vh' : '300px' }}
         >
           {messages.map((m, i) => (

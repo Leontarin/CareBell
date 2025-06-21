@@ -11,7 +11,7 @@ import { API } from "../config";
 
 export default function SettingsModal({ onClose }) {
   const { t, i18n } = useTranslation();
-  const { user, setUser } = useContext(AppContext);
+  const { user, setUser, darkMode, setDarkMode } = useContext(AppContext);
 
   const [scale, setScale] = useState(
     parseFloat(localStorage.getItem("fontScale")) || 1
@@ -52,7 +52,7 @@ export default function SettingsModal({ onClose }) {
 
   return (
     <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
-      <div className="w-[95%] max-w-md bg-white rounded-3xl shadow-xl p-8 relative">
+      <div className="w-[95%] max-w-md bg-white dark:bg-gray-800 rounded-3xl shadow-xl p-8 relative dark:text-gray-100">
         <button
           onClick={onClose}
           className="absolute top-4 left-4 text-2xl text-gray-600 hover:text-gray-800"
@@ -121,6 +121,22 @@ export default function SettingsModal({ onClose }) {
             />
             <FaRunning className="text-2xl" />
           </div>
+        </section>
+
+        {/* DARK MODE */}
+        <section className="mb-8">
+          <h3 className="text-xl font-semibold mb-3">
+            {t("SettingsModal.darkMode")}
+          </h3>
+          <label className="flex items-center gap-4 cursor-pointer">
+            <span className="flex-1">{darkMode ? 'On' : 'Off'}</span>
+            <input
+              type="checkbox"
+              checked={darkMode}
+              onChange={(e) => setDarkMode(e.target.checked)}
+              className="w-6 h-6"
+            />
+          </label>
         </section>
 
         {/* LANGUAGE & USER SELECTORS */}

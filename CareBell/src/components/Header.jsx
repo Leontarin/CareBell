@@ -96,9 +96,9 @@ export default function Header() {
 
   return (
     <>
-      <header className="flex justify-between items-center py-4 px-4 border-b border-blue-900 mb-4 bg-slate-200">
+      <header className="flex justify-between items-center py-4 px-4 border-b border-blue-900 mb-4 bg-slate-200 dark:bg-gray-800 dark:text-gray-100">
         {/* Date / Time / Weather */}
-        <div className="flex items-center space-x-6 text-blue-900">
+        <div className="flex items-center space-x-6 text-blue-900 dark:text-blue-200">
           <div className="flex flex-col leading-none">
             <span className="text-lg font-bold">{dateStr}</span>
             <span className="text-xl font-bold">{timeStr}</span>
@@ -138,17 +138,17 @@ export default function Header() {
         <div className="flex items-center space-x-4">
           <button
             onClick={() => setCalendarOpen(o => !o)}
-            className="bg-blue-900 text-yellow-200 p-3 rounded-full hover:bg-blue-800"
+            className="bg-blue-900 text-yellow-200 p-3 rounded-full hover:bg-blue-800 dark:bg-blue-700"
           >
             📅
           </button>
           <button
             onClick={() => setShowSettings(true)}
-            className="bg-blue-900 text-yellow-200 p-3 rounded-full hover:bg-blue-800"
+            className="bg-blue-900 text-yellow-200 p-3 rounded-full hover:bg-blue-800 dark:bg-blue-700"
           >
             ⚙️
           </button>
-          <button className="bg-red-500 text-white py-2 px-4 rounded-xl">
+          <button className="bg-red-500 text-white py-2 px-4 rounded-xl dark:bg-red-600">
             {t("Header.Emergency")}
           </button>
         </div>
