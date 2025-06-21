@@ -43,5 +43,13 @@ app.get('/', (_req, res) => {
   res.send('API is live on Vercel! 🚀');
 });
 
+// only start a listener when run directly (not when imported by Vercel)
+if (require.main === module) {
+  const PORT = process.env.PORT || 4443;
+  app.listen(PORT, () => {
+    console.log(`✅ API started locally on ${PORT}`);
+  });
+}
+
 // Export the Express app so Vercel can treat it as a serverless handler
 module.exports = app;
