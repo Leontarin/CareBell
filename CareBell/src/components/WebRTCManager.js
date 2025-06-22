@@ -1,9 +1,11 @@
 // CareBell/src/components/WebRTCManager.js
+import { P2P_CONFIG } from '../shared/config';
+
 class WebRTCManager {
-  constructor(localVideoRef, remoteVideoRef, socket, roomId, userId, targetUserId, polite) {
+  constructor(localVideoRef, remoteVideoRef, denoSignaling, roomId, userId, targetUserId, polite) {
     this.localVideoRef       = localVideoRef;
     this.remoteVideoRef      = remoteVideoRef;
-    this.socket              = socket;
+    this.denoSignaling       = denoSignaling;  // NEW: Deno signaling client
     this.roomId              = roomId;
     this.userId              = userId;
     this.targetUserId        = targetUserId; // NEW: specific peer we're connecting to
@@ -29,24 +31,18 @@ class WebRTCManager {
     this.dataChannel          = null;
     this.onConnectionEstablished = null;
 
-    this.iceServers = [
-      { urls: 'stun:stun.l.google.com:19302' },
-      { urls: 'stun:stun1.l.google.com:19302' },
-      { urls: 'stun:stun2.l.google.com:19302' },
-      { urls: 'stun:stun3.l.google.com:19302' },
-      { urls: 'stun:stun4.l.google.com:19302' },
-      // Add more STUN servers for better NAT traversal
-      { urls: 'stun:stun.stunprotocol.org:3478' },
-      { urls: 'stun:stun.voiparound.com' },
-      { urls: 'stun:stun.voipbuster.com' }
-    ];
-    
-    this.rtcConfig = {
-      iceServers: this.iceServers,
-      iceCandidatePoolSize: 10,
-      bundlePolicy: 'max-bundle',
-      rtcpMuxPolicy: 'require'
+    // Use the updated RTC config from P2P_CONFIG
+    this.rtcConfig = P2P_CONFIG.RTC_CONFIG;
+
+    // P2P Quality Monitoring
+    this.connectionQuality = {
+      latency: 0,
+      packetLoss: 0,
+      bandwidth: { up: 0, down: 0 },
+      lastUpdate: Date.now()
     };
+    
+    this.qualityMonitorInterval = null;
   }
 
   async initialize(localStream, isInitiator = false) {
@@ -70,7 +66,7 @@ class WebRTCManager {
         console.log(`⏰ P2P connection timeout with ${this.targetUserId}, triggering retry`);
         this.onConnectionFailed();
       }
-    }, 30000); // Longer timeout for P2P connections
+    }, P2P_CONFIG.CONNECTION_TIMEOUT);
 
     try {
       this.peerConnection = new RTCPeerConnection(this.rtcConfig);
@@ -188,17 +184,9 @@ class WebRTCManager {
       if (this.isDestroyed) return;
       
       if (event.candidate) {
-        console.log(`🧊 Sending P2P ICE candidate to ${this.targetUserId} via server`);
-        if (this.socket && this.socket.connected) {
-          this.socket.emit('p2p-signal', {
-            roomId: this.roomId,
-            fromUserId: this.userId,
-            toUserId: this.targetUserId,
-            signal: {
-              type: 'ice-candidate',
-              candidate: event.candidate
-            }
-          });
+        console.log(`🧊 Sending P2P ICE candidate to ${this.targetUserId} via Deno signaling`);
+        if (this.denoSignaling) {
+          this.denoSignaling.sendIceCandidate(this.targetUserId, event.candidate);
         }
       } else {
         console.log(`✅ P2P ICE gathering complete for ${this.targetUserId}`);
@@ -219,6 +207,9 @@ class WebRTCManager {
         this.connectionAttempts = 0;
         this.connectionState = 'connected';
         console.log(`✅ P2P WebRTC connection established with ${this.targetUserId}`);
+        
+        // Start quality monitoring
+        this.startQualityMonitoring();
         
         if (this.onConnectionEstablished) {
           this.onConnectionEstablished(this.targetUserId);
@@ -283,6 +274,25 @@ class WebRTCManager {
     };
   }
 
+  async restartIce() {
+    if (this.isDestroyed) return;
+    
+    try {
+      console.log(`🔄 Restarting P2P ICE connection with ${this.targetUserId}`);
+      await this.peerConnection.restartIce();
+    } catch (e) {
+      console.error(`❌ P2P ICE restart error with ${this.targetUserId}:`, e);
+      if (this.onConnectionFailed && !this.isDestroyed) {
+        setTimeout(() => {
+          if (!this.isDestroyed) {
+            console.log(`🔄 P2P ICE restart failed with ${this.targetUserId}, triggering connection retry`);
+            this.onConnectionFailed();
+          }
+        }, 2000);
+      }
+    }
+  }
+
   async createOffer() {
     if (this.isDestroyed || !this.peerConnection) return false;
     
@@ -300,14 +310,9 @@ class WebRTCManager {
       
       await this.peerConnection.setLocalDescription(offer);
       
-      console.log(`📤 Sending P2P offer to ${this.targetUserId} via server`);
-      if (this.socket && this.socket.connected && !this.isDestroyed) {
-        this.socket.emit('p2p-signal', {
-          roomId: this.roomId,
-          fromUserId: this.userId,
-          toUserId: this.targetUserId,
-          signal: { type: 'offer', sdp: offer }
-        });
+      console.log(`📤 Sending P2P offer to ${this.targetUserId} via Deno signaling`);
+      if (this.denoSignaling && !this.isDestroyed) {
+        this.denoSignaling.sendOffer(this.targetUserId, offer);
       }
       return true;
     } catch (error) {
@@ -371,14 +376,9 @@ class WebRTCManager {
       const answer = await this.peerConnection.createAnswer();
       await this.peerConnection.setLocalDescription(answer);
       
-      console.log(`📤 Sending P2P answer to ${this.targetUserId} via server`);
-      if (this.socket && this.socket.connected && !this.isDestroyed) {
-        this.socket.emit('p2p-signal', {
-          roomId: this.roomId,
-          fromUserId: this.userId,
-          toUserId: this.targetUserId,
-          signal: { type: 'answer', sdp: answer }
-        });
+      console.log(`📤 Sending P2P answer to ${this.targetUserId} via Deno signaling`);
+      if (this.denoSignaling && !this.isDestroyed) {
+        this.denoSignaling.sendAnswer(this.targetUserId, answer);
       }
       
       return true;
@@ -449,23 +449,66 @@ class WebRTCManager {
     }
   }
 
-  async restartIce() {
-    if (this.isDestroyed) return;
-    
-    try {
-      console.log(`🔄 Restarting P2P ICE connection with ${this.targetUserId}`);
-      await this.peerConnection.restartIce();
-    } catch (e) {
-      console.error(`❌ P2P ICE restart error with ${this.targetUserId}:`, e);
-      if (this.onConnectionFailed && !this.isDestroyed) {
-        setTimeout(() => {
-          if (!this.isDestroyed) {
-            console.log(`🔄 P2P ICE restart failed with ${this.targetUserId}, triggering connection retry`);
-            this.onConnectionFailed();
-          }
-        }, 2000);
+  startQualityMonitoring() {
+    this.qualityMonitorInterval = setInterval(async () => {
+      if (this.peerConnection && this.peerConnection.connectionState === 'connected') {
+        try {
+          const stats = await this.peerConnection.getStats();
+          this.updateConnectionQuality(stats);
+        } catch (error) {
+          console.warn('⚠️ Failed to get P2P connection stats:', error);
+        }
+      }
+    }, 5000);
+  }
+
+  updateConnectionQuality(stats) {
+    let bytesReceived = 0;
+    let bytesSent = 0;
+    let packetsLost = 0;
+    let packetsReceived = 0;
+    let currentRoundTripTime = 0;
+
+    stats.forEach((report) => {
+      if (report.type === 'inbound-rtp' && report.mediaType === 'video') {
+        bytesReceived += report.bytesReceived || 0;
+        packetsLost += report.packetsLost || 0;
+        packetsReceived += report.packetsReceived || 0;
+      } else if (report.type === 'outbound-rtp' && report.mediaType === 'video') {
+        bytesSent += report.bytesSent || 0;
+      } else if (report.type === 'candidate-pair' && report.state === 'succeeded') {
+        currentRoundTripTime = report.currentRoundTripTime || 0;
+      }
+    });
+
+    const now = Date.now();
+    const timeDiff = (now - this.connectionQuality.lastUpdate) / 1000;
+
+    if (timeDiff > 0) {
+      this.connectionQuality = {
+        latency: Math.round(currentRoundTripTime * 1000),
+        packetLoss: packetsReceived > 0 ? Math.round((packetsLost / (packetsLost + packetsReceived)) * 100) : 0,
+        bandwidth: {
+          up: Math.round((bytesSent * 8) / timeDiff / 1024),
+          down: Math.round((bytesReceived * 8) / timeDiff / 1024)
+        },
+        lastUpdate: now
+      };
+
+      console.log(`📊 P2P Quality with ${this.targetUserId}:`, {
+        latency: `${this.connectionQuality.latency}ms`,
+        packetLoss: `${this.connectionQuality.packetLoss}%`,
+        bandwidth: `↑${this.connectionQuality.bandwidth.up}kbps ↓${this.connectionQuality.bandwidth.down}kbps`
+      });
+
+      if (this.onQualityChange) {
+        this.onQualityChange(this.connectionQuality);
       }
     }
+  }
+
+  getConnectionQuality() {
+    return this.connectionQuality;
   }
 
   getConnectionState() {
@@ -476,7 +519,8 @@ class WebRTCManager {
       signalingState: this.peerConnection.signalingState,
       attempts: this.connectionAttempts,
       targetUser: this.targetUserId,
-      p2pState: this.connectionState
+      p2pState: this.connectionState,
+      quality: this.connectionQuality
     };
   }
 
@@ -489,6 +533,11 @@ class WebRTCManager {
     if (this.connectionTimeout) {
       clearTimeout(this.connectionTimeout);
       this.connectionTimeout = null;
+    }
+    
+    if (this.qualityMonitorInterval) {
+      clearInterval(this.qualityMonitorInterval);
+      this.qualityMonitorInterval = null;
     }
     
     if (this.dataChannel) {
