@@ -16,8 +16,16 @@ export default function SettingsModal({ onClose }) {
   const [scale, setScale] = useState(
     parseFloat(localStorage.getItem("fontScale")) || 1
   );
+  const [activeTab, setActiveTab] = useState("general");
+  const [selectedAllergens, setSelectedAllergens] = useState(user?.Allergens || []);
+  const [diabetic, setDiabetic] = useState(user?.Diabetic || false);
   const [users, setUsers] = useState([]);
   const [loadingUsers, setLoadingUsers] = useState(true);
+
+  useEffect(() => {
+    setSelectedAllergens(user?.Allergens || []);
+    setDiabetic(user?.Diabetic || false);
+  }, [user]);
 
   // 1. Load and persist font scale
   useEffect(() => {
@@ -50,150 +58,229 @@ export default function SettingsModal({ onClose }) {
     if (selected) setUser(selected);
   };
 
+  const allergens = t("Meals.Legend.Allergens", { returnObjects: true });
+  const allergenKeys = Object.keys(allergens);
+
+  const toggleAllergen = key => {
+    setSelectedAllergens(prev =>
+      prev.includes(key) ? prev.filter(a => a !== key) : [...prev, key]
+    );
+  };
+
+  const saveHealth = async () => {
+    if (!user) return;
+    try {
+      const res = await fetch(`${API}/users/${user.id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ Allergens: selectedAllergens, Diabetic: diabetic })
+      });
+      if (res.ok) {
+        const updated = await res.json();
+        setUser(updated);
+      }
+    } catch (err) {
+      console.error("Error saving health info", err);
+    }
+  };
+
   return (
     <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
-      <div className="w-[95%] max-w-md bg-white dark:bg-gray-800 rounded-3xl shadow-xl p-8 relative">
+      <div className="w-[95%] max-w-3xl bg-white dark:bg-gray-800 rounded-3xl shadow-xl p-6 relative flex">
         <button
           onClick={onClose}
           className="absolute top-4 left-4 text-2xl text-gray-600 hover:text-gray-800 dark:text-gray-300"
         >
           ×
         </button>
+        <div className="w-32 pr-4 border-r border-gray-300 dark:border-gray-600 shrink-0">
+          <h2 className="text-3xl font-bold text-blue-800 dark:text-blue-200 mb-6">
+            {t("SettingsModal.title")}
+          </h2>
+          <nav className="flex flex-col gap-2">
+            <button
+              onClick={() => setActiveTab("general")}
+              className={`px-3 py-2 rounded ${activeTab === "general" ? "bg-blue-600 text-white" : "bg-gray-200 dark:bg-gray-700"}`}
+            >
+              {t("SettingsModal.general")}
+            </button>
+            <button
+              onClick={() => setActiveTab("health")}
+              className={`px-3 py-2 rounded ${activeTab === "health" ? "bg-blue-600 text-white" : "bg-gray-200 dark:bg-gray-700"}`}
+            >
+              {t("SettingsModal.health")}
+            </button>
+          </nav>
+        </div>
+        <div className="flex-1 pl-6 overflow-y-auto">
+          {activeTab === "general" && (
+            <>
+              {/* TEXT SIZE */}
+              <section className="mb-8">
+                <h3 className="text-xl font-semibold mb-3">
+                  {t("SettingsModal.textSize")}
+                </h3>
+                <div className="flex items-center gap-4">
+                  <span className="text-3xl font-bold">A</span>
+                  <input
+                    type="range"
+                    min={0.8}
+                    max={1.6}
+                    step={0.05}
+                    value={scale}
+                    onChange={(e) => setScale(parseFloat(e.target.value))}
+                    className="flex-1 accent-blue-600 h-2 rounded-lg bg-gray-300"
+                  />
+                  <span className="text-5xl font-bold">A</span>
+                </div>
+              </section>
 
-        <h2 className="text-3xl font-bold text-blue-800 dark:text-blue-200 mb-8">
-          {t("SettingsModal.title")}
-        </h2>
+              {/* DARK MODE */}
+              <section className="mb-8">
+                <h3 className="text-xl font-semibold mb-3">
+                  {t("SettingsModal.darkMode")}
+                </h3>
+                <label className="inline-flex items-center cursor-pointer">
+                  <span className="mr-3 text-lg">{darkMode ? "On" : "Off"}</span>
+                  <input
+                    type="checkbox"
+                    checked={darkMode}
+                    onChange={(e) => setDarkMode(e.target.checked)}
+                    className="sr-only peer"
+                  />
+                  <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer dark:bg-gray-700 peer-checked:bg-blue-600"></div>
+                </label>
+              </section>
 
-        {/* TEXT SIZE */}
-        <section className="mb-8">
-          <h3 className="text-xl font-semibold mb-3">
-            {t("SettingsModal.textSize")}
-          </h3>
-          <div className="flex items-center gap-4">
-            <span className="text-3xl font-bold">A</span>
-            <input
-              type="range"
-              min={0.8}
-              max={1.6}
-              step={0.05}
-              value={scale}
-              onChange={(e) => setScale(parseFloat(e.target.value))}
-              className="flex-1 accent-blue-600 h-2 rounded-lg bg-gray-300"
-            />
-            <span className="text-5xl font-bold">A</span>
-          </div>
-        </section>
+              {/* VOLUME */}
+              <section className="mb-8">
+                <h3 className="text-xl font-semibold mb-3">
+                  {t("SettingsModal.volume")}
+                </h3>
+                <div className="flex items-center gap-4">
+                  <FaVolumeMute className="text-2xl" />
+                  <input
+                    type="range"
+                    min={0}
+                    max={100}
+                    defaultValue={70}
+                    className="flex-1 accent-blue-600 h-2 rounded-lg bg-gray-300"
+                    disabled
+                  />
+                  <FaVolumeUp className="text-2xl" />
+                </div>
+              </section>
 
-        {/* DARK MODE */}
-        <section className="mb-8">
-          <h3 className="text-xl font-semibold mb-3">
-            {t("SettingsModal.darkMode")}
-          </h3>
-          <label className="inline-flex items-center cursor-pointer">
-            <span className="mr-3 text-lg">{darkMode ? "On" : "Off"}</span>
-            <input
-              type="checkbox"
-              checked={darkMode}
-              onChange={(e) => setDarkMode(e.target.checked)}
-              className="sr-only peer"
-            />
-            <div
-              className="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer dark:bg-gray-700 peer-checked:bg-blue-600"
-            ></div>
-          </label>
-        </section>
+              {/* SPEAKING SPEED */}
+              <section className="mb-8">
+                <h3 className="text-xl font-semibold mb-3">
+                  {t("SettingsModal.speakingSpeed")}
+                </h3>
+                <div className="flex items-center gap-4">
+                  <FaTachometerAlt className="text-2xl" />
+                  <input
+                    type="range"
+                    min={0.5}
+                    max={1.5}
+                    step={0.1}
+                    defaultValue={1}
+                    className="flex-1 accent-blue-600 h-2 rounded-lg bg-gray-300"
+                    disabled
+                  />
+                  <FaRunning className="text-2xl" />
+                </div>
+              </section>
 
-        {/* VOLUME */}
-        <section className="mb-8">
-          <h3 className="text-xl font-semibold mb-3">
-            {t("SettingsModal.volume")}
-          </h3>
-          <div className="flex items-center gap-4">
-            <FaVolumeMute className="text-2xl" />
-            <input
-              type="range"
-              min={0}
-              max={100}
-              defaultValue={70}
-              className="flex-1 accent-blue-600 h-2 rounded-lg bg-gray-300"
-              disabled
-            />
-            <FaVolumeUp className="text-2xl" />
-          </div>
-        </section>
+              {/* LANGUAGE & USER SELECTORS */}
+              <section className="mb-8">
+                <div className="flex items-start gap-12">
+                  {/* Language Switcher */}
+                  <div>
+                    <h3 className="text-xl font-semibold mb-2">
+                      {t("SettingsModal.language")}
+                    </h3>
+                    <select
+                      value={i18n.language}
+                      onChange={(e) => changeLanguage(e.target.value)}
+                      className="border rounded px-2 py-1"
+                    >
+                      <option value="en">English</option>
+                      <option value="he">עברית</option>
+                      <option value="de">Deutsch</option>
+                      <option value="fi">Suomi</option>
+                    </select>
+                  </div>
 
-        {/* SPEAKING SPEED */}
-        <section className="mb-8">
-          <h3 className="text-xl font-semibold mb-3">
-            {t("SettingsModal.speakingSpeed")}
-          </h3>
-          <div className="flex items-center gap-4">
-            <FaTachometerAlt className="text-2xl" />
-            <input
-              type="range"
-              min={0.5}
-              max={1.5}
-              step={0.1}
-              defaultValue={1}
-              className="flex-1 accent-blue-600 h-2 rounded-lg bg-gray-300"
-              disabled
-            />
-            <FaRunning className="text-2xl" />
-          </div>
-        </section>
+                  {/* User Combobox */}
+                  <div>
+                    <h3 className="text-xl font-semibold mb-2">
+                      {t("SettingsModal.User")}
+                    </h3>
 
-        {/* LANGUAGE & USER SELECTORS */}
-        <section className="mb-8">
-          <div className="flex items-start gap-12">
-            {/* Language Switcher */}
-            <div>
-              <h3 className="text-xl font-semibold mb-2">
-                {t("SettingsModal.language")}
-              </h3>
-              <select
-                value={i18n.language}
-                onChange={(e) => changeLanguage(e.target.value)}
-                className="border rounded px-2 py-1"
-              >
-                <option value="en">English</option>
-                <option value="he">עברית</option>
-                <option value="de">Deutsch</option>
-                <option value="fi">Suomi</option>
-              </select>
-            </div>
+                    {loadingUsers ? (
+                      <p className="text-gray-600 dark:text-gray-300">{t("SettingsModal.loading")}</p>
+                    ) : (
+                      <select
+                        value={user?.id || ""}
+                        onChange={changeUser}
+                        className="border rounded px-2 py-1"
+                      >
+                        {users.map(u => (
+                          <option key={u.id} value={u.id}>
+                            {u.name || u.fullName || u.id}
+                          </option>
+                        ))}
+                      </select>
+                    )}
+                  </div>
+                </div>
+              </section>
+            </>
+          )}
 
-            {/* User Combobox */}
-            <div>
-              <h3 className="text-xl font-semibold mb-2">
-                {t("SettingsModal.User")}
-              </h3>
-
-              {loadingUsers ? (
-                <p className="text-gray-600 dark:text-gray-300">{t("SettingsModal.loading")}</p>
-              ) : (
-                <select
-                  value={user?.id || ""}
-                  onChange={changeUser}
-                  className="border rounded px-2 py-1"
-                >
-                  {users.map(u => (
-                    <option key={u.id} value={u.id}>
-                      {u.name || u.fullName || u.id}
-                    </option>
+          {activeTab === "health" && (
+            <>
+              <section className="mb-6">
+                <h3 className="text-xl font-semibold mb-3">
+                  {t("SettingsModal.health")}
+                </h3>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                  {allergenKeys.map(key => (
+                    <label key={key} className="flex items-center gap-2">
+                      <input
+                        type="checkbox"
+                        checked={selectedAllergens.includes(key)}
+                        onChange={() => toggleAllergen(key)}
+                      />
+                      {t(`Meals.Legend.Allergens.${key}`)}
+                    </label>
                   ))}
-                </select>
-              )}
-            </div>
-          </div>
-        </section>
+                </div>
+                <label className="flex items-center gap-2 mt-4 block">
+                  <input
+                    type="checkbox"
+                    checked={diabetic}
+                    onChange={e => setDiabetic(e.target.checked)}
+                  />
+                  {t("SettingsModal.diabetic")}
+                </label>
+              </section>
+              <button
+                onClick={saveHealth}
+                className="bg-blue-600 text-white px-4 py-2 rounded"
+              >
+                {t("SettingsModal.save")}
+              </button>
+            </>
+          )}
 
-        {/* Close Button */}
-        <button
-          onClick={onClose}
-          className="mt-4 bg-blue-600 text-white px-4 py-2 rounded"
-        >
-          {t("SettingsModal.close")}
-        </button>
+          <button
+            onClick={onClose}
+            className="mt-8 bg-blue-600 text-white px-4 py-2 rounded"
+          >
+            {t("SettingsModal.close")}
+          </button>
+        </div>
       </div>
     </div>
   );
