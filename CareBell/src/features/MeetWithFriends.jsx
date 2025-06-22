@@ -840,14 +840,6 @@ export default function MeetWithFriends() {
             </div>
           )}
 
-          {/* Room Info Panel */}
-          <div className="absolute bottom-4 right-4 bg-black bg-opacity-70 text-white p-3 rounded-lg text-xs">
-            <h4 className="font-semibold mb-1">Room Info</h4>
-            <p>Room: {joinedRoom}</p>
-            <p>Participants: {participants.length}/{MAX_P2P_PARTICIPANTS}</p>
-            <p>Your ID: {user.id.substring(0, 12)}...</p>
-            <p>Signaling: {signalingConnected ? '🟢 Connected' : '🔴 Disconnected'}</p>
-          </div>
         </div>
       </div>
     )}
