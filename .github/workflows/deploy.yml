@@ -1,27 +1,44 @@
-name: Deploy CareBell Backend
-
+name: Deploy
 on:
   push:
-    branches:
-      - master
+    branches: master
+  pull_request:
+    branches: master
 
 jobs:
   deploy:
+    name: Deploy
     runs-on: ubuntu-latest
 
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v3
+    permissions:
+      id-token: write # Needed for auth with Deno Deploy
+      contents: read # Needed to clone the repository
 
-      - name: SSH & deploy to server
-        uses: appleboy/ssh-action@v0.1.8
+    steps:
+      - name: Clone repository
+        uses: actions/checkout@v4
+
+      - name: Install Deno
+        uses: denoland/setup-deno@v2
         with:
-          host: ${{ secrets.DEPLOY_HOST }}
-          username: ${{ secrets.DEPLOY_USER }}
-          key: ${{ secrets.DEPLOY_KEY }}
-          port: 6922
-          script: |
-            cd /home/bella/CareBell/backend
-            git pull origin master
-            npm install
-            sudo systemctl restart carebell.service
+          deno-version: v2.x
+
+      - name: Install Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: lts/*
+
+      - name: Install step
+        run: "npm install"
+
+      - name: Build step
+        run: "npm start"
+
+      - name: Upload to Deno Deploy
+        uses: denoland/deployctl@v1
+        with:
+          project: "leontarin-carebell-34"
+          entrypoint: "package.json"
+          root: "backend"
+          
+          
