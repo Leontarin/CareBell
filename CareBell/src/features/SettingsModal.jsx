@@ -142,23 +142,6 @@ export default function SettingsModal({ onClose }) {
                 </div>
               </section>
 
-              {/* DARK MODE */}
-              <section className="mb-8">
-                <h3 className="text-xl font-semibold mb-3">
-                  {t("SettingsModal.darkMode")}
-                </h3>
-                <label className="inline-flex items-center cursor-pointer">
-                  <span className="mr-3 text-lg">{darkMode ? "On" : "Off"}</span>
-                  <input
-                    type="checkbox"
-                    checked={darkMode}
-                    onChange={(e) => setDarkMode(e.target.checked)}
-                    className="sr-only peer"
-                  />
-                  <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer dark:bg-gray-700 peer-checked:bg-blue-600"></div>
-                </label>
-              </section>
-
               {/* VOLUME */}
               <section className="mb-8">
                 <h3 className="text-xl font-semibold mb-3">
@@ -261,9 +244,17 @@ export default function SettingsModal({ onClose }) {
             ></div>
           </label>
         </section>
-            </>
-          )}
-
+        <button
+          onClick={onClose}
+          className="bg-gray-400 hover:bg-gray-300 dark:bg-teal-700 dark:hover:bg-teal-600 px-4 py-2 rounded"
+        >
+          {t("SettingsModal.close")}
+        </button>
+          </>
+        )}
+          
+          
+                  
           {activeTab === "health" && (
             <>
               <section className="mb-6">
@@ -311,13 +302,13 @@ export default function SettingsModal({ onClose }) {
                 <div className="flex justify-between mt-4">
                   <button
                     onClick={onClose}
-                    className="bg-gray-300 dark:bg-gray-700 px-4 py-2 rounded"
+                    className="bg-gray-400 hover:bg-gray-300 dark:bg-teal-700 dark:hover:bg-teal-600 px-4 py-2 rounded"
                   >
                     {t("SettingsModal.close")}
                   </button>
                   <button
                     onClick={saveHealth}
-                    className="bg-blue-600 text-white px-4 py-2 rounded"
+                    className="bg-blue-600 hover:bg-blue-500 dark:bg-blue-800 dark:hover:bg-blue-700 text-white px-4 py-2 rounded"
                   >
                     {t("SettingsModal.save")}
                   </button>

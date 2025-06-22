@@ -118,7 +118,7 @@
     "friends": "היפגש עם חברים"
   },
   "Meals": {
-    "backToList": "חזרה לרשימה",
+    "back": "חזרה לסורק",
     "ingredientsLabel": ":מרכיבים",
     "loadingLabel": "...טוען",
     "SpeakingLabel": "מדבר... (הקש כדי לעצור)",

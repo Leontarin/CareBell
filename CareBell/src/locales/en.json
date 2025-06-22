@@ -117,7 +117,7 @@
     "friends": "Meet with friends"
   },
   "Meals": {
-    "backToList": "Back to List",
+    "back": "Back to scanner",
     "ingredientsLabel": "Ingredients:",
     "loadingLabel": "Loading...",
     "SpeakingLabel": "Speaking... (Tap to Stop)",

@@ -116,7 +116,7 @@
     "friends": "Tapaa ystäviä"
   },
   "Meals": {
-    "backToList": "Takaisin listaan",
+    "back": "takaisin skanneriin",
     "ingredientsLabel": "Ainesosat:",
     "loadingLabel": "Ladataan...",
     "SpeakingLabel": "Puhutaan... (Napauta lopettaaksesi)",
