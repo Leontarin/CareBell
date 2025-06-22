@@ -425,7 +425,7 @@ export default function MeetWithFriends() {
   }
 
   // Stop P2P video call
-  function stopP2PVideoCall() {
+  function leaveRoom() {
     console.log('🛑 Stopping P2P video call');
 
     // Stop local stream
@@ -457,13 +457,11 @@ export default function MeetWithFriends() {
     setP2pStats({ totalConnections: 0, connectedPeers: 0, failedConnections: 0 });
     setSignalingConnected(false);
     remoteVideoRefs.current.clear();
-  }
 
-  // Leave room
-  function leaveRoom() {
-    stopP2PVideoCall();
     setJoinedRoom(null);
   }
+
+
 
   // Send P2P message to all connected peers
   const sendP2PMessageToAll = (message) => {
@@ -499,7 +497,7 @@ export default function MeetWithFriends() {
           
           <div className="mb-6 text-center">
             <p className="text-gray-600 dark:text-gray-400 text-sm">
-              ⚡ True Peer-to-Peer Video Calls via Deno Deploy • Maximum {MAX_P2P_PARTICIPANTS} participants per room4
+              ⚡ True Peer-to-Peer Video Calls via Deno Deploy • Maximum {MAX_P2P_PARTICIPANTS} participants per room5
             </p>
           </div>
 
@@ -595,12 +593,6 @@ export default function MeetWithFriends() {
             
             <div className="flex gap-3">
               <button
-                onClick={stopP2PVideoCall}
-                className="px-6 py-3 bg-red-600 text-white rounded-lg hover:bg-red-700 font-semibold text-lg shadow-lg transition-colors"
-              >
-                📞 End Deno P2P Call
-              </button>
-              <button
                 onClick={leaveRoom}
                 className="px-6 py-3 bg-gray-600 text-white rounded-lg hover:bg-gray-700 font-semibold text-lg shadow-lg transition-colors"
               >
@@ -660,27 +652,7 @@ export default function MeetWithFriends() {
               })}
             </div>
 
-            {/* P2P Call Info */}
-            <div className="mt-6 text-center">
-              <div className="bg-gray-800 rounded-lg p-4 inline-block">
-                <p className="text-white text-lg font-semibold">
-                  🔗 Deno P2P Mesh Network Active
-                </p>
-                <p className="text-gray-300 text-sm mt-1">
-                  Direct peer-to-peer connections via Deno Deploy signaling • No server bandwidth used for media
-                </p>
-                
-                {/* P2P Debug info in development */}
-                {process.env.NODE_ENV === 'development' && (
-                  <div className="mt-2 text-xs text-gray-400">
-                    <p>Deno Signaling: {signalingConnected ? '🟢 Connected' : '🔴 Disconnected'}</p>
-                    <p>Participants: {participants.join(', ')}</p>
-                    <p>P2P Connections: {Array.from(p2pConnections.keys()).join(', ')}</p>
-                    <p>Expected Mesh Connections: {participants.length > 1 ? (participants.length - 1) : 0}</p>
-                  </div>
-                )}
-              </div>
-            </div>
+          
           </div>
         </div>
       )}
