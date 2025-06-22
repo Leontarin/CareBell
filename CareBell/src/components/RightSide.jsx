@@ -55,8 +55,8 @@ export default function RightSide() {
   const titleKey = TITLES[segment];
   const title = titleKey ? t(`RightSide.${titleKey}`) : "";
 
-  const heightClass = "h-[75vh]";
-  const widthClass  = "w-[48vw]";
+  const heightClass = "h-auto md:h-[75vh]";
+  const widthClass  = "w-full md:w-[48vw]";
 
   if (!user) {
     return (
@@ -67,7 +67,10 @@ export default function RightSide() {
   }
 
   return (
-    <div id="rightSide" className={`${widthClass} ${heightClass} px-4 overflow-hidden`}>
+    <div
+      id="rightSide"
+      className={`${widthClass} ${heightClass} px-4 md:overflow-hidden overflow-y-auto`}
+    >
       <Routes>
         {/* Main menu */}
         <Route

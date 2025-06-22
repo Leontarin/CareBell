@@ -93,18 +93,22 @@ export default function SettingsModal({ onClose }) {
 
   return (
     <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
-      <div className="w-[90%] max-w-4xl bg-white dark:bg-gray-800 rounded-3xl shadow-xl p-6 relative flex">
+      <div
+        className="w-[90%] max-w-4xl max-h-[90vh] overflow-y-auto bg-white dark:bg-gray-800 rounded-3xl shadow-xl p-6 relative flex flex-col md:flex-row"
+      >
         <button
           onClick={onClose}
           className="absolute top-4 left-4 text-2xl text-gray-600 hover:text-gray-800 dark:text-gray-300"
         >
           ×
         </button>
-        <div className="w-32 pr-4 border-r border-gray-300 dark:border-gray-600 shrink-0">
+        <div
+          className="w-full md:w-32 md:pr-4 border-b md:border-b-0 md:border-r border-gray-300 dark:border-gray-600 shrink-0"
+        >
           <h2 className="text-3xl font-bold text-blue-800 dark:text-blue-200 mb-6">
             {t("SettingsModal.title")}
           </h2>
-          <nav className="flex flex-col gap-2">
+          <nav className="flex md:flex-col flex-row gap-2 justify-center">
             <button
               onClick={() => setActiveTab("general")}
               className={`px-3 py-2 rounded ${activeTab === "general" ? "bg-blue-600 text-white" : "bg-gray-200 dark:bg-gray-700"}`}
@@ -119,7 +123,7 @@ export default function SettingsModal({ onClose }) {
             </button>
           </nav>
         </div>
-        <div className="flex-1 pl-6 overflow-y-auto">
+        <div className="flex-1 md:pl-6 overflow-y-auto">
           {activeTab === "general" && (
             <>
               {/* TEXT SIZE */}
@@ -299,7 +303,7 @@ export default function SettingsModal({ onClose }) {
                   <p className="mt-2 text-black">{t("SettingsModal.saveError")}</p>
                 )}
 
-                <div className="flex justify-between mt-4">
+                <div className="flex flex-col md:flex-row justify-between mt-4 gap-2">
                   <button
                     onClick={onClose}
                     className="bg-gray-400 hover:bg-gray-300 dark:bg-teal-700 dark:hover:bg-teal-600 px-4 py-2 rounded"
