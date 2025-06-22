@@ -1,5 +1,5 @@
 export const API = "https://carebelldb.vercel.app";
-export const API_WS = 'wss://carebellp2p.deno.dev';
+export const P2P_SIGNALING_URL = 'wss://carebellp2p.deno.dev';
 //export const API = "http://localhost:4443";
 
 
