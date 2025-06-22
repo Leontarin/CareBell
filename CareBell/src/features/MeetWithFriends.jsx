@@ -733,21 +733,7 @@ export default function MeetWithFriends() {
                   </div>
                 )}
               </div>
-              <div className="absolute bottom-2 left-2 bg-black bg-opacity-70 text-white px-2 py-1 rounded text-sm font-semibold">
-                You ({user.id.substring(0, 8)}...)
-              </div>
-              {/* Connection status indicator */}
-              <div className="absolute top-2 right-2">
-                {signalingConnected ? (
-                  <div className="bg-green-600 text-white px-2 py-1 rounded text-xs font-semibold">
-                    🟢 LIVE
-                  </div>
-                ) : (
-                  <div className="bg-red-600 text-white px-2 py-1 rounded text-xs font-semibold">
-                    🔴 CONNECTING
-                  </div>
-                )}
-              </div>
+            
             </div>
 
             {/* P2P Remote Videos */}
@@ -801,44 +787,15 @@ export default function MeetWithFriends() {
                     </div>
                   )}
                   
-                  <div className="absolute bottom-2 left-2 bg-black bg-opacity-70 text-white px-2 py-1 rounded text-sm font-semibold">
-                    {participantId.substring(0, 8)}...
-                  </div>
-                  
-                  {/* Connection status indicator */}
-                  <div className="absolute top-2 right-2">
-                    {connectionState === 'connected' && stream && (
-                      <div className="bg-green-600 text-white px-2 py-1 rounded text-xs font-semibold">
-                        🟢 P2P
-                      </div>
-                    )}
-                    {connectionState === 'connecting' && (
-                      <div className="bg-yellow-600 text-white px-2 py-1 rounded text-xs font-semibold">
-                        🟡 CONNECTING
-                      </div>
-                    )}
-                    {connectionState === 'failed' && (
-                      <div className="bg-red-600 text-white px-2 py-1 rounded text-xs font-semibold">
-                        🔴 FAILED
-                      </div>
-                    )}
-                  </div>
+             
+      
                 </div>
               );
             })}
 
           </div>
 
-          {/* P2P Statistics Panel (Debug Info) */}
-          {process.env.NODE_ENV === 'development' && p2pStats.totalConnections > 0 && (
-            <div className="absolute bottom-4 left-4 bg-black bg-opacity-70 text-white p-3 rounded-lg text-xs">
-              <h4 className="font-semibold mb-1">P2P Statistics</h4>
-              <p>Total Connections: {p2pStats.totalConnections}</p>
-              <p>Connected Peers: {p2pStats.connectedPeers}</p>
-              <p>Failed Connections: {p2pStats.failedConnections}</p>
-              <p>Success Rate: {p2pStats.totalConnections > 0 ? Math.round((p2pStats.connectedPeers / p2pStats.totalConnections) * 100) : 0}%</p>
-            </div>
-          )}
+       
 
         </div>
       </div>
