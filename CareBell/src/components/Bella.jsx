@@ -129,6 +129,21 @@ export default function Bella() {
             message: { role: 'system', content: `Remember: ${r.description}` }
           });
         }
+
+        const foodRes = await fetch(`${API}/foods`);
+        if (foodRes.ok) {
+          const foods = await foodRes.json();
+          for (let f of foods) {
+            const ingredients = Array.isArray(f.ingredients) ? f.ingredients.join(', ') : '';
+            await vapi.send({
+              type: 'add-message',
+              message: {
+                role: 'system',
+                content: `Food item: ${f.name}. ${f.description}. Ingredients: ${ingredients}. Barcode: ${f.barcode}`
+              }
+            });
+          }
+        }
       } catch (e) { console.error(e); }
       try {
         const res = await fetch(`${API}/medications/${user.id}`);
