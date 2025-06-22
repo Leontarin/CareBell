@@ -27,6 +27,7 @@ export default function App() {
 
   const [user, setUser] = useState(null);
   const [bellaFullscreen, setBellaFullscreen] = useState(false);
+  const [meetFullscreen, setMeetFullscreen] = useState(false);
   const [darkMode, setDarkMode] = useState(
     localStorage.getItem('darkMode') === 'true'
   );
@@ -53,7 +54,7 @@ export default function App() {
   }, []);
 
   return (
-    <AppContext.Provider value={{user, setUser, bellaFullscreen, setBellaFullscreen, darkMode, setDarkMode}}>
+    <AppContext.Provider value={{user, setUser, bellaFullscreen, setBellaFullscreen, meetFullscreen, setMeetFullscreen, darkMode, setDarkMode}}>
     <BrowserRouter>
       <div
         className="

@@ -27,7 +27,7 @@ import Exercise          from "../features/Exercise";
 
 export default function RightSide() {
   const { t } = useTranslation();
-  const { user, bellaFullscreen } = useContext(AppContext);
+  const { user, bellaFullscreen, meetFullscreen, setMeetFullscreen } = useContext(AppContext);
   const navigate = useNavigate();
   if (bellaFullscreen) return null;
   const { pathname } = useLocation();
@@ -56,7 +56,7 @@ export default function RightSide() {
   const title = titleKey ? t(`RightSide.${titleKey}`) : "";
 
   const heightClass = "h-auto md:h-[75vh]";
-  const widthClass  = "w-full md:w-[48vw]";
+  const widthClass = meetFullscreen ? "w-full" : "w-full md:w-[48vw]";
 
   if (!user) {
     return (
@@ -99,7 +99,13 @@ export default function RightSide() {
             {/* Toolbar */}
             <div className="flex items-center mb-4">
               <button
-                onClick={() => navigate(-1)}
+                onClick={() => {
+                  // Reset meet fullscreen when going back
+                  if (segment === 'meet-with-friends') {
+                    setMeetFullscreen(false);
+                  }
+                  navigate(-1);
+                }}
                 className="flex items-center gap-2 px-3 py-2 bg-white dark:bg-gray-800 border-2 border-blue-900 dark:border-yellow-300 rounded-lg text-blue-900 dark:text-blue-200 font-semibold hover:bg-blue-50 dark:hover:bg-blue-900/30 transition"
               >
                 <FaArrowLeft /> {t("RightSide.back")}
