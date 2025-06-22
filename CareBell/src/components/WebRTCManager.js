@@ -1,11 +1,12 @@
-// WebRTCManager.js
+// CareBell/src/components/WebRTCManager.js
 class WebRTCManager {
-  constructor(localVideoRef, remoteVideoRef, socket, roomId, userId, polite) {
+  constructor(localVideoRef, remoteVideoRef, socket, roomId, userId, targetUserId, polite) {
     this.localVideoRef       = localVideoRef;
     this.remoteVideoRef      = remoteVideoRef;
     this.socket              = socket;
     this.roomId              = roomId;
     this.userId              = userId;
+    this.targetUserId        = targetUserId; // NEW: specific peer we're connecting to
     this.polite              = polite;
     this.peerConnection      = null;
     this.localStream         = null;
@@ -22,13 +23,22 @@ class WebRTCManager {
     this.isSettingRemoteDesc   = false;
     this.onRemoteStream        = null;
     this.isDestroyed           = false;
+    
+    // P2P specific properties
+    this.connectionState       = 'new';
+    this.dataChannel          = null;
+    this.onConnectionEstablished = null;
 
     this.iceServers = [
       { urls: 'stun:stun.l.google.com:19302' },
       { urls: 'stun:stun1.l.google.com:19302' },
       { urls: 'stun:stun2.l.google.com:19302' },
       { urls: 'stun:stun3.l.google.com:19302' },
-      { urls: 'stun:stun4.l.google.com:19302' }
+      { urls: 'stun:stun4.l.google.com:19302' },
+      // Add more STUN servers for better NAT traversal
+      { urls: 'stun:stun.stunprotocol.org:3478' },
+      { urls: 'stun:stun.voiparound.com' },
+      { urls: 'stun:stun.voipbuster.com' }
     ];
     
     this.rtcConfig = {
@@ -49,7 +59,7 @@ class WebRTCManager {
     this.isInitiator = isInitiator;
     this.connectionAttempts++;
 
-    console.log(`🚀 Initializing WebRTC connection (attempt ${this.connectionAttempts}/${this.maxConnectionAttempts})`);
+    console.log(`🚀 Initializing P2P connection to ${this.targetUserId} (attempt ${this.connectionAttempts}/${this.maxConnectionAttempts})`);
 
     if (this.connectionTimeout) {
       clearTimeout(this.connectionTimeout);
@@ -57,80 +67,120 @@ class WebRTCManager {
     
     this.connectionTimeout = setTimeout(() => {
       if (this.connectionAttempts < this.maxConnectionAttempts && this.onConnectionFailed && !this.isDestroyed) {
-        console.log(`⏰ Connection timeout, triggering retry`);
+        console.log(`⏰ P2P connection timeout with ${this.targetUserId}, triggering retry`);
         this.onConnectionFailed();
       }
-    }, 20000); // Increased timeout to 20 seconds
+    }, 30000); // Longer timeout for P2P connections
 
     try {
       this.peerConnection = new RTCPeerConnection(this.rtcConfig);
       
       // Add local stream tracks
       this.localStream.getTracks().forEach(track => {
-        console.log(`📤 Adding ${track.kind} track to peer connection`);
+        console.log(`📤 Adding ${track.kind} track to P2P connection with ${this.targetUserId}`);
         this.peerConnection.addTrack(track, this.localStream);
       });
+
+      // Create data channel for P2P messaging (optional)
+      if (isInitiator) {
+        this.dataChannel = this.peerConnection.createDataChannel('p2p-channel', {
+          ordered: true
+        });
+        this.setupDataChannel(this.dataChannel);
+      }
 
       this.setupPeerConnectionHandlers();
 
       if (isInitiator) {
-        // Longer delay for initiator to ensure everything is set up
+        // Delay for P2P connection establishment
         setTimeout(async () => {
           if (!this.isDestroyed && this.peerConnection && this.peerConnection.signalingState === 'stable' && !this.makingOffer) {
-            console.log('🎯 Initiator creating initial offer after delay');
+            console.log(`🎯 P2P Initiator creating offer for ${this.targetUserId}`);
             await this.createOffer();
           }
-        }, 1000); // Increased delay to 1 second
+        }, 1000);
       }
 
       return true;
     } catch (error) {
-      console.error('❌ Error initializing WebRTC connection:', error);
+      console.error(`❌ Error initializing P2P connection with ${this.targetUserId}:`, error);
       return false;
     }
+  }
+
+  setupDataChannel(channel) {
+    channel.onopen = () => {
+      console.log(`📡 Data channel opened with ${this.targetUserId}`);
+    };
+
+    channel.onmessage = (event) => {
+      console.log(`💬 Received P2P message from ${this.targetUserId}:`, event.data);
+      // Handle P2P messages (chat, file transfer, etc.)
+    };
+
+    channel.onclose = () => {
+      console.log(`📡 Data channel closed with ${this.targetUserId}`);
+    };
+  }
+
+  sendP2PMessage(message) {
+    if (this.dataChannel && this.dataChannel.readyState === 'open') {
+      this.dataChannel.send(JSON.stringify({
+        type: 'p2p-message',
+        from: this.userId,
+        message: message,
+        timestamp: Date.now()
+      }));
+      return true;
+    }
+    return false;
   }
 
   setupPeerConnectionHandlers() {
     if (!this.peerConnection || this.isDestroyed) return;
 
+    // Handle incoming data channels
+    this.peerConnection.ondatachannel = (event) => {
+      const channel = event.channel;
+      console.log(`📡 Received data channel from ${this.targetUserId}`);
+      this.dataChannel = channel;
+      this.setupDataChannel(channel);
+    };
+
     this.peerConnection.ontrack = (event) => {
       if (this.isDestroyed) return;
       
-      console.log(`📥 Track received from ${this.userId}:`, event.track.kind, event.track.enabled, event.track.readyState);
+      console.log(`📥 P2P Track received from ${this.targetUserId}:`, event.track.kind, event.track.enabled, event.track.readyState);
       
       try {
-        // Use the stream from the event if available
         if (event.streams && event.streams[0]) {
           this._remoteStream = event.streams[0];
-          console.log('🎥 Using stream from event for', this.userId, 'tracks:', event.streams[0].getTracks().length);
+          console.log(`🎥 Using P2P stream from ${this.targetUserId}, tracks:`, event.streams[0].getTracks().length);
         } else {
-          // Create new stream if needed
           if (!this._remoteStream) {
             this._remoteStream = new MediaStream();
-            console.log('🆕 Created new remote stream for', this.userId);
+            console.log(`🆕 Created new P2P remote stream for ${this.targetUserId}`);
           }
           this._remoteStream.addTrack(event.track);
-          console.log('➕ Added track to remote stream for', this.userId, 'total tracks:', this._remoteStream.getTracks().length);
+          console.log(`➕ Added track to P2P remote stream for ${this.targetUserId}, total tracks:`, this._remoteStream.getTracks().length);
         }
 
-        // Call the callback if provided
         if (this.onRemoteStream && !this.isDestroyed) {
-          console.log('📞 Calling onRemoteStream callback for', this.userId);
+          console.log(`📞 Calling P2P onRemoteStream callback for ${this.targetUserId}`);
           this.onRemoteStream(this._remoteStream);
         }
 
-        // Set video element source as backup
         if (this.remoteVideoRef.current && !this.isDestroyed) {
-          console.log('📺 Setting srcObject on video element for', this.userId);
+          console.log(`📺 Setting P2P srcObject on video element for ${this.targetUserId}`);
           this.remoteVideoRef.current.srcObject = this._remoteStream;
           this.remoteVideoRef.current.volume = 1.0;
           this.remoteVideoRef.current.muted = false;
           this.remoteVideoRef.current.play().catch(e => {
-            console.log("⚠️ Autoplay prevented:", e.message);
+            console.log("⚠️ P2P Autoplay prevented:", e.message);
           });
         }
       } catch (error) {
-        console.error('❌ Error handling track event:', error);
+        console.error(`❌ Error handling P2P track event from ${this.targetUserId}:`, error);
       }
     };
 
@@ -138,11 +188,12 @@ class WebRTCManager {
       if (this.isDestroyed) return;
       
       if (event.candidate) {
-        console.log(`🧊 Sending ICE candidate from ${this.userId} to room ${this.roomId}`);
+        console.log(`🧊 Sending P2P ICE candidate to ${this.targetUserId} via server`);
         if (this.socket && this.socket.connected) {
-          this.socket.emit('signal', {
+          this.socket.emit('p2p-signal', {
             roomId: this.roomId,
-            userId: this.userId,
+            fromUserId: this.userId,
+            toUserId: this.targetUserId,
             signal: {
               type: 'ice-candidate',
               candidate: event.candidate
@@ -150,7 +201,7 @@ class WebRTCManager {
           });
         }
       } else {
-        console.log(`✅ ICE gathering complete for ${this.userId}`);
+        console.log(`✅ P2P ICE gathering complete for ${this.targetUserId}`);
       }
     };
 
@@ -158,7 +209,7 @@ class WebRTCManager {
       if (this.isDestroyed) return;
       
       const state = this.peerConnection.iceConnectionState;
-      console.log(`🧊 ICE connection state changed to: ${state} for user ${this.userId}`);
+      console.log(`🧊 P2P ICE connection state changed to: ${state} with ${this.targetUserId}`);
       
       if (state === 'connected' || state === 'completed') {
         if (this.connectionTimeout) {
@@ -166,9 +217,15 @@ class WebRTCManager {
           this.connectionTimeout = null;
         }
         this.connectionAttempts = 0;
-        console.log(`✅ WebRTC connection established with user ${this.userId}`);
+        this.connectionState = 'connected';
+        console.log(`✅ P2P WebRTC connection established with ${this.targetUserId}`);
+        
+        if (this.onConnectionEstablished) {
+          this.onConnectionEstablished(this.targetUserId);
+        }
       } else if (state === 'failed' || state === 'disconnected') {
-        console.log(`❌ ICE connection ${state} with user ${this.userId}`);
+        console.log(`❌ P2P ICE connection ${state} with ${this.targetUserId}`);
+        this.connectionState = state;
         if (state === 'failed') {
           setTimeout(() => {
             if (!this.isDestroyed) {
@@ -183,13 +240,15 @@ class WebRTCManager {
       if (this.isDestroyed) return;
       
       const state = this.peerConnection.connectionState;
-      console.log(`🔗 Connection state changed to: ${state} for user ${this.userId}`);
+      console.log(`🔗 P2P Connection state changed to: ${state} with ${this.targetUserId}`);
       
       if (state === 'connected') {
         this.connectionAttempts = 0;
-        console.log(`✅ Peer connection fully established with user ${this.userId}`);
+        this.connectionState = 'connected';
+        console.log(`✅ P2P Peer connection fully established with ${this.targetUserId}`);
       } else if (state === 'failed' && this.onConnectionFailed) {
-        console.log(`❌ Peer connection failed with user ${this.userId}`);
+        console.log(`❌ P2P Peer connection failed with ${this.targetUserId}`);
+        this.connectionState = 'failed';
         setTimeout(() => {
           if (!this.isDestroyed && this.onConnectionFailed) {
             this.onConnectionFailed();
@@ -200,12 +259,12 @@ class WebRTCManager {
 
     this.peerConnection.onnegotiationneeded = async () => {
       if (this.isDestroyed || this.negotiationLock || this.makingOffer || this.isSettingRemoteDesc) {
-        console.log('⚠️ Negotiation skipped - already in progress or destroyed');
+        console.log('⚠️ P2P Negotiation skipped - already in progress or destroyed');
         return;
       }
       
       if (this.peerConnection.signalingState !== 'stable') {
-        console.log(`⚠️ Negotiation needed but connection not stable (${this.peerConnection.signalingState}), skipping`);
+        console.log(`⚠️ P2P Negotiation needed but connection not stable (${this.peerConnection.signalingState}), skipping`);
         return;
       }
       
@@ -213,10 +272,10 @@ class WebRTCManager {
       this.makingOffer = true;
       
       try {
-        console.log(`🤝 Negotiation needed for ${this.userId}, creating offer`);
+        console.log(`🤝 P2P Negotiation needed for ${this.targetUserId}, creating offer`);
         await this.createOffer();
       } catch (e) {
-        console.error('❌ Negotiation error:', e);
+        console.error(`❌ P2P Negotiation error with ${this.targetUserId}:`, e);
       } finally {
         this.makingOffer = false;
         this.negotiationLock = false;
@@ -224,35 +283,16 @@ class WebRTCManager {
     };
   }
 
-  async restartIce() {
-    if (this.isDestroyed) return;
-    
-    try {
-      console.log('🔄 Restarting ICE connection');
-      await this.peerConnection.restartIce();
-    } catch (e) {
-      console.error('❌ ICE restart error:', e);
-      if (this.onConnectionFailed && !this.isDestroyed) {
-        setTimeout(() => {
-          if (!this.isDestroyed) {
-            console.log('🔄 ICE restart failed, triggering connection retry');
-            this.onConnectionFailed();
-          }
-        }, 2000);
-      }
-    }
-  }
-
   async createOffer() {
     if (this.isDestroyed || !this.peerConnection) return false;
     
     if (this.peerConnection.signalingState !== 'stable') {
-      console.log(`⚠️ Cannot create offer in state: ${this.peerConnection.signalingState}`);
+      console.log(`⚠️ Cannot create P2P offer in state: ${this.peerConnection.signalingState}`);
       return false;
     }
     
     try {
-      console.log(`🎯 Creating offer from ${this.userId} for room ${this.roomId}`);
+      console.log(`🎯 Creating P2P offer for ${this.targetUserId}`);
       const offer = await this.peerConnection.createOffer({
         offerToReceiveAudio: true,
         offerToReceiveVideo: true
@@ -260,17 +300,18 @@ class WebRTCManager {
       
       await this.peerConnection.setLocalDescription(offer);
       
-      console.log(`📤 Sending offer from ${this.userId} to room ${this.roomId}`);
+      console.log(`📤 Sending P2P offer to ${this.targetUserId} via server`);
       if (this.socket && this.socket.connected && !this.isDestroyed) {
-        this.socket.emit('signal', {
+        this.socket.emit('p2p-signal', {
           roomId: this.roomId,
-          userId: this.userId,
+          fromUserId: this.userId,
+          toUserId: this.targetUserId,
           signal: { type: 'offer', sdp: offer }
         });
       }
       return true;
     } catch (error) {
-      console.error('❌ Error creating offer:', error);
+      console.error(`❌ Error creating P2P offer for ${this.targetUserId}:`, error);
       return false;
     }
   }
@@ -284,11 +325,11 @@ class WebRTCManager {
         case 'answer':         return await this.handleAnswer(signal.sdp);
         case 'ice-candidate':  return await this.handleIceCandidate(signal.candidate);
         default:
-          console.log('❓ Unknown signal type:', signal.type);
+          console.log(`❓ Unknown P2P signal type: ${signal.type}`);
           return false;
       }
     } catch (error) {
-      console.error(`❌ Error handling ${signal.type} signal:`, error);
+      console.error(`❌ Error handling P2P ${signal.type} signal from ${this.targetUserId}:`, error);
       return false;
     }
   }
@@ -296,20 +337,20 @@ class WebRTCManager {
   async handleOffer(offer) {
     if (this.isDestroyed) return false;
     
-    console.log(`📥 Handling offer from another user, polite: ${this.polite}, making offer: ${this.makingOffer}, signaling state: ${this.peerConnection.signalingState}`);
+    console.log(`📥 Handling P2P offer from ${this.targetUserId}, polite: ${this.polite}, making offer: ${this.makingOffer}`);
     
     const offerDesc = typeof offer.sdp === 'string' ? offer : { type: 'offer', sdp: offer };
     
-    // Perfect negotiation logic
+    // Perfect negotiation logic for P2P
     const readyForOffer = this.peerConnection.signalingState === 'stable' || this.peerConnection.signalingState === 'have-remote-offer';
     const offerCollision = !readyForOffer && this.makingOffer;
     
     this.ignoreOffer = !this.polite && offerCollision;
     
-    console.log(`🤔 Offer handling - readyForOffer: ${readyForOffer}, offerCollision: ${offerCollision}, ignoreOffer: ${this.ignoreOffer}`);
+    console.log(`🤔 P2P Offer handling - readyForOffer: ${readyForOffer}, offerCollision: ${offerCollision}, ignoreOffer: ${this.ignoreOffer}`);
     
     if (this.ignoreOffer) {
-      console.log('🚫 Ignoring offer due to collision and impolite role');
+      console.log(`🚫 Ignoring P2P offer from ${this.targetUserId} due to collision and impolite role`);
       return false;
     }
     
@@ -317,31 +358,32 @@ class WebRTCManager {
     
     try {
       if (offerCollision && this.polite) {
-        console.log('🔄 Rolling back due to collision (polite)');
+        console.log(`🔄 Rolling back P2P offer due to collision (polite) with ${this.targetUserId}`);
         await this.peerConnection.setLocalDescription({ type: 'rollback' });
         this.makingOffer = false;
       }
       
       await this.peerConnection.setRemoteDescription(offerDesc);
-      console.log('✅ Remote description set successfully');
+      console.log(`✅ P2P Remote description set successfully for ${this.targetUserId}`);
       
       await this.processQueuedIceCandidates();
       
       const answer = await this.peerConnection.createAnswer();
       await this.peerConnection.setLocalDescription(answer);
       
-      console.log(`📤 Sending answer from ${this.userId} to room ${this.roomId}`);
+      console.log(`📤 Sending P2P answer to ${this.targetUserId} via server`);
       if (this.socket && this.socket.connected && !this.isDestroyed) {
-        this.socket.emit('signal', {
+        this.socket.emit('p2p-signal', {
           roomId: this.roomId,
-          userId: this.userId,
+          fromUserId: this.userId,
+          toUserId: this.targetUserId,
           signal: { type: 'answer', sdp: answer }
         });
       }
       
       return true;
     } catch (error) {
-      console.error('❌ Error handling offer:', error);
+      console.error(`❌ Error handling P2P offer from ${this.targetUserId}:`, error);
       return false;
     } finally {
       this.isSettingRemoteDesc = false;
@@ -351,13 +393,12 @@ class WebRTCManager {
   async handleAnswer(answer) {
     if (this.isDestroyed) return false;
     
-    // Check if we're expecting an answer
     if (this.peerConnection.signalingState !== 'have-local-offer') {
-      console.log(`⚠️ Ignoring answer in state: ${this.peerConnection.signalingState}`);
+      console.log(`⚠️ Ignoring P2P answer from ${this.targetUserId} in state: ${this.peerConnection.signalingState}`);
       return false;
     }
     
-    console.log(`📥 Processing answer from another user`);
+    console.log(`📥 Processing P2P answer from ${this.targetUserId}`);
     const answerDesc = typeof answer.sdp === 'string' ? answer : { type: 'answer', sdp: answer };
     
     this.isSettingRemoteDesc = true;
@@ -365,10 +406,10 @@ class WebRTCManager {
     try {
       await this.peerConnection.setRemoteDescription(answerDesc);
       await this.processQueuedIceCandidates();
-      console.log('✅ Answer processed successfully');
+      console.log(`✅ P2P Answer processed successfully from ${this.targetUserId}`);
       return true;
     } catch (error) {
-      console.error('❌ Error processing answer:', error);
+      console.error(`❌ Error processing P2P answer from ${this.targetUserId}:`, error);
       return false;
     } finally {
       this.isSettingRemoteDesc = false;
@@ -382,14 +423,14 @@ class WebRTCManager {
     try {
       if (this.peerConnection.remoteDescription && this.peerConnection.remoteDescription.type) {
         await this.peerConnection.addIceCandidate(candidate);
-        console.log('✅ ICE candidate added successfully');
+        console.log(`✅ P2P ICE candidate added successfully from ${this.targetUserId}`);
       } else {
-        console.log('📦 Queueing ICE candidate for later');
+        console.log(`📦 Queueing P2P ICE candidate from ${this.targetUserId} for later`);
         this.queuedIceCandidates.push(candidate);
       }
       return true;
     } catch (e) {
-      console.error('❌ Error adding ICE candidate:', e);
+      console.error(`❌ Error adding P2P ICE candidate from ${this.targetUserId}:`, e);
       return false;
     }
   }
@@ -401,9 +442,28 @@ class WebRTCManager {
       const candidate = this.queuedIceCandidates.shift();
       try {
         await this.peerConnection.addIceCandidate(candidate);
-        console.log('✅ Processed queued ICE candidate');
+        console.log(`✅ Processed queued P2P ICE candidate from ${this.targetUserId}`);
       } catch (e) {
-        console.error('❌ Queued ICE candidate error:', e);
+        console.error(`❌ Queued P2P ICE candidate error from ${this.targetUserId}:`, e);
+      }
+    }
+  }
+
+  async restartIce() {
+    if (this.isDestroyed) return;
+    
+    try {
+      console.log(`🔄 Restarting P2P ICE connection with ${this.targetUserId}`);
+      await this.peerConnection.restartIce();
+    } catch (e) {
+      console.error(`❌ P2P ICE restart error with ${this.targetUserId}:`, e);
+      if (this.onConnectionFailed && !this.isDestroyed) {
+        setTimeout(() => {
+          if (!this.isDestroyed) {
+            console.log(`🔄 P2P ICE restart failed with ${this.targetUserId}, triggering connection retry`);
+            this.onConnectionFailed();
+          }
+        }, 2000);
       }
     }
   }
@@ -414,19 +474,26 @@ class WebRTCManager {
       connectionState: this.peerConnection.connectionState,
       iceConnectionState: this.peerConnection.iceConnectionState,
       signalingState: this.peerConnection.signalingState,
-      attempts: this.connectionAttempts
+      attempts: this.connectionAttempts,
+      targetUser: this.targetUserId,
+      p2pState: this.connectionState
     };
   }
 
   destroy() {
     if (this.isDestroyed) return;
     
-    console.log('🧹 Destroying WebRTC manager for', this.userId);
+    console.log(`🧹 Destroying P2P WebRTC manager for ${this.targetUserId}`);
     this.isDestroyed = true;
     
     if (this.connectionTimeout) {
       clearTimeout(this.connectionTimeout);
       this.connectionTimeout = null;
+    }
+    
+    if (this.dataChannel) {
+      this.dataChannel.close();
+      this.dataChannel = null;
     }
     
     if (this.peerConnection) {
