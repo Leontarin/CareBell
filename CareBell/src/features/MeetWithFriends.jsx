@@ -581,7 +581,7 @@ export default function MeetWithFriends() {
           <div className="flex justify-between items-center w-full p-6 bg-gray-800 border-b border-gray-700">
             <div>
               <h2 className="text-white text-2xl font-bold">
-                🔗 Deno P2P Room: {joinedRoom}
+                {joinedRoom} Room
               </h2>
               <p className="text-gray-300 text-sm mt-1">
                 👥 {participants.length}/{MAX_P2P_PARTICIPANTS} participants 
