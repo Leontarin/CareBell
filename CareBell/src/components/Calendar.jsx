@@ -148,12 +148,12 @@ export default function Calendar({ onClose }) {
   while (grid.length < 42) grid.push(null);
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-30 flex">
+    <div className="fixed inset-0 bg-black bg-opacity-30 flex text-black dark:text-white">
       {/* Calendar panel */}
-      <div className="bg-blue-100 rounded-lg shadow-lg m-2 flex flex-col w-full h-screen max-h-screen">
+      <div className="bg-blue-200 dark:bg-gray-800 rounded-lg shadow-lg m-2 flex flex-col w-full h-screen max-h-screen">
 
         {/* Header */}
-        <div className="flex-none h-16 p-3 bg-blue-200 border-b border-blue-900 flex items-center justify-between">
+        <div className="flex-none h-16 p-3 bg-blue-200 dark:bg-gray-900 border-b border-blue-900 dark:border-gray-700 flex items-center justify-between">
           <h2 className="text-2xl font-bold text-blue-800">
             {currentDate.toLocaleDateString(undefined, { month: "long", year: "numeric" })}
           </h2>
@@ -165,7 +165,7 @@ export default function Calendar({ onClose }) {
               type="month"
               value={`${y}-${String(mo+1).padStart(2,"0")}`}
               onChange={jumpToMonth}
-              className="border px-2 py-1 rounded"
+              className="border px-2 py-1 rounded dark:bg-gray-700 dark:text-white dark:border-gray-500"
             />
             <button onClick={nextMonth} className="px-3 py-1 bg-blue-600 text-white rounded">
               {t("Calendar.next")}
@@ -177,7 +177,7 @@ export default function Calendar({ onClose }) {
         </div>
 
         {/* Upcoming events */}
-        <div className="flex-none h-24 p-3 border-b border-blue-300 bg-blue-50">
+        <div className="flex-none h-24 p-3 border-b border-blue-300 dark:border-gray-600 bg-blue-50 dark:bg-gray-800">
           <strong className="text-blue-700">
             {t("Calendar.upcoming")}
           </strong>
@@ -189,7 +189,7 @@ export default function Calendar({ onClose }) {
                 <button
                   key={e._id}
                   onClick={() => openDayView(d)}
-                  className="px-2 py-1 bg-blue-100 border border-blue-400 rounded text-sm hover:bg-blue-200"
+                  className="px-2 py-1 bg-blue-100 border border-blue-400 rounded text-sm hover:bg-blue-200 dark:bg-blue-900 dark:border-blue-600 dark:hover:bg-blue-800"
                 >
                   {d.getDate()}/{d.getMonth()+1} {tStr} — {e.title}
                 </button>
@@ -205,7 +205,7 @@ export default function Calendar({ onClose }) {
         {/* Month grid */}
         <div className="flex-1 overflow-auto grid grid-cols-7 grid-rows-7 divide-y divide-x divide-gray-300">
           {[t("Calendar.Mon"),t("Calendar.Tue"),t("Calendar.Wed"),t("Calendar.Thu"),t("Calendar.Fri"),t("Calendar.Sat"),t("Calendar.Sun")].map(w => (
-            <div key={w} className="p-2 bg-blue-300 text-white font-semibold text-center">{w}</div>
+            <div key={w} className="p-2 bg-blue-300 dark:bg-gray-700 text-white font-semibold text-center">{w}</div>
           ))}
           {grid.map((day, idx) =>
             day ? (
@@ -214,10 +214,11 @@ export default function Calendar({ onClose }) {
                 onClick={() => openDayView(day)}
                 className={`p-2 relative cursor-pointer ${
                   day.toDateString() === todayString
-                    ? "bg-blue-400 text-white"
+                    ? "bg-blue-400 text-white dark:bg-blue-700"
                     : day < new Date()
-                      ? "bg-gray-300 text-gray-700"
-                      : "bg-blue-100 text-blue-900"
+                      ? "bg-gray-300 text-gray-700 dark:bg-gray-700 dark:text-gray-300"
+                      : "bg-blue-100 text-blue-900 dark:bg-gray-600 dark:text-gray-100"
+
                 }`}
               >
                 <div className="text-xl font-medium">{day.getDate()}</div>
@@ -244,7 +245,7 @@ export default function Calendar({ onClose }) {
                     <div
                       key={e._id}
                       onClick={ev => { ev.stopPropagation(); openEdit(e); }}
-                      className="mt-1 px-1 bg-blue-200 text-xs truncate rounded hover:bg-blue-300 cursor-pointer"
+                      className="mt-1 px-1 bg-blue-200 text-xs truncate rounded hover:bg-blue-300 cursor-pointer dark:bg-blue-700 dark:hover:bg-blue-800"
                     >
                       {new Date(e.date).toLocaleTimeString(undefined, { hour:"2-digit", minute:"2-digit" })} {e.title}
                     </div>
@@ -259,7 +260,7 @@ export default function Calendar({ onClose }) {
                 </button>
               </div>
             ) : (
-              <div key={idx} className="bg-white" />
+              <div key={idx} className="bg-blue-100 dark:bg-gray-800" />
             )
           )}
         </div>
@@ -268,34 +269,34 @@ export default function Calendar({ onClose }) {
       {/* Add/Edit Modal */}
       {modalOpen && (
         <div className="fixed inset-0 bg-black bg-opacity-30 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-4 w-80">
-            <h3 className="text-lg font-bold mb-2">
+          <div className="bg-blue-100 dark:bg-gray-800 rounded-lg p-4 w-80">
+            <h3 className="text-lg font-bold mb-2 text-black dark:text-white">
               {editing._id ? t("Calendar.editEvent") : t("Calendar.newEvent")}
             </h3>
-            <label className="block font-medium">{t("Calendar.date")}</label>
+            <label className="block font-medium text-black dark:text-white">{t("Calendar.date")}</label>
             <input
               type="date"
-              className="w-full mb-2 border p-1"
+              className="w-full mb-2 border p-1 text-gray-400 dark:bg-gray-700 dark:text-white dark:border-gray-500"
               value={editing.date}
               onChange={e => setEditing({ ...editing, date: e.target.value })}
             />
-            <label className="block font-medium">{t("Calendar.time")}</label>
+            <label className="block font-medium text-black dark:text-white">{t("Calendar.time")}</label>
             <input
               type="time"
-              className="w-full mb-2 border p-1"
+              className="w-full mb-2 border p-1 text-gray-400 dark:bg-gray-700 dark:text-white dark:border-gray-500"
               value={editing.time}
               onChange={e => setEditing({ ...editing, time: e.target.value })}
             />
             <input
               type="text"
               placeholder={t("Calendar.title")}
-              className="w-full mb-2 border p-1"
+              className="w-full mb-2 border p-1 dark:bg-gray-700 dark:text-white dark:border-gray-500"
               value={editing.title}
               onChange={e => setEditing({ ...editing, title: e.target.value })}
             />
             <textarea
               placeholder={t("Calendar.details")}
-              className="w-full mb-2 border p-1"
+              className="w-full mb-2 border p-1 dark:bg-gray-700 dark:text-white dark:border-gray-500"
               value={editing.content}
               onChange={e => setEditing({ ...editing, content: e.target.value })}
             />
@@ -333,7 +334,7 @@ export default function Calendar({ onClose }) {
             )}
 
             {/* Actions */}
-            <div className="mt-4 flex justify-end space-x-2">
+            <div className="mt-4 flex justify-end space-x-2 text-red-700">
               <button onClick={() => setModalOpen(false)}>
                 {t("Calendar.cancel")}
               </button>
@@ -351,10 +352,16 @@ export default function Calendar({ onClose }) {
       {/* Day-detail View */}
       {dayViewOpen && selectedDay && (
         <div className="fixed inset-0 bg-black bg-opacity-30 flex items-center justify-center z-40">
-          <div className="bg-white rounded-lg p-6 w-full max-w-2xl h-full max-h-screen overflow-auto">
+          <div className="bg-blue-300 dark:bg-gray-800 rounded-lg p-6 w-full max-w-2xl h-full max-h-screen overflow-auto">
             <div className="flex justify-between items-center mb-4">
               <h3 className="text-xl font-bold">{selectedDay.toDateString()}</h3>
-              <button onClick={closeDayView} className="text-xl font-bold">✕</button>
+              <button
+                onClick={closeDayView}
+                className="text-xl font-bold text-red-600 hover:text-red-800"
+                aria-label="Close day view"
+              >
+                ✕
+              </button>
             </div>
             <div className="grid grid-cols-4 grid-rows-6 gap-4 h-full">
               {[...Array(24).keys()].map(hour => {
@@ -366,7 +373,7 @@ export default function Calendar({ onClose }) {
                   <div
                     key={hour}
                     onClick={() => openNewAtHour(hour)}
-                    className="bg-teal-100 hover:bg-teal-200 border rounded-lg p-2 flex flex-col cursor-pointer"
+                    className="bg-teal-400 hover:bg-teal-500 dark:bg-teal-600 dark:hover:bg-teal-700 border rounded-lg p-2 flex flex-col cursor-pointer"
                   >
                     <span className="font-semibold">{String(hour).padStart(2,"0")}:00</span>
                     <div className="flex-1 overflow-auto mt-1">
@@ -374,12 +381,12 @@ export default function Calendar({ onClose }) {
                         <div
                           key={e._id}
                           onClick={ev => { ev.stopPropagation(); openEdit(e); }}
-                          className="bg-blue-50 p-1 rounded mb-1 text-sm cursor-pointer"
+                          className="bg-blue-500 dark:bg-blue-700 p-1 rounded mb-1 text-sm cursor-pointer"
                         >
                           <strong>{new Date(e.date).toTimeString().slice(0,5)}</strong> {e.title}
                         </div>
                       )) : (
-                        <div className="text-gray-500 text-sm">No events</div>
+                        <div className="text-black text-sm">No events</div>
                       )}
                     </div>
                   </div>
