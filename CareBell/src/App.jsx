@@ -59,7 +59,7 @@ export default function App() {
         className="
           w-full max-w-screen-lg mx-auto
           p-4
-          h-screen          /* exactly viewport height */
+          min-h-screen      /* allow page to scroll on small screens */
           flex flex-col
           bg-white dark:bg-gray-900 dark:text-gray-100
         "
@@ -74,7 +74,8 @@ export default function App() {
           className="
             flex-1               /* fill remaining height */
             flex flex-col md:flex-row gap-2
-            overflow-hidden      /* hide any overflow—scroll in children only */
+            md:overflow-hidden  /* hide overflow on large screens */
+            overflow-y-auto    /* allow scrolling on small screens */
           "
         >
           <LeftSide />
