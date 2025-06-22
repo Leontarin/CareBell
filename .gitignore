@@ -37,6 +37,10 @@ yarn-error.log*
 # Express server
 /server/logs
 
+# Generated TTS audio
+backend/resources/tts/*
+!backend/resources/tts/.gitkeep
+
 
 
 package-lock.json
