@@ -4,8 +4,8 @@ import React, { useEffect, useState, useContext } from "react";
 import logo from "../resources/Logo_Gold_Blau_Rubik.png";
 import { Link } from "react-router-dom";
 import SettingsModal from "./SettingsModal";
-import Calendar from "./Calendar";
-import { AppContext } from "../AppContext";
+import Calendar from "../features/Calendar";
+import { AppContext } from "../shared/AppContext";
 import { useTranslation } from "react-i18next";
 
 const OPENWEATHER_KEY = "6d3ad80f32ae07a071aeb542a0049d46";
@@ -96,7 +96,7 @@ export default function Header() {
 
   return (
     <>
-      <header className="flex justify-between items-center py-4 px-4 border-b border-blue-900 mb-4 bg-slate-200 dark:bg-gray-800 dark:border-blue-300">
+      <header className="flex justify-between items-center py-4 px-4 border-b border-blue-900 mb-4 bg-slate-200 dark:bg-gray-800 dark:border-yellow-300">
         {/* Date / Time / Weather */}
         <div className="flex items-center space-x-6 text-blue-900 dark:text-blue-200">
           <div className="flex flex-col leading-none">
@@ -121,7 +121,7 @@ export default function Header() {
           ) : wErr ? (
             <span className="text-sm text-red-600">{wErr}</span>
           ) : (
-            <span className="text-sm text-gray-600">{t("Header.LoadingWeather")}</span>
+            <span className="text-sm text-gray-600 dark:text-gray-300">{t("Header.LoadingWeather")}</span>
           )}
         </div>
 
@@ -130,7 +130,7 @@ export default function Header() {
           <img
             src={logo}
             alt="CareBells Logo"
-            className="h-16 cursor-pointer"
+            className="h-16 cursor-pointer dark:bg-gradien"
           />
         </Link>
 
@@ -148,7 +148,7 @@ export default function Header() {
           >
             ⚙️
           </button>
-          <button className="bg-red-500 text-white py-2 px-4 rounded-xl">
+          <button className="bg-red-500 text-white py-2 px-4 rounded-xl dark:bg-red-600">
             {t("Header.Emergency")}
           </button>
         </div>

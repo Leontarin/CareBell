@@ -6,8 +6,8 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import Header        from "./components/Header";
 import LeftSide      from "./components/LeftSide";
 import RightSide     from "./components/RightSide";
-import { AppContext } from "./AppContext";
-import { API } from "./config"
+import { AppContext } from "./shared/AppContext";
+import { API } from "./shared/config"
 
 /**
  * Fetches JSON from the given URL and throws on HTTP errors.
