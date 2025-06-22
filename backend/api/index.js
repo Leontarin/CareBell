@@ -8,16 +8,16 @@ const { createServer } = require('http');
 const { Server } = require('socket.io');
 
 // ─── Route handlers ───────────────────────────────────────────────────────────
-const userRoute         = require('./routes/users');
-const contactRoute      = require('./routes/contacts');
-const foodRoute         = require('./routes/foods');
-const medicationRoute   = require('./routes/medications');
-const bellaReminderRoute = require('./routes/bellaReminders');
-const newsRoute         = require('./routes/news');
-const exercisesRoute    = require('./routes/exercises');
-const reminderRoute     = require('./routes/reminders');
-const roomsRoute        = require('./routes/rooms');
-const ttsRoute          = require('./routes/tts');
+const userRoute         = require('../routes/users');
+const contactRoute      = require('../routes/contacts');
+const foodRoute         = require('../routes/foods');
+const medicationRoute   = require('../routes/medications');
+const bellaReminderRoute = require('../routes/bellaReminders');
+const newsRoute         = require('../routes/news');
+const exercisesRoute    = require('../routes/exercises');
+const reminderRoute     = require('../routes/reminders');
+const roomsRoute        = require('../routes/rooms');
+const ttsRoute          = require('../routes/tts');
 const resourcesPath     = express.static(path.join(__dirname, '..', 'resources'));
 
 // ─── App setup ────────────────────────────────────────────────────────────────
@@ -41,7 +41,7 @@ dbConnect().catch(err => {
 });
 
 // ─── Socket.IO Integration ───────────────────────────────────────────────────
-const setupSockets = require('./sockets');
+const setupSockets = require('../sockets');
 setupSockets(io);
 
 // ─── Routes ───────────────────────────────────────────────────────────────────
@@ -65,7 +65,7 @@ app.get('/', (_req, res) => {
 if (require.main === module) {
   const PORT = process.env.PORT || 4443;
   server.listen(PORT, () => {
-    console.log(`✅ API with Socket.IO started locally on ${PORT}`);
+    console.log(`✅ API started on ${PORT}`);
   });
 }
 

@@ -2,23 +2,17 @@
 const mongoose = require('mongoose');
 
 const MONGO_OPTIONS = {
-  useNewUrlParser: true,
-  useUnifiedTopology: true,
-  // fail if we can’t connect in 5s
+  // driver 4.x+ embeds these behaviors by default
   serverSelectionTimeoutMS: 5_000,
-  // don’t buffer up commands forever while disconnected
   bufferCommands: false,
 };
 
 let cachedPromise = null;
-
 function dbConnect() {
   if (!cachedPromise) {
     cachedPromise = mongoose
       .connect(process.env.MONGODB_URI, MONGO_OPTIONS)
-      .then(() => {
-        console.log('✅ MongoDB connected');
-      })
+      .then(() => console.log('✅ MongoDB connected'))
       .catch(err => {
         console.error('❌ MongoDB initial connection error:', err);
         cachedPromise = null;
@@ -28,7 +22,6 @@ function dbConnect() {
   return cachedPromise;
 }
 
-// runtime event logging
 mongoose.connection.on('error', err =>
   console.error('MongoDB runtime error:', err)
 );
