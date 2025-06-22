@@ -343,7 +343,11 @@ function Exercise() {
                 <div className="relative">
                   {/* Show GIF in the exercise card */}
                   <img 
-                    src={exercise.gifUrl || "https://via.placeholder.com/400x300?text=Exercise+GIF"} 
+                    src={
+                      exercise.gifUrl
+                        ? `${API}${exercise.gifUrl}`            // prepend backend origin
+                        : "https://via.placeholder.com/400x300?text=Exercise+GIF"
+                    } 
                     alt={exercise.name} 
                     className="w-full h-48 object-cover"
                     onError={(e) => {
@@ -432,7 +436,7 @@ function Exercise() {
                 <div className="mb-6">
                   <div className="relative">
                     <img 
-                      src={selectedExercise.gifUrl} 
+                      src={`${API}${selectedExercise.gifUrl}`}
                       alt={`${selectedExercise.name} Exercise Animation`} 
                       className="w-full rounded-lg"
                       onError={(e) => {

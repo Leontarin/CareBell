@@ -2,6 +2,7 @@ require('dotenv').config();
 const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors');
+const path = require('path');
 
 // ─── Route handlers ───────────────────────────────────────────────────────────
 const userRoute         = require('../routes/users');
@@ -13,6 +14,7 @@ const newsRoute         = require('../routes/news');
 const exercisesRoute    = require('../routes/exercises');
 const reminderRoute     = require('../routes/reminders');
 const roomsRoute        = require('../routes/rooms');
+const resourcesPath = express.static(path.join(__dirname, '..', 'resources'));
 
 // ─── App setup ────────────────────────────────────────────────────────────────
 const app = express();
@@ -38,6 +40,8 @@ app.use('/news',         newsRoute);
 app.use('/exercises',    exercisesRoute);
 app.use('/reminders',    reminderRoute);
 app.use('/rooms',        roomsRoute);
+app.use('/resources',    resourcesPath);
+
 
 app.get('/', (_req, res) => {
   res.send('API is live on Vercel! 🚀');
