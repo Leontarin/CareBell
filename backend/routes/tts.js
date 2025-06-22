@@ -11,7 +11,19 @@ const router = express.Router();
 const BIN_DIR = path.resolve(__dirname, '../tts/bin');
 const MODEL_DIR = path.resolve(__dirname, '../tts/models');
 
-const PIPER_PATH = path.join(BIN_DIR, 'win32/piper.exe');
+const PIPER_PATH = (() => {
+  const platform = os.platform();          // get current platform
+  if (platform === 'win32') {
+    // on Windows use the .exe
+    return path.join(BIN_DIR, 'win32', 'piper.exe');
+  } else if (platform === 'linux') {
+    // on Linux use the linux binary
+    return path.join(BIN_DIR, 'linux', 'piper');
+  } else {
+    // optional: handle other platforms or throw
+    throw new Error(`Unsupported platform: ${platform}`);
+  }
+})();
 
 const MODEL_PATHS = {
   en: path.join(MODEL_DIR, 'en_US-hfc_female-medium.onnx'),
