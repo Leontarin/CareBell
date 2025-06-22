@@ -27,11 +27,11 @@ const PIPER_PATH = (() => {
 
 const MODEL_PATHS = {
   en: path.join(MODEL_DIR, 'en_US-hfc_female-medium.onnx'),
-  //de: path.join(MODEL_DIR, 'de_DE-eva_k-medium.onnx'),
+  de: path.join(MODEL_DIR, 'de_DE-kerstin-low.onnx'),
 };
 
 router.post('/', (req, res) => {
-  const { text, lang = 'en' } = req.body || {};
+  const { text, lang = 'en', speed=1.0 } = req.body || {};
   if (!text || typeof text !== 'string') {
     return res.status(400).json({ error: 'Missing or invalid "text" in request body' });
   }

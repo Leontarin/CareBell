@@ -104,18 +104,30 @@ export default function Meals() {
   };
 
   const createFoodDescription = item => {
-    let desc = `${t("Meals.FoodInfo")}: ${item.Dish}. `;
-    desc += `${item.Description || t("Meals.noDescription")}. `;
-    desc += item.diabetic_friendly
-      ? `${t("Meals.diabeticFriendlyYes")}. `
-      : `${t("Meals.diabeticFriendlyNo")}. `;
-
-    const extras = [
-      ...trAllergens(item.Allergens),
-      ...trAdditives(item.Additives),
-      ...trPictograms(item.Pictograms)
-    ];
-    if (extras.length) desc += `${t("Meals.includesLabel")} ${extras.join(", ")}.`;
+    // 1. Meal Name + Description
+    let desc = `${item.Dish}. ${item.Description || t("Meals.noDescription")}. `;
+  
+    // 2. It's [NOT] Diabetic Friendly
+    desc += `It's ${item.diabetic_friendly ? "" : "NOT "}Diabetic Friendly. `;
+  
+    // 3. Allergens
+    if (item.Allergens && item.Allergens.length) {
+      const allergenList = trAllergens(item.Allergens).join(", ");
+      desc += `Allergens: ${allergenList}. `;
+    }
+  
+    // 4. Additives
+    if (item.Additives && item.Additives.length) {
+      const additiveList = trAdditives(item.Additives).join(", ");
+      desc += `Additives: ${additiveList}. `;
+    }
+  
+    // 5. Pictograms
+    if (item.Pictograms && item.Pictograms.length) {
+      const pictogramList = trPictograms(item.Pictograms).join(", ");
+      desc += `${pictogramList}.`;
+    }
+  
     return desc;
   };
 
