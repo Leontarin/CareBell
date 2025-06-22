@@ -499,7 +499,7 @@ export default function MeetWithFriends() {
           
           <div className="mb-6 text-center">
             <p className="text-gray-600 dark:text-gray-400 text-sm">
-              ⚡ True Peer-to-Peer Video Calls via Deno Deploy • Maximum {MAX_P2P_PARTICIPANTS} participants per room1
+              ⚡ True Peer-to-Peer Video Calls via Deno Deploy • Maximum {MAX_P2P_PARTICIPANTS} participants per room2
             </p>
           </div>
 
