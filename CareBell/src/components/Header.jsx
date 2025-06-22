@@ -4,8 +4,8 @@ import React, { useEffect, useState, useContext } from "react";
 import logo from "../resources/Logo_Gold_Blau_Rubik.png";
 import { Link } from "react-router-dom";
 import SettingsModal from "./SettingsModal";
-import Calendar from "./Calendar";
-import { AppContext } from "../AppContext";
+import Calendar from "../features/Calendar";
+import { AppContext } from "../shared/AppContext";
 import { useTranslation } from "react-i18next";
 
 const OPENWEATHER_KEY = "6d3ad80f32ae07a071aeb542a0049d46";

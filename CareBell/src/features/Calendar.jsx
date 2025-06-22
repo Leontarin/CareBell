@@ -1,8 +1,8 @@
 import React, { useState, useEffect, useCallback, useContext } from "react";
 import axios from "axios";
 import { useTranslation } from "react-i18next";
-import { AppContext } from "../AppContext";
-import { API } from "../config";
+import { AppContext } from "../shared/AppContext";
+import { API } from "../shared/config";
 
 const FORECAST_API = "https://api.openweathermap.org/data/2.5/forecast";
 const OWM_KEY      = "6d3ad80f32ae07a071aeb542a0049d46";

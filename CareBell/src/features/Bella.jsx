@@ -6,8 +6,8 @@ import Vapi from '@vapi-ai/web';
 import { FaPhone, FaPhoneSlash, FaExpand, FaCompress } from 'react-icons/fa';
 import bella_img from '../resources/Grafik3a.png';
 import { useTranslation } from 'react-i18next';
-import { AppContext } from '../AppContext';
-import { API } from '../config';
+import { AppContext } from '../shared/AppContext';
+import { API } from '../shared/config';
 
 export default function Bella() {
   const { t, i18n } = useTranslation();

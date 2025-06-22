@@ -6,8 +6,8 @@ import {
   FaTachometerAlt
 } from "react-icons/fa";
 import { useTranslation } from "react-i18next";
-import { AppContext } from "../AppContext";
-import { API } from "../config";
+import { AppContext } from "../shared/AppContext";
+import { API } from "../shared/config";
 
 export default function SettingsModal({ onClose }) {
   const { t, i18n } = useTranslation();

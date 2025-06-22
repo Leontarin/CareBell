@@ -1,6 +1,6 @@
 import React, { useContext } from "react";
-import Bella from "./Bella";
-import { AppContext } from "../AppContext";
+import Bella from "../features/Bella";
+import { AppContext } from "../shared/AppContext";
 
 export default function LeftSide() {
   const { bellaFullscreen } = useContext(AppContext);

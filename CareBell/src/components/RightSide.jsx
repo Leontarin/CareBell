@@ -17,13 +17,13 @@ import {
   useLocation,
   Outlet
 } from "react-router-dom";
-import { AppContext } from "../AppContext";
-import CallContacts      from "./CallContacts";
-import MeetWithFriends   from "./MeetWithFriends";
-import Medication        from "./Medication";
-import Meals             from "./Meals";
-import News              from "./News";
-import Exercise          from "./Exercise";
+import { AppContext } from "../shared/AppContext";
+import CallContacts      from "../features/CallContacts";
+import MeetWithFriends   from "../features/MeetWithFriends";
+import Medication        from "../features/Medication";
+import Meals             from "../features/Meals";
+import News              from "../features/News";
+import Exercise          from "../features/Exercise";
 
 export default function RightSide() {
   const { t } = useTranslation();
