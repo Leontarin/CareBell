@@ -86,16 +86,17 @@ class WebRTCManager {
       }
 
       this.setupPeerConnectionHandlers();
-
-      if (isInitiator) {
-        // Delay for P2P connection establishment
-        setTimeout(async () => {
-          if (!this.isDestroyed && this.peerConnection && this.peerConnection.signalingState === 'stable' && !this.makingOffer) {
-            console.log(`🎯 P2P Initiator creating offer for ${this.targetUserId}`);
-            await this.createOffer();
-          }
-        }, 1000);
-      }
+      
+if (isInitiator) {
+  // Reduce delay and add randomization to prevent simultaneous offers
+  const delay = 500 + Math.random() * 500; // 500-1000ms random delay
+  setTimeout(async () => {
+    if (!this.isDestroyed && this.peerConnection && this.peerConnection.signalingState === 'stable' && !this.makingOffer) {
+      console.log(`🎯 P2P Initiator creating offer for ${this.targetUserId}`);
+      await this.createOffer();
+    }
+  }, delay);
+}
 
       return true;
     } catch (error) {
@@ -248,30 +249,39 @@ class WebRTCManager {
       }
     };
 
-    this.peerConnection.onnegotiationneeded = async () => {
-      if (this.isDestroyed || this.negotiationLock || this.makingOffer || this.isSettingRemoteDesc) {
-        console.log('⚠️ P2P Negotiation skipped - already in progress or destroyed');
-        return;
-      }
-      
-      if (this.peerConnection.signalingState !== 'stable') {
-        console.log(`⚠️ P2P Negotiation needed but connection not stable (${this.peerConnection.signalingState}), skipping`);
-        return;
-      }
-      
-      this.negotiationLock = true;
-      this.makingOffer = true;
-      
-      try {
-        console.log(`🤝 P2P Negotiation needed for ${this.targetUserId}, creating offer`);
-        await this.createOffer();
-      } catch (e) {
-        console.error(`❌ P2P Negotiation error with ${this.targetUserId}:`, e);
-      } finally {
-        this.makingOffer = false;
-        this.negotiationLock = false;
-      }
-    };
+   this.peerConnection.onnegotiationneeded = async () => {
+  if (this.isDestroyed || this.negotiationLock || this.makingOffer || this.isSettingRemoteDesc) {
+    console.log('⚠️ P2P Negotiation skipped - already in progress or destroyed');
+    return;
+  }
+  
+  if (this.peerConnection.signalingState !== 'stable') {
+    console.log(`⚠️ P2P Negotiation needed but connection not stable (${this.peerConnection.signalingState}), skipping`);
+    return;
+  }
+  
+  // Add a small delay for the non-initiator to reduce offer collisions
+  if (!this.isInitiator) {
+    await new Promise(resolve => setTimeout(resolve, Math.random() * 1000));
+    // Check again if still needed
+    if (this.peerConnection.signalingState !== 'stable' || this.makingOffer || this.isDestroyed) {
+      return;
+    }
+  }
+  
+  this.negotiationLock = true;
+  this.makingOffer = true;
+  
+  try {
+    console.log(`🤝 P2P Negotiation needed for ${this.targetUserId}, creating offer`);
+    await this.createOffer();
+  } catch (e) {
+    console.error(`❌ P2P Negotiation error with ${this.targetUserId}:`, e);
+  } finally {
+    this.makingOffer = false;
+    this.negotiationLock = false;
+  }
+};
   }
 
   async restartIce() {
