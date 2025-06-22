@@ -542,17 +542,9 @@ export default function MeetWithFriends() {
      {!joinedRoom ? (
        <div className="flex flex-col items-center justify-center h-full p-8">
          <h2 className="text-black dark:text-white text-3xl mb-4 font-bold">
-           🔗 {t("MeetWithFriends.Title")}
+           {t("MeetWithFriends.Title")}
          </h2>
          
-         <div className="mb-6 text-center">
-           <p className="text-gray-600 dark:text-gray-400 text-sm">
-             ⚡ True Peer-to-Peer Video Calls via Deno Deploy • Maximum {MAX_P2P_PARTICIPANTS} participants per room
-           </p>
-           <p className="text-gray-600 dark:text-gray-400 text-xs mt-1">
-             🔴 Live: {socket?.connected ? 'Connected' : 'Disconnected'} • Rooms auto-update in real-time
-           </p>
-         </div>
 
          <div className="mb-8 flex items-center">
            <input
@@ -656,12 +648,6 @@ export default function MeetWithFriends() {
                {signalingConnected && <span className="text-green-400 ml-2">🟢 Connected</span>}
                {!signalingConnected && <span className="text-red-400 ml-2">🔴 Connecting...</span>}
              </p>
-             {p2pStats.totalConnections > 0 && (
-               <p className="text-gray-400 text-xs mt-1">
-                 P2P: {p2pStats.connectedPeers}/{p2pStats.totalConnections} connected
-                 {p2pStats.failedConnections > 0 && `, ${p2pStats.failedConnections} failed`}
-               </p>
-             )}
            </div>
            
            <div className="flex gap-3">
