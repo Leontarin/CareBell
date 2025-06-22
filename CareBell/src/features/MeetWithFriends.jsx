@@ -2,7 +2,7 @@
 import React, { useState, useEffect, useContext, useRef } from "react";
 import axios from "axios";
 import { io } from "socket.io-client";
-import { API, P2P_CONFIG } from "../shared/config";
+import { API, P2P_CONFIG, P2P_SIGNALING_URL } from "../shared/config";
 import { AppContext } from "../shared/AppContext";
 import { WebRTCManager } from "../components/WebRTCManager";
 import { DenoP2PSignaling } from "../components/DenoP2PSignaling";
@@ -53,7 +53,7 @@ export default function MeetWithFriends() {
     if (!user?.id) return;
 
     console.log('🔌 Connecting to room management socket...');
-    const newSocket = io(API.replace('/api', ''), {
+    const newSocket = io(P2P_SIGNALING_URL, {
       transports: ['websocket', 'polling']
     });
 
