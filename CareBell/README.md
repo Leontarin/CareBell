@@ -10,3 +10,10 @@ Currently, two official plugins are available:
 ## Expanding the ESLint configuration
 
 If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+
+## Responsiveness
+
+This project uses Tailwind CSS and now includes orientation variants for
+`portrait` and `landscape`. These variants make it easier to adapt layouts for
+phones, tablets and desktops in both orientations. See `tailwind.config.cjs` for
+the custom configuration.
