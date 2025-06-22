@@ -10,7 +10,8 @@
     "reminderPrefix": "ERINNERUNG:",
     "noReminders": "Du hast keine gespeicherten Erinnerungen.",
     "fullscreen": "Vollbild",
-    "exitFullscreen": "Vollbild verlassen"
+    "exitFullscreen": "Vollbild verlassen",
+     "warningMessage": "Geef Bella geen persoonlijke informatie (wachtwoorden, achternamen, bankrekening, enz.)"
   },
   "Calendar": {
     "Mon": "Montag",

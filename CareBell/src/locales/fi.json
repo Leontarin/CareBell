@@ -10,7 +10,8 @@
     "reminderPrefix": "MUISTUTUS:",
     "noReminders": "Sinulla ei ole tallennettuja muistutuksia.",
     "fullscreen": "Kokoruutu",
-    "exitFullscreen": "Poistu kokoruudusta"
+    "exitFullscreen": "Poistu kokoruudusta",
+    "warningMessage": "Älä anna Bellalle henkilökohtaisia tietoja (salasanoja, sukunimiä, pankkitilitietoja jne.)"
   },
   "Calendar": {
     "Mon": "maanantai",

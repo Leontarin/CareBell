@@ -354,7 +354,7 @@ export default function Bella() {
           <div
             className="sticky top-0 z-10 bg-yellow-200 dark:bg-yellow-400 text-gray-800 border border-yellow-500 rounded p-2 mb-2 text-center text-sm"
           >
-            Please do not give Bella personal information (passwords, last names, bank account, etc..)
+            {t('Bella.warningMessage')}
           </div>
           {messages.map((m, i) => (
             <div key={i} className={`flex ${m.speaker === 'assistant' ? 'justify-start' : 'justify-end'}`}>

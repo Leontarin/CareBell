@@ -10,7 +10,8 @@
     "reminderPrefix": "REMINDER:",
     "noReminders": "You have no saved reminders.",
     "fullscreen": "Fullscreen",
-    "exitFullscreen": "Exit Fullscreen"
+    "exitFullscreen": "Exit Fullscreen",
+    "warningMessage": "Please do not give Bella personal information (passwords, last names, bank account, etc..)"
   },
   "Calendar": {
     "Mon": "Mon",
