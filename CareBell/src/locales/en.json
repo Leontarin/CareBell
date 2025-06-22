@@ -143,6 +143,7 @@
     "diabeticFriendlyLabel": "Diabetic friendly:",
     "diabeticFriendlyYes": "Yes",
     "diabeticFriendlyNo": "No",
+    "allergyWarning": "You are allergic to the following in the meal:",
   
     "LegendHeadings": {
       "Additives":  "Additives",

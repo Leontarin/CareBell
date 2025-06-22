@@ -1,11 +1,14 @@
 // src/components/Meals.jsx
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useContext } from "react";
 import BarcodeScannerComponent from "react-qr-barcode-scanner";
 import { API } from "../config";
 import { useTranslation } from "react-i18next";
+import { AppContext } from "../AppContext";
 
 export default function Meals() {
   const { t } = useTranslation();
+  const { user } = useContext(AppContext);
+  const userAllergens = user?.Allergens || [];
 
   /* ---------- state ---------- */
   const [activeTab,     setActiveTab]     = useState("list");
@@ -363,6 +366,26 @@ export default function Meals() {
             </p>
           </div>
 
+          {/* ====== ALLERGY WARNING ====== */}
+          {(() => {
+            if (!user) return null;
+            const overlap = (meal.Allergens || []).filter(a =>
+              userAllergens.includes(a)
+            );
+            return overlap.length > 0 ? (
+              <div className="bg-yellow-100 border-l-4 border-yellow-500 text-yellow-800 p-4 rounded mb-6">
+                <p className="font-semibold mb-2">
+                  {t("Meals.allergyWarning")}
+                </p>
+                <ul className="list-disc list-inside text-lg">
+                  {overlap.map(key => (
+                    <li key={key}>{t(`Meals.Legend.Allergens.${key}`)}</li>
+                  ))}
+                </ul>
+              </div>
+            ) : null;
+          })()}
+
           {/* ====== DIABETIC FRIENDLY (always first) ====== */}
           <div className="mt-6">
             <h3 className="text-2xl font-semibold mb-1">
@@ -386,30 +409,53 @@ export default function Meals() {
 
           {/* ====== LEGEND SECTIONS ====== */}
           {(() => {
-            const sections = [
-              { key:"Allergens",  items:trAllergens(meal.Allergens)  },
-              { key:"Additives",  items:trAdditives(meal.Additives)  },
-              { key:"Pictograms", items:trPictograms(meal.Pictograms) }
-            ];
-            return sections.map(sec =>
-              sec.items.length>0 && (
-                <div key={sec.key} className="mt-6">
+            const renderSection = (key, list, tr) =>
+              list.length > 0 && (
+                <div key={key} className="mt-6">
                   <h3 className="text-2xl font-semibold mb-3">
-                    {t(`Meals.LegendHeadings.${sec.key}`)}
+                    {t(`Meals.LegendHeadings.${key}`)}
                   </h3>
                   <ul className="bg-white rounded-lg p-5 border border-gray-100 shadow-sm">
-                    {sec.items.map((txt,i)=>(
-                      <li
-                        key={i}
-                        className="py-3 text-xl border-b border-gray-100 last:border-0 flex items-center"
-                      >
-                        <span className="mr-3 text-green-500 text-2xl">✓</span>
-                        {txt}
-                      </li>
-                    ))}
+                    {list.map((val, i) => {
+                      const allergic =
+                        key === "Allergens" && userAllergens.includes(val);
+                      return (
+                        <li
+                          key={i}
+                          className="py-3 text-xl border-b border-gray-100 last:border-0 flex items-center"
+                        >
+                          <span
+                            className={`mr-3 text-2xl ${
+                              allergic ? "text-red-600" : "text-green-500"
+                            }`}
+                          >
+                            {allergic ? "✕" : "✓"}
+                          </span>
+                          {tr(val)}
+                        </li>
+                      );
+                    })}
                   </ul>
                 </div>
-              )
+              );
+            return (
+              <>
+                {renderSection(
+                  "Allergens",
+                  meal.Allergens || [],
+                  a => t(`Meals.Legend.Allergens.${a}`)
+                )}
+                {renderSection(
+                  "Additives",
+                  meal.Additives || [],
+                  a => t(`Meals.Legend.Additives.${a}`)
+                )}
+                {renderSection(
+                  "Pictograms",
+                  meal.Pictograms || [],
+                  a => t(`Meals.Legend.Pictograms.${a}`)
+                )}
+              </>
             );
           })()}
 
