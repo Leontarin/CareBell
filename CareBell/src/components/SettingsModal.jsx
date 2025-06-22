@@ -19,6 +19,8 @@ export default function SettingsModal({ onClose }) {
   const [activeTab, setActiveTab] = useState("general");
   const [selectedAllergens, setSelectedAllergens] = useState(user?.Allergens || []);
   const [diabetic, setDiabetic] = useState(user?.Diabetic || false);
+  const [dropdownOpen, setDropdownOpen] = useState(false);
+  const [saveStatus, setSaveStatus] = useState(null); // 'success' | 'error'
   const [users, setUsers] = useState([]);
   const [loadingUsers, setLoadingUsers] = useState(true);
 
@@ -78,15 +80,20 @@ export default function SettingsModal({ onClose }) {
       if (res.ok) {
         const updated = await res.json();
         setUser(updated);
+        setSaveStatus("success");
+      } else {
+        setSaveStatus("error");
       }
+      setTimeout(() => setSaveStatus(null), 3000);
     } catch (err) {
       console.error("Error saving health info", err);
+      setSaveStatus("error");
     }
   };
 
   return (
     <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
-      <div className="w-[95%] max-w-3xl bg-white dark:bg-gray-800 rounded-3xl shadow-xl p-6 relative flex">
+      <div className="w-[90%] max-w-4xl bg-white dark:bg-gray-800 rounded-3xl shadow-xl p-6 relative flex">
         <button
           onClick={onClose}
           className="absolute top-4 left-4 text-2xl text-gray-600 hover:text-gray-800 dark:text-gray-300"
@@ -244,19 +251,29 @@ export default function SettingsModal({ onClose }) {
                 <h3 className="text-xl font-semibold mb-3">
                   {t("SettingsModal.health")}
                 </h3>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                  {allergenKeys.map(key => (
-                    <label key={key} className="flex items-center gap-2">
-                      <input
-                        type="checkbox"
-                        checked={selectedAllergens.includes(key)}
-                        onChange={() => toggleAllergen(key)}
-                      />
-                      {t(`Meals.Legend.Allergens.${key}`)}
-                    </label>
-                  ))}
+                <div className="relative mb-4">
+                  <button
+                    onClick={() => setDropdownOpen(o => !o)}
+                    className="border rounded px-2 py-1 w-full text-left"
+                  >
+                    {t("SettingsModal.allergens")}
+                  </button>
+                  {dropdownOpen && (
+                    <div className="absolute left-0 right-0 mt-1 border rounded p-2 bg-white dark:bg-gray-700 max-h-40 overflow-y-auto z-10">
+                      {allergenKeys.map(key => (
+                        <label key={key} className="flex items-center gap-2">
+                          <input
+                            type="checkbox"
+                            checked={selectedAllergens.includes(key)}
+                            onChange={() => toggleAllergen(key)}
+                          />
+                          {t(`Meals.Legend.Allergens.${key}`)}
+                        </label>
+                      ))}
+                    </div>
+                  )}
                 </div>
-                <label className="flex items-center gap-2 mt-4 block">
+                <label className="flex items-center gap-2 block">
                   <input
                     type="checkbox"
                     checked={diabetic}
@@ -264,22 +281,32 @@ export default function SettingsModal({ onClose }) {
                   />
                   {t("SettingsModal.diabetic")}
                 </label>
+
+                {saveStatus === "success" && (
+                  <p className="mt-2 text-black">{t("SettingsModal.saveSuccess")}</p>
+                )}
+                {saveStatus === "error" && (
+                  <p className="mt-2 text-black">{t("SettingsModal.saveError")}</p>
+                )}
+
+                <div className="flex justify-between mt-4">
+                  <button
+                    onClick={onClose}
+                    className="bg-gray-300 dark:bg-gray-700 px-4 py-2 rounded"
+                  >
+                    {t("SettingsModal.close")}
+                  </button>
+                  <button
+                    onClick={saveHealth}
+                    className="bg-blue-600 text-white px-4 py-2 rounded"
+                  >
+                    {t("SettingsModal.save")}
+                  </button>
+                </div>
               </section>
-              <button
-                onClick={saveHealth}
-                className="bg-blue-600 text-white px-4 py-2 rounded"
-              >
-                {t("SettingsModal.save")}
-              </button>
             </>
           )}
 
-          <button
-            onClick={onClose}
-            className="mt-8 bg-blue-600 text-white px-4 py-2 rounded"
-          >
-            {t("SettingsModal.close")}
-          </button>
         </div>
       </div>
     </div>
