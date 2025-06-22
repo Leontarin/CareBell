@@ -129,7 +129,77 @@
     "FoodList": "רשימת מזון",
     "FoodInfo": "מידע על הארוחה",
     "addMeal": "הוסף ארוחה",
-    "mealTime": "שעת ארוחה"
+    "mealTime": "שעת ארוחה",
+    "searchPlaceholder": "חפש מזון לפי שם...",
+    "noMatch": "אין מאכלים התואמים לחיפוש",
+    "noFoods": "לא נמצאו מאכלים",
+    "startCamera": "הפעל מצלמה",
+    "stopCamera": "עצור מצלמה",
+    "qrScanned": "קוד QR נסרק בהצלחה. מאתר מידע...",
+    "notFoundWithCode": "מאכל עם קוד {{code}} לא נמצא.",
+    "notFoundSpoken": "מצטערים, המאכל לא נמצא.",
+    "noDescription": "אין תיאור",
+    "includesLabel": "כולל:",
+    "diabeticFriendlyLabel": "ידידותי לסוכרת:",
+    "diabeticFriendlyYes": "כן",
+    "diabeticFriendlyNo": "לא",
+  
+    "LegendHeadings": {
+      "Additives":  "תוספים",
+      "Allergens":  "אלרגנים",
+      "Pictograms": "פיקטוגרמות"
+    },
+    "Legend": {
+      "Additives": {
+        "1": "צבע מאכל",
+        "2": "מגופרתי",
+        "3": "פוספט",
+        "4": "משפר טעם",
+        "5": "מלח כבישה",
+        "6": "עם סוכר(ים) וממתיק",
+        "7": "נוגד חמצון"
+      },
+      "Allergens": {
+        "contains gluten": "מכיל גלוטן",
+        "contains wheat": "מכיל חיטה",
+        "contains rye": "מכיל שיפון",
+        "contains barley": "מכיל שעורה",
+        "contains oats": "מכיל שיבולת שועל",
+        "contains spelt": "מכיל כוסמין",
+        "contains kamut": "מכיל קאמות",
+        "contains crustaceans": "מכיל סרטנים",
+        "contains egg": "מכיל ביצים",
+        "contains fish": "מכיל דגים",
+        "contains peanuts": "מכיל בוטנים",
+        "contains soybeans": "מכיל סויה",
+        "contains milk and dairy products": "מכיל חלב ומוצריו",
+        "contains tree nuts": "מכיל אגוזי עץ",
+        "contains almonds": "מכיל שקדים",
+        "contains hazelnuts": "מכיל אגוזי לוז",
+        "contains walnuts": "מכיל אגוזי מלך",
+        "contains cashews": "מכיל קשיו",
+        "contains pecans": "מכיל פקאן",
+        "contains brazil nuts": "מכיל אגוזי ברזיל",
+        "contains pistachios": "מכיל פיסטוקים",
+        "contains macadamia": "מכיל אגוזי מקדמיה",
+        "contains celery": "מכיל סלרי",
+        "contains mustard": "מכיל חרדל",
+        "contains sesame": "מכיל שומשום",
+        "contains sulphite/sulfur dioxide": "מכיל סולפיט/דו-תחמוצת הגופרית",
+        "contains lupin": "מכיל לופין",
+        "contains mollusks": "מכיל רכיכות"
+      },
+      "Pictograms": {
+        "R": "מכיל בשר בקר",
+        "S": "מכיל בשר חזיר",
+        "G": "מכיל בשר עוף",
+        "M": "מכיל לקטוז",
+        "A": "מכיל אלכוהול",
+        "W": "מכיל גלוטן",
+        "K": "טעם שום חריף",
+        "Y": "טבעוני"
+      }
+    }
   },
   "Medication": {
     "frequencyHours": "תדירות (בשעות)",

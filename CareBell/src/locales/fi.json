@@ -127,7 +127,77 @@
     "FoodList": "Ruokalista",
     "FoodInfo": "Ruokatiedot",
     "addMeal": "Lisää ateria",
-    "mealTime": "Ateria-aika"
+    "mealTime": "Ateria-aika",
+    "searchPlaceholder": "Etsi ruokaa nimellä...",
+    "noMatch": "Hakusi ei vastannut ruokia",
+    "noFoods": "Ruokia ei löytynyt",
+    "startCamera": "Käynnistä kamera",
+    "stopCamera": "Pysäytä kamera",
+    "qrScanned": "QR-koodi luettu onnistuneesti. Haetaan tietoja.",
+    "notFoundWithCode": "Ruokaa koodilla {{code}} ei löytynyt.",
+    "notFoundSpoken": "Valitettavasti ruokaa ei löytynyt.",
+    "noDescription": "Ei kuvausta",
+    "includesLabel": "Sisältää:",
+    "diabeticFriendlyLabel": "Diabeetikkoystävällinen:",
+    "diabeticFriendlyYes": "Kyllä",
+    "diabeticFriendlyNo": "Ei",
+  
+    "LegendHeadings": {
+      "Additives":  "Lisäaineet",
+      "Allergens":  "Allergeenit",
+      "Pictograms": "Piktogrammit"
+    },
+    "Legend": {
+      "Additives": {
+        "1": "Väri",
+        "2": "Sulfiittia",
+        "3": "Fosfaatti",
+        "4": "Arominvahvenne",
+        "5": "Nitriittisuola",
+        "6": "Sisältää sokeria ja makeutusainetta",
+        "7": "Antioksidantti"
+      },
+      "Allergens": {
+        "contains gluten": "sisältää gluteenia",
+        "contains wheat": "sisältää vehnää",
+        "contains rye": "sisältää ruista",
+        "contains barley": "sisältää ohraa",
+        "contains oats": "sisältää kauraa",
+        "contains spelt": "sisältää spelttiä",
+        "contains kamut": "sisältää kamutia",
+        "contains crustaceans": "sisältää äyriäisiä",
+        "contains egg": "sisältää munaa",
+        "contains fish": "sisältää kalaa",
+        "contains peanuts": "sisältää maapähkinöitä",
+        "contains soybeans": "sisältää soijapapuja",
+        "contains milk and dairy products": "sisältää maitoa ja maitotuotteita",
+        "contains tree nuts": "sisältää pähkinöitä",
+        "contains almonds": "sisältää manteleita",
+        "contains hazelnuts": "sisältää hasselpähkinöitä",
+        "contains walnuts": "sisältää saksanpähkinöitä",
+        "contains cashews": "sisältää cashewpähkinöitä",
+        "contains pecans": "sisältää pekäänipähkinöitä",
+        "contains brazil nuts": "sisältää parapähkinöitä",
+        "contains pistachios": "sisältää pistaasipähkinöitä",
+        "contains macadamia": "sisältää macadamiapähkinöitä",
+        "contains celery": "sisältää selleriä",
+        "contains mustard": "sisältää sinappia",
+        "contains sesame": "sisältää seesamia",
+        "contains sulphite/sulfur dioxide": "sisältää sulfiittia/rikkidioksidia",
+        "contains lupin": "sisältää lupiinia",
+        "contains mollusks": "sisältää nilviäisiä"
+      },
+      "Pictograms": {
+        "R": "sisältää naudanh lihaa",
+        "S": "sisältää sianlihaa",
+        "G": "sisältää siipikarjaa",
+        "M": "sisältää laktoosia",
+        "A": "sisältää alkoholia",
+        "W": "sisältää gluteenia",
+        "K": "mausteinen valkosipulin maku",
+        "Y": "vegaaninen"
+      }
+    }
   },
   "Medication": {
     "frequencyHours": "Tiheys (tuntia)",

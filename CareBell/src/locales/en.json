@@ -129,7 +129,77 @@
     "FoodInfo": "Food Information",
 
     "addMeal": "Add Meal",
-    "mealTime": "Meal Time"
+    "mealTime": "Meal Time",
+    "searchPlaceholder": "Search for food by name...",
+    "noMatch": "No foods match your search",
+    "noFoods": "No foods found",
+    "startCamera": "Start Camera",
+    "stopCamera": "Stop Camera",
+    "qrScanned": "QR code scanned successfully. Looking up food information.",
+    "notFoundWithCode": "Food with code {{code}} not found.",
+    "notFoundSpoken": "Sorry, this food was not found.",
+    "noDescription": "No description available",
+    "includesLabel": "It includes:",
+    "diabeticFriendlyLabel": "Diabetic friendly:",
+    "diabeticFriendlyYes": "Yes",
+    "diabeticFriendlyNo": "No",
+  
+    "LegendHeadings": {
+      "Additives":  "Additives",
+      "Allergens":  "Allergens",
+      "Pictograms": "Pictograms"
+    },
+    "Legend": {
+      "Additives": {
+        "1": "Colorant",
+        "2": "Sulphured",
+        "3": "Phosphate",
+        "4": "Flavor enhancer",
+        "5": "Curing salt",
+        "6": "With sugar(s) and sweetener",
+        "7": "Antioxidant"
+      },
+      "Allergens": {
+        "contains gluten": "contains gluten",
+        "contains wheat": "contains wheat",
+        "contains rye": "contains rye",
+        "contains barley": "contains barley",
+        "contains oats": "contains oats",
+        "contains spelt": "contains spelt",
+        "contains kamut": "contains kamut",
+        "contains crustaceans": "contains crustaceans",
+        "contains egg": "contains egg",
+        "contains fish": "contains fish",
+        "contains peanuts": "contains peanuts",
+        "contains soybeans": "contains soybeans",
+        "contains milk and dairy products": "contains milk and dairy products",
+        "contains tree nuts": "contains tree nuts",
+        "contains almonds": "contains almonds",
+        "contains hazelnuts": "contains hazelnuts",
+        "contains walnuts": "contains walnuts",
+        "contains cashews": "contains cashews",
+        "contains pecans": "contains pecans",
+        "contains brazil nuts": "contains brazil nuts",
+        "contains pistachios": "contains pistachios",
+        "contains macadamia": "contains macadamia",
+        "contains celery": "contains celery",
+        "contains mustard": "contains mustard",
+        "contains sesame": "contains sesame",
+        "contains sulphite/sulfur dioxide": "contains sulphite/sulfur dioxide",
+        "contains lupin": "contains lupin",
+        "contains mollusks": "contains mollusks"
+      },
+      "Pictograms": {
+        "R": "contains beef",
+        "S": "contains pork",
+        "G": "contains poultry",
+        "M": "contains lactose",
+        "A": "contains alcohol",
+        "W": "contains gluten",
+        "K": "spicy garlic note",
+        "Y": "vegan"
+      }
+    }
   },
   "Medication": {
     "frequencyHours": "Frequecy (hours)",

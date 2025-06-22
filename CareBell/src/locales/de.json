@@ -11,7 +11,7 @@
     "noReminders": "Du hast keine gespeicherten Erinnerungen.",
     "fullscreen": "Vollbild",
     "exitFullscreen": "Vollbild verlassen",
-     "warningMessage": "Geef Bella geen persoonlijke informatie (wachtwoorden, achternamen, bankrekening, enz.)"
+    "warningMessage": "Geef Bella geen persoonlijke informatie (wachtwoorden, achternamen, bankrekening, enz.)"
   },
   "Calendar": {
     "Mon": "Montag",
@@ -126,7 +126,77 @@
     "FoodInfo": "Lebensmittelinformationen",
 
     "addMeal": "Mahlzeit hinzufügen",
-    "mealTime": "Essenszeit"
+    "mealTime": "Essenszeit",
+    "searchPlaceholder": "Suche Lebensmittel nach Name...",
+    "noMatch": "Keine Lebensmittel entsprechen deiner Suche",
+    "noFoods": "Keine Lebensmittel gefunden",
+    "startCamera": "Kamera starten",
+    "stopCamera": "Kamera stoppen",
+    "qrScanned": "QR-Code erfolgreich gescannt. Suche nach Informationen.",
+    "notFoundWithCode": "Lebensmittel mit Code {{code}} nicht gefunden.",
+    "notFoundSpoken": "Entschuldigung, dieses Lebensmittel wurde nicht gefunden.",
+    "noDescription": "Keine Beschreibung verfügbar",
+    "includesLabel": "Enthält:",
+    "diabeticFriendlyLabel": "Diabetikergeeignet:",
+    "diabeticFriendlyYes": "Ja",
+    "diabeticFriendlyNo": "Nein",
+  
+    "LegendHeadings": {
+      "Additives":  "Zusatzstoffe",
+      "Allergens":  "Allergene",
+      "Pictograms": "Piktogramme"
+    },
+    "Legend": {
+      "Additives": {
+        "1": "Farbstoff",
+        "2": "Geschwefelt",
+        "3": "Phosphat",
+        "4": "Geschmacksverstärker",
+        "5": "Pökelsalz",
+        "6": "Mit Zucker(n) und Süßstoff",
+        "7": "Antioxidationsmittel"
+      },
+      "Allergens": {
+        "contains gluten": "enthält Gluten",
+        "contains wheat": "enthält Weizen",
+        "contains rye": "enthält Roggen",
+        "contains barley": "enthält Gerste",
+        "contains oats": "enthält Hafer",
+        "contains spelt": "enthält Dinkel",
+        "contains kamut": "enthält Kamut",
+        "contains crustaceans": "enthält Krebstiere",
+        "contains egg": "enthält Ei",
+        "contains fish": "enthält Fisch",
+        "contains peanuts": "enthält Erdnüsse",
+        "contains soybeans": "enthält Sojabohnen",
+        "contains milk and dairy products": "enthält Milch und Milchprodukte",
+        "contains tree nuts": "enthält Schalenfrüchte",
+        "contains almonds": "enthält Mandeln",
+        "contains hazelnuts": "enthält Haselnüsse",
+        "contains walnuts": "enthält Walnüsse",
+        "contains cashews": "enthält Cashewnüsse",
+        "contains pecans": "enthält Pekannüsse",
+        "contains brazil nuts": "enthält Paranüsse",
+        "contains pistachios": "enthält Pistazien",
+        "contains macadamia": "enthält Macadamianüsse",
+        "contains celery": "enthält Sellerie",
+        "contains mustard": "enthält Senf",
+        "contains sesame": "enthält Sesam",
+        "contains sulphite/sulfur dioxide": "enthält Sulfit/Schwefeldioxid",
+        "contains lupin": "enthält Lupine",
+        "contains mollusks": "enthält Weichtiere"
+      },
+      "Pictograms": {
+        "R": "enthält Rindfleisch",
+        "S": "enthält Schweinefleisch",
+        "G": "enthält Geflügel",
+        "M": "enthält Laktose",
+        "A": "enthält Alkohol",
+        "W": "enthält Gluten",
+        "K": "würzige Knoblauchnote",
+        "Y": "vegan"
+      }
+    }
   },
   "Medication": {
     "frequencyHours": "Frequenz (Stunden)",
