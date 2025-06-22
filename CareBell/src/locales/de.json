@@ -114,7 +114,7 @@
     "friends": "Freunde treffen"
   },
   "Meals": {
-    "backToList": "Zurück zur Liste",
+    "back": "zurück zum Scanner",
     "ingredientsLabel": "Zutaten:",
     "loadingLabel": "Laden...",
     "SpeakingLabel": "Sprechen... (Zum Stoppen tippen)",
