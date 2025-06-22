@@ -52,7 +52,6 @@ export default function MeetWithFriends() {
   useEffect(() => {
     if (!user?.id) return;
 
-    console.log('🔌 Connecting to room management socket...');
     const newSocket = io(P2P_SIGNALING_URL, {
       transports: ['websocket', 'polling']
     });
@@ -67,7 +66,6 @@ export default function MeetWithFriends() {
 
     // Listen for real-time room updates
     newSocket.on('room-created', (room) => {
-      console.log('🆕 New room created:', room.name);
       setRooms(prev => {
         // Avoid duplicates
         const exists = prev.find(r => r.name === room.name);
@@ -77,17 +75,14 @@ export default function MeetWithFriends() {
     });
 
     newSocket.on('room-updated', (room) => {
-      console.log('🔄 Room updated:', room.name, 'participants:', room.participants.length);
       setRooms(prev => prev.map(r => r.name === room.name ? room : r));
     });
 
     newSocket.on('room-deleted', (data) => {
-      console.log('🗑️ Room deleted:', data.name);
       setRooms(prev => prev.filter(r => r.name !== data.name));
       
       // If user was in the deleted room, handle cleanup
       if (joinedRoom === data.name) {
-        console.log('🔄 Current room was deleted, leaving...');
         leaveRoom();
       }
     });
@@ -95,7 +90,6 @@ export default function MeetWithFriends() {
     setSocket(newSocket);
 
     return () => {
-      console.log('🧹 Cleaning up room management socket');
       newSocket.disconnect();
     };
   }, [user?.id]);
@@ -114,7 +108,6 @@ export default function MeetWithFriends() {
       const newMutedState = !isAudioMuted;
       audioTracks[0].enabled = !newMutedState;
       setIsAudioMuted(newMutedState);
-      console.log(`🎤 Audio ${newMutedState ? 'muted' : 'unmuted'}`);
     }
   };
 
@@ -126,7 +119,6 @@ export default function MeetWithFriends() {
       const newVideoOffState = !isVideoOff;
       videoTracks[0].enabled = !newVideoOffState;
       setIsVideoOff(newVideoOffState);
-      console.log(`📹 Video ${newVideoOffState ? 'disabled' : 'enabled'}`);
     }
   };
 
@@ -134,61 +126,45 @@ export default function MeetWithFriends() {
   useEffect(() => {
     if (!joinedRoom || !user?.id) return;
 
-    console.log('🔌 Initializing Deno P2P signaling for room:', joinedRoom);
     
     const signaling = new DenoP2PSignaling(joinedRoom, user.id);
     
     // Set up signaling event handlers
     signaling.onConnected = () => {
-      console.log('✅ Connected to Deno P2P signaling server');
       setSignalingConnected(true);
     };
 
     signaling.onDisconnected = () => {
-      console.log('🔌 Disconnected from Deno P2P signaling server');
       setSignalingConnected(false);
     };
 
     signaling.onError = (error) => {
-      console.error('❌ Deno P2P signaling error:', error);
       setSignalingConnected(false);
     };
 
     // Handle participants updates from Deno server
     signaling.onParticipantsUpdate = (participantList, newUser, leftUser) => {
-      console.log('👥 P2P Participants updated:', participantList);
       
       // Enforce P2P mesh limit
       if (participantList.length > MAX_P2P_PARTICIPANTS) {
-        console.warn(`⚠️ Too many participants (${participantList.length}). P2P mesh limited to ${MAX_P2P_PARTICIPANTS}`);
         alert(`Room limited to ${MAX_P2P_PARTICIPANTS} participants for optimal P2P performance.`);
         participantList = participantList.slice(0, MAX_P2P_PARTICIPANTS);
       }
       
       setParticipants(participantList);
 
-      if (newUser) {
-        console.log(`👋 New user joined: ${newUser}`);
-      }
-      if (leftUser) {
-        console.log(`👋 User left: ${leftUser}`);
-      }
     };
 
     // Handle P2P WebRTC signals from Deno server
     signaling.onP2PSignal = (fromUserId, signal) => {
-      console.log('📡 Received P2P signal from', fromUserId, ':', signal.type);
 
       setP2pConnections(currentConnections => {
         const manager = currentConnections.get(fromUserId);
         if (manager) {
           manager.handleSignal({ signal }).catch(err => {
-            console.error('❌ Error handling P2P signal from', fromUserId, ':', err);
             updateConnectionState(fromUserId, 'failed');
           });
-        } else {
-          console.warn('⚠️ No P2P WebRTC manager found for user:', fromUserId);
-        }
+        } 
         return currentConnections;
       });
     };
@@ -199,7 +175,6 @@ export default function MeetWithFriends() {
 
     // Cleanup on unmount
     return () => {
-      console.log('🧹 Cleaning up Deno P2P signaling');
       signaling.disconnect();
       setDenoSignaling(null);
       setSignalingConnected(false);
@@ -232,9 +207,7 @@ export default function MeetWithFriends() {
   useEffect(() => {
     async function fetchRooms() {
       try {
-        console.log('📋 Fetching rooms from backend...');
         const res = await axios.get(`${API}/rooms`);
-        console.log('✅ Rooms fetched:', res.data.length, 'rooms');
         setRooms(res.data);
       } catch (e) {
         console.error("❌ Error fetching rooms:", e);
@@ -249,16 +222,11 @@ export default function MeetWithFriends() {
       return;
     }
 
-    console.log('🔄 Processing P2P mesh changes for', user.id);
-    console.log('Current participants:', participants);
-    console.log('Current P2P connections:', Array.from(p2pConnections.keys()));
-
     // Create P2P connections for new participants (full mesh)
     participants.forEach(async (participantId) => {
       if (participantId === user.id) return; // Skip self
 
       if (!p2pConnections.has(participantId)) {
-        console.log('🆕 Creating P2P mesh connection for participant:', participantId);
         await createP2PConnection(participantId);
       }
     });
@@ -267,7 +235,6 @@ export default function MeetWithFriends() {
     const currentConnectionKeys = Array.from(p2pConnections.keys());
     currentConnectionKeys.forEach((participantId) => {
       if (!participants.includes(participantId)) {
-        console.log('🧹 Cleaning up P2P connection for participant who left:', participantId);
         cleanupP2PConnection(participantId);
       }
     });
@@ -281,7 +248,6 @@ export default function MeetWithFriends() {
       // Check retry attempts
       const attempts = retryAttempts.current.get(participantId) || 0;
       if (attempts >= P2P_CONFIG.MAX_RETRY_ATTEMPTS) {
-        console.log(`⚠️ Max retry attempts reached for P2P connection to ${participantId}`);
         updateConnectionState(participantId, 'failed');
         return;
       }
@@ -306,7 +272,6 @@ export default function MeetWithFriends() {
 
       // Set up connection failure handling
       manager.onConnectionFailed = () => {
-        console.log('🔄 P2P Connection failed with', participantId, 'attempting retry');
         
         // Increment retry count
         const newAttempts = (retryAttempts.current.get(participantId) || 0) + 1;
@@ -318,33 +283,24 @@ export default function MeetWithFriends() {
         // Retry after a delay if under max attempts
         if (newAttempts < P2P_CONFIG.MAX_RETRY_ATTEMPTS) {
           const timeoutId = setTimeout(() => {
-            console.log(`🔁 Retrying P2P connection with ${participantId} (attempt ${newAttempts + 1}/${P2P_CONFIG.MAX_RETRY_ATTEMPTS})`);
             createP2PConnection(participantId);
           }, P2P_CONFIG.RETRY_DELAY_BASE * newAttempts); // Exponential backoff
           
           connectionTimeouts.current.set(participantId, timeoutId);
         } else {
-          console.log(`❌ P2P connection to ${participantId} failed permanently after ${P2P_CONFIG.MAX_RETRY_ATTEMPTS} attempts`);
           updateConnectionState(participantId, 'failed');
         }
       };
 
       // Handle successful connection
       manager.onConnectionEstablished = (targetUserId) => {
-        console.log(`✅ P2P connection established with ${targetUserId}`);
         updateConnectionState(targetUserId, 'connected');
         retryAttempts.current.delete(targetUserId); // Reset retry count
       };
 
       // Handle remote stream
       manager.onRemoteStream = (stream) => {
-        console.log('🎥 Received P2P remote stream from', participantId);
-        console.log('Stream tracks:', stream.getTracks().map(t => ({ 
-          kind: t.kind, 
-          enabled: t.enabled, 
-          readyState: t.readyState 
-        })));
-
+       
         // Update state
         setRemoteStreams(prev => {
           const newMap = new Map(prev);
@@ -356,7 +312,6 @@ export default function MeetWithFriends() {
         setTimeout(() => {
           const videoRef = remoteVideoRefs.current.get(participantId);
           if (videoRef?.current) {
-            console.log('📺 Setting P2P video element for', participantId);
             videoRef.current.srcObject = stream;
             videoRef.current.volume = 1.0;
             videoRef.current.muted = false;
@@ -382,11 +337,9 @@ export default function MeetWithFriends() {
       updateConnectionState(participantId, 'connecting');
 
       // Initialize P2P connection
-      console.log('🚀 Initializing P2P mesh connection with', participantId, 'as initiator:', isInitiator);
       await manager.initialize(localStream, isInitiator);
 
     } catch (error) {
-      console.error('❌ Failed to create P2P connection with', participantId, ':', error);
       updateConnectionState(participantId, 'failed');
     }
   };
@@ -447,21 +400,18 @@ export default function MeetWithFriends() {
     if (!newRoomName.trim()) return;
     
     try {
-      console.log('🏗️ Creating room:', newRoomName);
       const { data } = await axios.post(`${API}/rooms/create`, {
         name: newRoomName,
         userId: user.id,
       });
       
       setNewRoomName("");
-      console.log('✅ Room created successfully:', data);
       
       // Automatically join the created room
       await joinRoom(data.name);
       
     } catch (e) {
       const errorMsg = e.response?.data?.error || e.message;
-      console.error('❌ Failed to create room:', errorMsg);
       alert("Failed to create room: " + errorMsg);
     }
   }
@@ -469,11 +419,9 @@ export default function MeetWithFriends() {
   // Join room with P2P mesh
   async function joinRoom(roomName) {
     if (!user?.id) {
-      console.error('❌ Cannot join room: user not ready');
       return;
     }
 
-    console.log('🚪 Joining P2P room:', roomName);
     
     try {
       // Notify backend that user is joining
@@ -482,7 +430,6 @@ export default function MeetWithFriends() {
         userId: user.id
       });
 
-      console.log('✅ Successfully joined room on backend:', response.data);
       setJoinedRoom(roomName);
 
       // Get media access with P2P optimized settings
@@ -490,11 +437,6 @@ export default function MeetWithFriends() {
         video: P2P_CONFIG.VIDEO_CONSTRAINTS,
         audio: P2P_CONFIG.AUDIO_CONSTRAINTS
       });
-
-      console.log('🎥 P2P Local stream obtained:', stream.getTracks().map(t => ({ 
-        kind: t.kind, 
-        enabled: t.enabled 
-      })));
 
       setLocalStream(stream);
       setIsInCall(true);
@@ -511,7 +453,6 @@ export default function MeetWithFriends() {
       // Note: Deno signaling connection will be established by the useEffect above
 
     } catch (error) {
-      console.error('❌ Error joining room:', error);
       const errorMsg = error.response?.data?.error || error.message;
       alert('Could not join room: ' + errorMsg);
       setJoinedRoom(null);
@@ -520,7 +461,6 @@ export default function MeetWithFriends() {
 
   // Stop P2P video call
   function leaveRoom() {
-    console.log('🛑 Leaving P2P room:', joinedRoom);
 
     // Reset fullscreen when leaving room
     setMeetFullscreen(false);
@@ -531,9 +471,9 @@ export default function MeetWithFriends() {
         roomName: joinedRoom,
         userId: user.id
       }).then(() => {
-        console.log('✅ Successfully left room on backend');
+        console.log('Successfully left room on backend');
       }).catch(error => {
-        console.error('❌ Error leaving room on backend:', error);
+        console.error('Error leaving room on backend:', error);
       });
     }
 
@@ -582,7 +522,6 @@ export default function MeetWithFriends() {
         sentCount++;
       }
     });
-    console.log(`📤 P2P message sent to ${sentCount}/${p2pConnections.size} peers`);
     return sentCount;
   };
 
@@ -888,20 +827,6 @@ export default function MeetWithFriends() {
               );
             })}
 
-            {/* Empty slots for potential participants */}
-            {participants.length < MAX_P2P_PARTICIPANTS && (
-              <div className="relative bg-gray-800 rounded-xl overflow-hidden shadow-2xl border-2 border-gray-600 border-dashed flex items-center justify-center">
-                <div className="text-center text-gray-400">
-                  <div className="text-4xl mb-2">👤</div>
-                  <p className="text-sm font-semibold">
-                    Waiting for participants...
-                  </p>
-                  <p className="text-xs mt-1">
-                    {MAX_P2P_PARTICIPANTS - participants.length} slots available
-                  </p>
-                </div>
-              </div>
-            )}
           </div>
 
           {/* P2P Statistics Panel (Debug Info) */}
