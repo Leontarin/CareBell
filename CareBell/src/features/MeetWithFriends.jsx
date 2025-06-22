@@ -499,7 +499,7 @@ export default function MeetWithFriends() {
           
           <div className="mb-6 text-center">
             <p className="text-gray-600 dark:text-gray-400 text-sm">
-              ⚡ True Peer-to-Peer Video Calls via Deno Deploy • Maximum {MAX_P2P_PARTICIPANTS} participants per room2
+              ⚡ True Peer-to-Peer Video Calls via Deno Deploy • Maximum {MAX_P2P_PARTICIPANTS} participants per room3
             </p>
           </div>
 
@@ -627,67 +627,77 @@ export default function MeetWithFriends() {
 
           {/* P2P Video Grid */}
           <div className="flex-1 bg-black p-6 overflow-hidden">
-  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 h-full min-h-0">
-    {/* Local Video */}
-    <div className="relative bg-gray-800 rounded-xl overflow-hidden shadow-2xl border-2 border-green-500">
-  <video
-    ref={localVideoRef}
-    autoPlay
-    muted
-    playsInline
-    className="w-full h-full object-cover"
-  />
-  {/* Small status dot in corner */}
-  <div className="absolute top-2 right-2 w-3 h-3 bg-green-500 rounded-full"></div>
-</div>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 h-full min-h-0">
+              {/* Local Video */}
+              <div className="relative bg-gray-800 rounded-xl overflow-hidden shadow-2xl border-2 border-green-500">
+                <video
+                  ref={localVideoRef}
+                  autoPlay
+                  muted
+                  playsInline
+                  className="w-full h-full object-cover"
+                />
+                {/* REMOVED: All overlay text */}
+              </div>
 
-    {/* P2P Remote Videos */}
-    {participants.filter(pid => pid !== user.id).map((participantId) => {
-      if (!remoteVideoRefs.current.has(participantId)) {
-        remoteVideoRefs.current.set(participantId, React.createRef());
-      }
-      
-      const videoRef = remoteVideoRefs.current.get(participantId);
-      const stream = remoteStreams.get(participantId);
-      const connectionState = connectionStates.get(participantId) || 'unknown';
-      
-      const getStatusColor = () => {
-        if (connectionState === 'connected' && stream) return 'bg-green-500';
-        if (connectionState === 'connecting') return 'bg-yellow-500';
-        if (connectionState === 'failed') return 'bg-red-500';
-        return 'bg-gray-500';
-      };
+              {/* P2P Remote Videos */}
+              {participants.filter(pid => pid !== user.id).map((participantId) => {
+                if (!remoteVideoRefs.current.has(participantId)) {
+                  remoteVideoRefs.current.set(participantId, React.createRef());
+                }
+                
+                const videoRef = remoteVideoRefs.current.get(participantId);
+                const stream = remoteStreams.get(participantId);
+                const connectionState = connectionStates.get(participantId) || 'unknown';
+                
+                return (
+                  <div key={participantId} className="relative bg-gray-800 rounded-xl overflow-hidden shadow-2xl border-2 border-blue-500">
+                    <video
+                      ref={videoRef}
+                      autoPlay
+                      playsInline
+                      controls={false}
+                      volume={1.0}
+                      muted={false}
+                      className="w-full h-full object-cover"
+                      onLoadedMetadata={(e) => {
+                        console.log('📊 Deno P2P Video metadata loaded for', participantId);
+                      }}
+                      onPlay={() => {
+                        console.log('▶️ Deno P2P Video started playing for', participantId);
+                      }}
+                      onError={(e) => {
+                        console.error('❌ Deno P2P Video error for', participantId, ':', e);
+                      }}
+                    />
+                    {/* REMOVED: All overlay text including user labels and connection status */}
+                  </div>
+                );
+              })}
+            </div>
 
-       return (
-    <div key={participantId} className="relative bg-gray-800 rounded-xl overflow-hidden shadow-2xl border-2 border-blue-500">
-      <video
-        ref={videoRef}
-        autoPlay
-        playsInline
-        controls={false}
-        volume={1.0}
-        muted={false}
-        className="w-full h-full object-cover"
-      />
-      {/* Small status dot */}
-      <div className={`absolute top-2 right-2 w-3 h-3 rounded-full ${getStatusColor()}`}></div>
-    </div>
-  );
-    })}
-  </div>
-
-  {/* Simplified P2P Call Info */}
-  <div className="mt-6 text-center">
-    <div className="bg-gray-800 rounded-lg p-4 inline-block">
-      <p className="text-white text-lg font-semibold">
-        🔗 Deno P2P Mesh Network Active
-      </p>
-      <p className="text-gray-300 text-sm mt-1">
-        Direct peer-to-peer connections • No server bandwidth used for media
-      </p>
-    </div>
-  </div>
-</div>
+            {/* P2P Call Info */}
+            <div className="mt-6 text-center">
+              <div className="bg-gray-800 rounded-lg p-4 inline-block">
+                <p className="text-white text-lg font-semibold">
+                  🔗 Deno P2P Mesh Network Active
+                </p>
+                <p className="text-gray-300 text-sm mt-1">
+                  Direct peer-to-peer connections via Deno Deploy signaling • No server bandwidth used for media
+                </p>
+                
+                {/* P2P Debug info in development */}
+                {process.env.NODE_ENV === 'development' && (
+                  <div className="mt-2 text-xs text-gray-400">
+                    <p>Deno Signaling: {signalingConnected ? '🟢 Connected' : '🔴 Disconnected'}</p>
+                    <p>Participants: {participants.join(', ')}</p>
+                    <p>P2P Connections: {Array.from(p2pConnections.keys()).join(', ')}</p>
+                    <p>Expected Mesh Connections: {participants.length > 1 ? (participants.length - 1) : 0}</p>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
         </div>
       )}
     </div>
