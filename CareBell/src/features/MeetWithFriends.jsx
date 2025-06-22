@@ -494,12 +494,12 @@ export default function MeetWithFriends() {
       {!joinedRoom ? (
         <div className="flex flex-col items-center justify-center h-full p-8">
           <h2 className="text-black dark:text-white text-3xl mb-4 font-bold">
-            🔗 {t("MeetWithFriends.Title")} (Deno P2P)
+            🔗 {t("MeetWithFriends.Title")}
           </h2>
           
           <div className="mb-6 text-center">
             <p className="text-gray-600 dark:text-gray-400 text-sm">
-              ⚡ True Peer-to-Peer Video Calls via Deno Deploy • Maximum {MAX_P2P_PARTICIPANTS} participants per room3
+              ⚡ True Peer-to-Peer Video Calls via Deno Deploy • Maximum {MAX_P2P_PARTICIPANTS} participants per room4
             </p>
           </div>
 
@@ -563,7 +563,7 @@ export default function MeetWithFriends() {
                           : 'bg-[#4f46e5] hover:bg-[#4338ca] text-white'
                       }`}
                     >
-                      {isRoomFull ? '🚫 Room Full' : '🔗 Join Deno P2P Call'}
+                      {isRoomFull ? '🚫 Room Full' : '🔗 Join Call'}
                     </button>
                   </div>
                 );
@@ -586,27 +586,11 @@ export default function MeetWithFriends() {
                 🔗 Deno P2P Room: {joinedRoom}
               </h2>
               <p className="text-gray-300 text-sm mt-1">
-                👥 {participants.length}/{MAX_P2P_PARTICIPANTS} participants • 
-                ⚡ {p2pStats.connectedPeers} P2P connections active
+                👥 {participants.length}/{MAX_P2P_PARTICIPANTS} participants 
+              
               </p>
               
-              {/* P2P Connection Status */}
-              <div className="flex gap-4 mt-2 text-xs">
-                <span className={signalingConnected ? "text-green-400" : "text-red-400"}>
-                  📡 Deno Signaling: {signalingConnected ? 'Connected' : 'Disconnected'}
-                </span>
-                <span className="text-green-400">
-                  ✅ Connected: {p2pStats.connectedPeers}
-                </span>
-                <span className="text-yellow-400">
-                  🔄 Total: {p2pStats.totalConnections}
-                </span>
-                {p2pStats.failedConnections > 0 && (
-                  <span className="text-red-400">
-                    ❌ Failed: {p2pStats.failedConnections}
-                  </span>
-                )}
-              </div>
+             
             </div>
             
             <div className="flex gap-3">
