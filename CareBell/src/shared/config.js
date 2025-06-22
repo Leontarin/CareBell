@@ -5,7 +5,7 @@ export const P2P_SIGNALING_URL = 'wss://carebellp2p.deno.dev';
 
 
 export const P2P_CONFIG = {
-  MAX_PARTICIPANTS: 6,
+  MAX_PARTICIPANTS: 10,
   CONNECTION_TIMEOUT: 30000,
   MAX_RETRY_ATTEMPTS: 3,
   RETRY_DELAY_BASE: 3000,

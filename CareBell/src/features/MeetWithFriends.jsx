@@ -32,6 +32,10 @@ export default function MeetWithFriends() {
     failedConnections: 0
   });
 
+  // Media control states
+  const [isAudioMuted, setIsAudioMuted] = useState(false);
+  const [isVideoOff, setIsVideoOff] = useState(false);
+
   // P2P Signaling
   const [denoSignaling, setDenoSignaling] = useState(null);
   const [signalingConnected, setSignalingConnected] = useState(false);
@@ -41,6 +45,31 @@ export default function MeetWithFriends() {
   const remoteVideoRefs = useRef(new Map()); // userId -> videoRef
   const connectionTimeouts = useRef(new Map());
   const retryAttempts = useRef(new Map()); // userId -> attemptCount
+
+  // Media control functions
+  const toggleAudio = () => {
+    if (!localStream) return;
+
+    const audioTracks = localStream.getAudioTracks();
+    if (audioTracks.length > 0) {
+      const newMutedState = !isAudioMuted;
+      audioTracks[0].enabled = !newMutedState;
+      setIsAudioMuted(newMutedState);
+      console.log(`🎤 Audio ${newMutedState ? 'muted' : 'unmuted'}`);
+    }
+  };
+
+  const toggleVideo = () => {
+    if (!localStream) return;
+
+    const videoTracks = localStream.getVideoTracks();
+    if (videoTracks.length > 0) {
+      const newVideoOffState = !isVideoOff;
+      videoTracks[0].enabled = !newVideoOffState;
+      setIsVideoOff(newVideoOffState);
+      console.log(`📹 Video ${newVideoOffState ? 'disabled' : 'enabled'}`);
+    }
+  };
 
   // Initialize Deno P2P signaling (replaces Socket.IO)
   useEffect(() => {
@@ -410,6 +439,10 @@ export default function MeetWithFriends() {
       setLocalStream(stream);
       setIsInCall(true);
 
+      // Reset media control states
+      setIsAudioMuted(false);
+      setIsVideoOff(false);
+
       // Set local video
       if (localVideoRef.current) {
         localVideoRef.current.srcObject = stream;
@@ -458,10 +491,12 @@ export default function MeetWithFriends() {
     setSignalingConnected(false);
     remoteVideoRefs.current.clear();
 
+    // Reset media control states
+    setIsAudioMuted(false);
+    setIsVideoOff(false);
+
     setJoinedRoom(null);
   }
-
-
 
   // Send P2P message to all connected peers
   const sendP2PMessageToAll = (message) => {
@@ -497,7 +532,7 @@ export default function MeetWithFriends() {
           
           <div className="mb-6 text-center">
             <p className="text-gray-600 dark:text-gray-400 text-sm">
-              ⚡ True Peer-to-Peer Video Calls via Deno Deploy • Maximum {MAX_P2P_PARTICIPANTS} participants per room5
+              ⚡ True Peer-to-Peer Video Calls via Deno Deploy • Maximum {MAX_P2P_PARTICIPANTS} participants per room
             </p>
           </div>
 
@@ -585,13 +620,35 @@ export default function MeetWithFriends() {
               </h2>
               <p className="text-gray-300 text-sm mt-1">
                 👥 {participants.length}/{MAX_P2P_PARTICIPANTS} participants 
-              
               </p>
-              
-             
             </div>
             
             <div className="flex gap-3">
+              {/* Media Control Buttons */}
+              <button
+                onClick={toggleAudio}
+                className={`px-4 py-2 rounded-lg font-semibold text-sm shadow-lg transition-colors ${
+                  isAudioMuted 
+                    ? 'bg-red-600 hover:bg-red-700 text-white' 
+                    : 'bg-green-600 hover:bg-green-700 text-white'
+                }`}
+                title={isAudioMuted ? 'Unmute microphone' : 'Mute microphone'}
+              >
+                {isAudioMuted ? '🔇 Unmute' : '🎤 Mute'}
+              </button>
+
+              <button
+                onClick={toggleVideo}
+                className={`px-4 py-2 rounded-lg font-semibold text-sm shadow-lg transition-colors ${
+                  isVideoOff 
+                    ? 'bg-red-600 hover:bg-red-700 text-white' 
+                    : 'bg-blue-600 hover:bg-blue-700 text-white'
+                }`}
+                title={isVideoOff ? 'Turn on camera' : 'Turn off camera'}
+              >
+                {isVideoOff ? '📹 Video On' : '📹 Video Off'}
+              </button>
+
               <button
                 onClick={leaveRoom}
                 className="px-6 py-3 bg-gray-600 text-white rounded-lg hover:bg-gray-700 font-semibold text-lg shadow-lg transition-colors"
@@ -613,7 +670,22 @@ export default function MeetWithFriends() {
                   playsInline
                   className="w-full h-full object-cover"
                 />
-                {/* REMOVED: All overlay text */}
+                {/* Media status indicators */}
+                <div className="absolute top-2 left-2 flex gap-1">
+                  {isAudioMuted && (
+                    <div className="bg-red-600 text-white px-2 py-1 rounded text-xs font-semibold">
+                      🔇 MUTED
+                    </div>
+                  )}
+                  {isVideoOff && (
+                    <div className="bg-red-600 text-white px-2 py-1 rounded text-xs font-semibold">
+                      📹 OFF
+                    </div>
+                  )}
+                </div>
+                <div className="absolute bottom-2 left-2 bg-black bg-opacity-70 text-white px-2 py-1 rounded text-sm font-semibold">
+                  You
+                </div>
               </div>
 
               {/* P2P Remote Videos */}
@@ -646,13 +718,13 @@ export default function MeetWithFriends() {
                         console.error('❌ Deno P2P Video error for', participantId, ':', e);
                       }}
                     />
-                    {/* REMOVED: All overlay text including user labels and connection status */}
+                    <div className="absolute bottom-2 left-2 bg-black bg-opacity-70 text-white px-2 py-1 rounded text-sm font-semibold">
+                      {participantId.substring(0, 8)}...
+                    </div>
                   </div>
                 );
               })}
             </div>
-
-          
           </div>
         </div>
       )}
