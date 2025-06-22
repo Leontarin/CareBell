@@ -73,7 +73,8 @@ export default function App() {
           id="mainContent"
           className="
             flex-1               /* fill remaining height */
-            flex flex-col md:flex-row gap-2
+            flex flex-col gap-2
+            landscape:flex-row   /* row layout in landscape orientation */
             overflow-hidden      /* hide any overflow—scroll in children only */
           "
         >

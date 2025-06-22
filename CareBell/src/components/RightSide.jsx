@@ -55,8 +55,8 @@ export default function RightSide() {
   const titleKey = TITLES[segment];
   const title = titleKey ? t(`RightSide.${titleKey}`) : "";
 
-  const heightClass = "h-[75vh]";
-  const widthClass  = "w-[48vw]";
+  const heightClass = 'h-full';
+  const widthClass = 'w-full landscape:w-3/5';
 
   if (!user) {
     return (
