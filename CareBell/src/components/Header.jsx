@@ -3,7 +3,7 @@
 import React, { useEffect, useState, useContext } from "react";
 import logo from "../resources/Logo_Gold_Blau_Rubik.png";
 import { Link } from "react-router-dom";
-import SettingsModal from "./SettingsModal";
+import SettingsModal from "../features/SettingsModal";
 import Calendar from "../features/Calendar";
 import { AppContext } from "../shared/AppContext";
 import { useTranslation } from "react-i18next";
