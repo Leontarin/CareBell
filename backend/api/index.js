@@ -3,6 +3,8 @@ const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors');
 const path = require('path');
+const { createServer } = require('http');
+const { Server } = require('socket.io');
 
 // ─── Route handlers ───────────────────────────────────────────────────────────
 const userRoute         = require('../routes/users');
@@ -18,6 +20,15 @@ const resourcesPath = express.static(path.join(__dirname, '..', 'resources'));
 
 // ─── App setup ────────────────────────────────────────────────────────────────
 const app = express();
+const server = createServer(app); // Create HTTP server
+const io = new Server(server, {
+  cors: {
+    origin: "*",
+    methods: ["GET", "POST"],
+    credentials: false
+  },
+  transports: ['websocket', 'polling']
+});
 
 app.use(cors({
   origin: '*',
@@ -29,6 +40,10 @@ app.use(express.json());
 mongoose.connect(process.env.MONGODB_URI)
   .then(() => console.log('✅ Connected to MongoDB'))
   .catch(err => console.error('❌ Could not connect to MongoDB:', err));
+
+// ─── Socket.IO Integration ───────────────────────────────────────────────────
+const setupSockets = require('../sockets');
+setupSockets(io);
 
 // ─── Routes ───────────────────────────────────────────────────────────────────
 app.use('/users',        userRoute);
@@ -42,7 +57,6 @@ app.use('/reminders',    reminderRoute);
 app.use('/rooms',        roomsRoute);
 app.use('/resources',    resourcesPath);
 
-
 app.get('/', (_req, res) => {
   res.send('API is live on Vercel! 🚀');
 });
@@ -50,10 +64,10 @@ app.get('/', (_req, res) => {
 // only start a listener when run directly (not when imported by Vercel)
 if (require.main === module) {
   const PORT = process.env.PORT || 4443;
-  app.listen(PORT, () => {
-    console.log(`✅ API started locally on ${PORT}`);
+  server.listen(PORT, () => { // Use server.listen instead of app.listen
+    console.log(`✅ API with Socket.IO started locally on ${PORT}`);
   });
 }
 
-// Export the Express app so Vercel can treat it as a serverless handler
-module.exports = app;
+// Export the server for Vercel
+module.exports = server;
