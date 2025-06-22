@@ -1,16 +1,17 @@
 const mongoose = require('mongoose');
 
 const roomSchema = new mongoose.Schema({
-  name: { type: String, required: true },
-  participants: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }],
+  name: { type: String, required: true, unique: true }, 
+  participants: [{ type: String, required: true }],
   createdAt: { type: Date, default: Date.now },
-  isActive: { type: Boolean, default: false }, // true if a call is ongoing
+  isActive: { type: Boolean, default: false },
 });
 
-// Remove room if no participants remain
+// Auto-delete room when no participants remain
 roomSchema.pre('save', function(next) {
   if (this.participants.length === 0) {
-    this.remove();
+    this.deleteOne();
+    return;
   }
   next();
 });
