@@ -84,24 +84,7 @@ export default function SettingsModal({ onClose }) {
           </div>
         </section>
 
-        {/* DARK MODE */}
-        <section className="mb-8">
-          <h3 className="text-xl font-semibold mb-3">
-            {t("SettingsModal.darkMode")}
-          </h3>
-          <label className="inline-flex items-center cursor-pointer">
-            <span className="mr-3 text-lg">{darkMode ? "On" : "Off"}</span>
-            <input
-              type="checkbox"
-              checked={darkMode}
-              onChange={(e) => setDarkMode(e.target.checked)}
-              className="sr-only peer"
-            />
-            <div
-              className="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer dark:bg-gray-700 peer-checked:bg-blue-600"
-            ></div>
-          </label>
-        </section>
+        
 
         {/* VOLUME */}
         <section className="mb-8">
@@ -153,7 +136,7 @@ export default function SettingsModal({ onClose }) {
               <select
                 value={i18n.language}
                 onChange={(e) => changeLanguage(e.target.value)}
-                className="border rounded px-2 py-1"
+                className="border rounded px-2 py-1 border-teal-400 dark:bg-blue-900 dark:hover:bg-blue-800"
               >
                 <option value="en">English</option>
                 <option value="he">עברית</option>
@@ -169,12 +152,12 @@ export default function SettingsModal({ onClose }) {
               </h3>
 
               {loadingUsers ? (
-                <p className="text-gray-600 dark:text-gray-300">{t("SettingsModal.loading")}</p>
+                <p className="text-gray-600 dark:text-gray-300 ">{t("SettingsModal.loading")}</p>
               ) : (
                 <select
                   value={user?.id || ""}
                   onChange={changeUser}
-                  className="border rounded px-2 py-1"
+                  className="border rounded px-2 py-1 border-teal-400 dark:bg-blue-900 dark:hover:bg-blue-800"
                 >
                   {users.map(u => (
                     <option key={u.id} value={u.id}>
@@ -185,6 +168,25 @@ export default function SettingsModal({ onClose }) {
               )}
             </div>
           </div>
+        </section>
+
+        {/* DARK MODE */}
+        <section className="mb-8">
+          <h3 className="text-xl font-semibold mb-3">
+            {t("SettingsModal.darkMode")}
+          </h3>
+          <label className="inline-flex items-center cursor-pointer">
+            <span className="mr-3 text-lg">{darkMode ? "On" : "Off"}</span>
+            <input
+              type="checkbox"
+              checked={darkMode}
+              onChange={(e) => setDarkMode(e.target.checked)}
+              className="sr-only peer"
+            />
+            <div
+              className="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer dark:bg-gray-700 peer-checked:bg-blue-600"
+            ></div>
+          </label>
         </section>
 
         {/* Close Button */}

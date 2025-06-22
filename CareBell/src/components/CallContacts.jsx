@@ -107,7 +107,7 @@ export default function CallContacts() {
           value={query}
           onChange={e => setQuery(e.target.value)}
           placeholder={t("CallContacts.searchPlaceholder")}
-          className="flex-1 rounded-md border-2 border-blue-900 dark:border-blue-300 focus:border-blue-700 focus:ring-blue-700 text-base px-4 py-2 bg-white dark:bg-gray-800 dark:text-gray-100"
+          className="flex-1 rounded-md border-2 border-blue-900 dark:border-yellow-300 focus:border-blue-700 focus:ring-blue-700 text-base px-4 py-2 bg-white dark:bg-gray-800 dark:text-gray-100"
         />
         {!isAdding && (
           <button
@@ -170,7 +170,7 @@ export default function CallContacts() {
                 value={form[f.name]}
                 onChange={handleChange}
                 placeholder={f.placeholder}
-                className="mt-1 w-full rounded-md border-2 border-blue-900 dark:border-blue-300 focus:border-blue-700 focus:ring-blue-700 text-base px-3 py-2 bg-white dark:bg-gray-800 dark:text-gray-100"
+                className="mt-1 w-full rounded-md border-2 border-blue-900 dark:border-yellow-300 focus:border-blue-700 focus:ring-blue-700 text-base px-3 py-2 bg-white dark:bg-gray-800 dark:text-gray-100"
               />
             </div>
           ))}
@@ -180,7 +180,7 @@ export default function CallContacts() {
                 setIsAdding(false);
                 setForm({ fullName: "", phoneNumber: "", relationship: "" });
               }}
-              className="px-4 py-2 rounded-lg bg-gray-300 hover:bg-gray-400 text-sm transition"
+              className="px-4 py-2 rounded-lg bg-gray-600 hover:bg-gray-500 text-sm transition"
             >
               {t("CallContacts.cancel")}
             </button>

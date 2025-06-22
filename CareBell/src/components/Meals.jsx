@@ -386,7 +386,7 @@ function Meals() {
                 placeholder="Search for food by name..."
                 value={searchTerm}
                 onChange={handleSearch}
-                className="w-full px-5 py-4 text-xl border-2 border-gray-300 rounded-lg focus:border-blue-500 focus:outline-none"
+                className="w-full px-5 py-4 text-xl border-2 border-gray-300 rounded-lg focus:border-blue-500 focus:outline-none dark:border-yellow-300 dark:bg-gray-600"
                 aria-label="Search for food"
               />
               <div className="absolute right-4 top-1/2 transform -translate-y-1/2 text-2xl text-gray-500">
@@ -410,7 +410,7 @@ function Meals() {
               {filteredMeals.map((food) => (
                 <li 
                   key={food._id} 
-                  className="border border-gray-200 rounded-lg overflow-hidden shadow-md hover:shadow-lg transition-shadow"
+                  className="border border-gray-200 rounded-lg overflow-hidden shadow-md hover:shadow-lg transition-shadow dark:border-yellow-400"
                 >
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                     {/* Food Image */}
@@ -475,7 +475,7 @@ function Meals() {
       {/* Loading Indicator */}
       {loading && (
         <div className="flex flex-col items-center justify-center my-8 py-6">
-          <div className="animate-spin rounded-full h-16 w-16 border-b-4 border-blue-500 mb-4"></div>
+          <div className="animate-spin rounded-full h-16 w-16 border-b-4 border-blue-500 mb-4 dark:border-yellow-500"></div>
           <p className="text-2xl text-gray-600">{t("Meals.loadingLabel")}</p>
         </div>
       )}
@@ -540,7 +540,7 @@ function Meals() {
             <h3 className="text-2xl font-semibold text-gray-800 mb-3">{t("Meals.ingredientsLabel")}</h3>
             <ul className="bg-white rounded-lg p-5 border border-gray-100 shadow-sm">
               {meal.ingredients.map((item, idx) => (
-                <li key={idx} className="py-3 text-xl border-b border-gray-100 last:border-0 flex items-center">
+                <li key={idx} className="py-3 text-xl border-b border-gray-100 last:border-0 flex items-center dark:border-yellow-300">
                   <span className="mr-3 text-green-500 text-2xl">✓</span>
                   {item}
                 </li>

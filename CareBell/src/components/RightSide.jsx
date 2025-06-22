@@ -78,7 +78,7 @@ export default function RightSide() {
                 <Link
                   key={to}
                   to={to}
-                  className="flex flex-col items-center justify-center border-2 border-blue-900 dark:border-blue-300 rounded-xl p-6 hover:bg-blue-100 dark:hover:bg-blue-900/30 transition whitespace-nowrap"
+                  className="flex flex-col items-center justify-center border-2 border-blue-900 dark:border-yellow-300 rounded-xl p-6 hover:bg-blue-100 dark:hover:bg-blue-900/30 transition whitespace-nowrap"
                 >
                   <Icon className="text-4xl mb-2 text-blue-900 dark:text-blue-200" />
                   <span className="text-lg font-semibold text-blue-900 dark:text-blue-200">
@@ -97,7 +97,7 @@ export default function RightSide() {
             <div className="flex items-center mb-4">
               <button
                 onClick={() => navigate(-1)}
-                className="flex items-center gap-2 px-3 py-2 bg-white dark:bg-gray-800 border-2 border-blue-900 dark:border-blue-300 rounded-lg text-blue-900 dark:text-blue-200 font-semibold hover:bg-blue-50 dark:hover:bg-blue-900/30 transition"
+                className="flex items-center gap-2 px-3 py-2 bg-white dark:bg-gray-800 border-2 border-blue-900 dark:border-yellow-300 rounded-lg text-blue-900 dark:text-blue-200 font-semibold hover:bg-blue-50 dark:hover:bg-blue-900/30 transition"
               >
                 <FaArrowLeft /> {t("RightSide.back")}
               </button>

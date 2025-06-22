@@ -290,14 +290,14 @@ export default function Bella() {
 
   const btnClass = `
     inline-flex items-center justify-center
-    text-base border-2 border-blue-900 rounded-xl
+    text-base border-2 border-blue-600 dark:border-yellow-300 rounded-xl
     py-2 px-4 bg-blue-900 text-white font-semibold
     hover:bg-blue-800 focus:outline-none focus:ring-2 focus:ring-white
     transition
   `;
   const chatBtnClass = `
     inline-flex items-center justify-center
-    border-2 border-blue-700 rounded-full
+    border-2 border-blue-600 dark:border-yellow-300 rounded-full
     py-1 px-4 text-sm bg-blue-700 text-white font-semibold
     hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-300
     transition mb-4
@@ -314,7 +314,7 @@ export default function Bella() {
       <div className="flex flex-col items-center">
         <div
           id="bella-img"
-          className={`rounded-full overflow-hidden border-[5px] border-blue-800 mb-2 ${imageSize}`}
+          className={`rounded-full overflow-hidden border-[5px] border-blue-800 dark:border-yellow-300 mb-2 ${imageSize}`}
         >
           <img src={bella_img} alt="Bella" className="w-full h-full object-cover" />
         </div>

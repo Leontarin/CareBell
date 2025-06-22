@@ -140,7 +140,7 @@ export default function Medication() {
           ))}
 
           <div className="flex justify-end gap-4">
-            <button onClick={() => setIsAdding(false)} className="px-5 py-2 rounded-xl bg-gray-300 hover:bg-gray-400 transition text-lg">
+            <button onClick={() => setIsAdding(false)} className="px-5 py-2 rounded-xl bg-gray-600 hover:bg-gray-500 transition text-lg">
               {t("Medication.cancel")}
             </button>
             <button

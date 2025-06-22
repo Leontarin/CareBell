@@ -425,7 +425,7 @@ export default function MeetWithFriends() {
   if (!user?.id) {
     return (
       <div className="w-full h-full bg-gradient-to-br from-gray-800 to-gray-900 flex items-center justify-center">
-        <div className="text-center p-12 bg-gray-800 rounded-2xl shadow-2xl border border-gray-700">
+        <div className="text-center p-12 bg-blue-300 dark:bg-gray-800 rounded-2xl shadow-2xl border border-gray-700">
           <div className="text-6xl mb-6">🔐</div>
           <h2 className="text-white text-3xl font-bold mb-4">Authentication Required</h2>
           <p className="text-gray-300 text-lg">Please log in to access video rooms</p>
@@ -436,11 +436,11 @@ export default function MeetWithFriends() {
 
   // Main render
   return (
-    <div className="w-full h-full bg-gray-900 relative overflow-hidden">
+    <div className="w-full h-full bg-blue-300 dark:bg-gray-900 relative overflow-hidden">
       {/* 5) If no room is joined, show room list + "Create Room" input */}
       {!joinedRoom ? (
         <div className="flex flex-col items-center justify-center h-full p-8">
-          <h2 className="text-white text-3xl mb-8 font-bold"> {t("MeetWithFriends.Title")}</h2>
+          <h2 className="text-black dark:text-white text-3xl mb-8 font-bold"> {t("MeetWithFriends.Title")}</h2>
 
           <div className="mb-8 flex items-center">
             <input
@@ -459,22 +459,22 @@ export default function MeetWithFriends() {
           </div>
 
           <div className="w-full max-w-2xl">
-            <h3 className="text-white text-xl mb-4">{t("MeetWithFriends.availableRooms")}</h3>
+            <h3 className="text-black dark:text-white text-xl mb-4">{t("MeetWithFriends.availableRooms")}</h3>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
   {rooms.map((r) => {
     const participantCount = roomParticipants.get(r.name) || 0;
     return (
       <div
         key={r._id}
-        className="flex flex-col justify-between bg-[#2b2b2f] border border-gray-700 rounded-xl p-6 shadow-md hover:shadow-xl transition duration-300"
+        className="flex flex-col justify-between bg-blue-100 dark:bg-[#2b2b2f] border border-blue-700 rounded-xl p-6 shadow-md hover:shadow-xl transition duration-300 dark:border-yellow-400"
         style={{ minHeight: '200px' }}
       >
         {/*Title and the name of the room*/}
         <div>
-          <h4 className="text-white text-xl font-semibold mb-1">
+          <h4 className="text-blue-900 dark:text-white text-xl font-semibold mb-1">
             {r.name}
           </h4>
-          <p className="text-gray-400 text-sm">
+          <p className="text-gray-700 dark:text-gray-400 text-sm">
             👥 {participantCount} {t("MeetWithFriends.participant")}
             {participantCount !== 1 ? t("MeetWithFriends.s") : ""} {t("MeetWithFriends.online")}
           </p>

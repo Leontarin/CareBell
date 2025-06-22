@@ -205,7 +205,7 @@ export default function Calendar({ onClose }) {
         {/* Month grid */}
         <div className="flex-1 overflow-auto grid grid-cols-7 grid-rows-7 divide-y divide-x divide-gray-300">
           {[t("Calendar.Mon"),t("Calendar.Tue"),t("Calendar.Wed"),t("Calendar.Thu"),t("Calendar.Fri"),t("Calendar.Sat"),t("Calendar.Sun")].map(w => (
-            <div key={w} className="p-2 bg-blue-300 dark:bg-gray-700 text-white font-semibold text-center">{w}</div>
+            <div key={w} className="p-2 bg-blue-300 dark:bg-blue-700 text-white font-semibold text-center">{w}</div>
           ))}
           {grid.map((day, idx) =>
             day ? (
@@ -216,8 +216,8 @@ export default function Calendar({ onClose }) {
                   day.toDateString() === todayString
                     ? "bg-blue-400 text-white dark:bg-blue-700"
                     : day < new Date()
-                      ? "bg-gray-300 text-gray-700 dark:bg-gray-700 dark:text-gray-300"
-                      : "bg-blue-100 text-blue-900 dark:bg-gray-600 dark:text-gray-100"
+                      ? "bg-gray-300 text-gray-700 dark:bg-cyan-900 dark:text-gray-300"
+                      : "bg-blue-100 text-blue-900 dark:bg-cyan-700 dark:text-gray-100"
 
                 }`}
               >
@@ -254,11 +254,15 @@ export default function Calendar({ onClose }) {
 
                 <button
                   onClick={ev => { ev.stopPropagation(); openNew(day); }}
-                  className="absolute bottom-1 right-1 text-green-600 font-bold"
+                  className="w-8 h-8 absolute bottom-1 right-1 bg-teal-500 hover:bg-teal-600 text-white rounded-full flex items-center justify-center"
                 >
-                  {t("Calendar.add")}
+                  <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M12 5v14M5 12h14" />
+                  </svg>
                 </button>
+
               </div>
+              
             ) : (
               <div key={idx} className="bg-blue-100 dark:bg-gray-800" />
             )
