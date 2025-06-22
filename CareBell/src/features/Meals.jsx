@@ -3,10 +3,11 @@ import React, { useState, useEffect, useContext } from "react";
 import BarcodeScannerComponent from "react-qr-barcode-scanner";
 import { API } from "../shared/config";
 import { useTranslation } from "react-i18next";
+import { playTts } from "../shared/tts";
 import { AppContext } from "../shared/AppContext";
 
 export default function Meals() {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const { user } = useContext(AppContext);
   const userAllergens = user?.Allergens || [];
 
@@ -19,13 +20,16 @@ export default function Meals() {
   const [loading,       setLoading]       = useState(false);
   const [error,         setError]         = useState("");
   const [speaking,      setSpeaking]      = useState(false);
+  const [audioObj,      setAudioObj]      = useState(null);
 
   /* ---------- effects ---------- */
   useEffect(() => {
     fetchAllMeals();
   }, []);
 
-  useEffect(() => () => window.speechSynthesis.cancel(), []);
+  useEffect(() => () => {
+    if (audioObj) audioObj.pause();
+  }, [audioObj]);
 
   /* ---------- locale helpers ---------- */
   const trAdditives  = codes => (codes || []).map(c => t(`Meals.Legend.Additives.${c}`));
@@ -55,35 +59,57 @@ export default function Meals() {
     if (!scanning) speakText(t("Meals.positionLabel"));
   };
 
-  const speakText = text => {
+  const speakText = async text => {
     stopSpeaking();
     if (!text) return;
-    const u = new SpeechSynthesisUtterance(text);
-    u.rate = 0.8; u.pitch = 1; u.volume = 1;
-    // … choose voice …
-    u.onstart = () => setSpeaking(true);
-    u.onend   = () => setSpeaking(false);
-    window.speechSynthesis.speak(u);
+    try {
+      const lang = i18n.language.split('-')[0];
+      const audio = await playTts(text, lang);
+      setAudioObj(audio);
+      setSpeaking(true);
+      audio.onended = () => {
+        setSpeaking(false);
+        setAudioObj(null);
+      };
+    } catch (err) {
+      console.error('TTS error:', err);
+    }
   };
 
   const stopSpeaking = () => {
-    window.speechSynthesis.cancel();
+    if (audioObj) {
+      audioObj.pause();
+      audioObj.currentTime = 0;
+      setAudioObj(null);
+    }
     setSpeaking(false);
   };
 
   const createFoodDescription = item => {
-    let desc = `${t("Meals.FoodInfo")}: ${item.Dish}. `;
-    desc += `${item.Description || t("Meals.noDescription")}. `;
-    desc += item.diabetic_friendly
-      ? `${t("Meals.diabeticFriendlyYes")}. `
-      : `${t("Meals.diabeticFriendlyNo")}. `;
-
-    const extras = [
-      ...trAllergens(item.Allergens),
-      ...trAdditives(item.Additives),
-      ...trPictograms(item.Pictograms)
-    ];
-    if (extras.length) desc += `${t("Meals.includesLabel")} ${extras.join(", ")}.`;
+    // 1. Meal Name + Description
+    let desc = `${item.Dish}. ${item.Description || t("Meals.noDescription")}. `;
+  
+    // 2. It's [NOT] Diabetic Friendly
+    desc += `It's ${item.diabetic_friendly ? "" : "NOT "}Diabetic Friendly. `;
+  
+    // 3. Allergens
+    if (item.Allergens && item.Allergens.length) {
+      const allergenList = trAllergens(item.Allergens).join(", ");
+      desc += `Allergens: ${allergenList}. `;
+    }
+  
+    // 4. Additives
+    if (item.Additives && item.Additives.length) {
+      const additiveList = trAdditives(item.Additives).join(", ");
+      desc += `Additives: ${additiveList}. `;
+    }
+  
+    // 5. Pictograms
+    if (item.Pictograms && item.Pictograms.length) {
+      const pictogramList = trPictograms(item.Pictograms).join(", ");
+      desc += `${pictogramList}.`;
+    }
+  
     return desc;
   };
 
