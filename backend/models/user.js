@@ -57,6 +57,14 @@ const userSchema = new mongoose.Schema({
   Y: {
     type: Number,
     default: 0
+  },
+  Allergens: {
+    type: [String],
+    default: []
+  },
+  Diabetic: {
+    type: Boolean,
+    default: false
   }
 }, {
   timestamps: true

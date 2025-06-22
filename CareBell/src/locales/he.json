@@ -143,6 +143,7 @@
     "diabeticFriendlyLabel": "ידידותי לסוכרת:",
     "diabeticFriendlyYes": "כן",
     "diabeticFriendlyNo": "לא",
+    "allergyWarning": "את/ה אלרגי/ת לפריטים הבאים במנה:",
   
     "LegendHeadings": {
       "Additives":  "תוספים",
@@ -251,10 +252,17 @@
   },
   "SettingsModal": {
     "title": "הגדרות",
+    "general": "כללי",
+    "health": "בריאות",
     "textSize": "גודל טקסט",
     "volume": "עוצמת קול",
     "speakingSpeed": "מהירות דיבור",
     "darkMode": "מצב חשוך",
+    "diabetic": "סוכרתי",
+    "allergens": "אלרגנים",
+    "saveSuccess": "נשמר בהצלחה.",
+    "saveError": "השמירה נכשלה.",
+    "save": "שמור",
     "close": "סגור",
     "language": "בחירת שפה",
     "User": "החלף משתמש",

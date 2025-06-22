@@ -140,6 +140,7 @@
     "diabeticFriendlyLabel": "Diabetikergeeignet:",
     "diabeticFriendlyYes": "Ja",
     "diabeticFriendlyNo": "Nein",
+    "allergyWarning": "Sie sind allergisch gegen Folgendes im Gericht:",
   
     "LegendHeadings": {
       "Additives":  "Zusatzstoffe",
@@ -249,10 +250,17 @@
   },
   "SettingsModal": {
     "title": "Einstellungen",
+    "general": "Allgemein",
+    "health": "Gesundheit",
     "textSize": "Textgröße",
     "volume": "Lautstärke",
     "speakingSpeed": "Sprechgeschwindigkeit",
     "darkMode": "Dunkelmodus",
+    "diabetic": "Diabetiker",
+    "allergens": "Allergene",
+    "saveSuccess": "Erfolgreich gespeichert.",
+    "saveError": "Speichern fehlgeschlagen.",
+    "save": "Speichern",
     "close": "Schließen",
     "language": "Sprache",
     "User": "Benutzer wechseln",

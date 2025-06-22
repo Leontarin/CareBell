@@ -41,6 +41,8 @@ router.post("/addUser", async (req, res) => {
     W,
     K,
     Y,
+    Allergens,
+    Diabetic,
   } = req.body;
 
   const newUser = new User({
@@ -58,11 +60,29 @@ router.post("/addUser", async (req, res) => {
     W,
     K,
     Y,
+    Allergens: Allergens || [],
+    Diabetic: Diabetic || false,
   });
 
   try {
     const saved = await newUser.save();
     res.status(201).json(saved);
+  } catch (e) {
+    res.status(400).json({ message: e.message });
+  }
+});
+
+// Update an existing user by id
+router.put("/:id", async (req, res) => {
+  try {
+    const updates = req.body;
+    const user = await User.findOneAndUpdate(
+      { id: req.params.id },
+      updates,
+      { new: true }
+    );
+    if (!user) return res.status(404).json({ message: "Not found" });
+    res.json(user);
   } catch (e) {
     res.status(400).json({ message: e.message });
   }

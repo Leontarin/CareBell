@@ -141,6 +141,7 @@
     "diabeticFriendlyLabel": "Diabeetikkoystävällinen:",
     "diabeticFriendlyYes": "Kyllä",
     "diabeticFriendlyNo": "Ei",
+    "allergyWarning": "Olet allerginen aterian seuraaville aineksille:",
   
     "LegendHeadings": {
       "Additives":  "Lisäaineet",
@@ -249,10 +250,17 @@
   },
   "SettingsModal": {
     "title": "Asetukset",
+    "general": "Yleiset",
+    "health": "Terveys",
     "textSize": "Tekstin koko",
     "volume": "Äänenvoimakkuus",
     "speakingSpeed": "Puhenopeus",
     "darkMode": "Tumma tila",
+    "diabetic": "Diabeetikko",
+    "allergens": "Allergeenit",
+    "saveSuccess": "Tallennus onnistui.",
+    "saveError": "Tallennus epäonnistui.",
+    "save": "Tallenna",
     "close": "Sulje",
     "language": "kieli",
     "User": "Vaihda käyttäjää",
