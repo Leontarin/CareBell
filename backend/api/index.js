@@ -16,6 +16,7 @@ const newsRoute         = require('../routes/news');
 const exercisesRoute    = require('../routes/exercises');
 const reminderRoute     = require('../routes/reminders');
 const roomsRoute        = require('../routes/rooms');
+const ttsRoute          = require('../routes/tts');
 const resourcesPath = express.static(path.join(__dirname, '..', 'resources'));
 
 // ─── App setup ────────────────────────────────────────────────────────────────
@@ -56,6 +57,7 @@ app.use('/exercises',    exercisesRoute);
 app.use('/reminders',    reminderRoute);
 app.use('/rooms',        roomsRoute);
 app.use('/resources',    resourcesPath);
+app.use('/tts',          ttsRoute);
 
 app.get('/', (_req, res) => {
   res.send('API is live on Vercel! 🚀');
