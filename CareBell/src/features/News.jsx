@@ -79,6 +79,7 @@ export default function News() {
     const controller = new AbortController();
     abortRef.current = controller;
     setTtsLoading(true);
+    setCurrentArticleIndex(index);
     try {
       const lang = i18n.language.split('-')[0];
       const audio = await playTts(text, lang, controller.signal);
@@ -86,7 +87,6 @@ export default function News() {
       setTtsLoading(false);
       setAudioObj(audio);
       setSpeaking(true);
-      setCurrentArticleIndex(index);
       audio.onended = () => {
         setSpeaking(false);
         setCurrentArticleIndex(null);

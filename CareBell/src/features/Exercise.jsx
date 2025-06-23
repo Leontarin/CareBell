@@ -89,6 +89,7 @@ function Exercise() {
     const controller = new AbortController();
     abortRef.current = controller;
     setTtsLoading(true);
+    setCurrentSpeakingId(exerciseId);
     try {
       const lang = i18n.language.split('-')[0];
       const audio = await playTts(text, lang, controller.signal);
@@ -96,7 +97,6 @@ function Exercise() {
       setTtsLoading(false);
       setAudioObj(audio);
       setSpeaking(true);
-      setCurrentSpeakingId(exerciseId);
       audio.onended = () => {
         setSpeaking(false);
         setCurrentSpeakingId(null);
