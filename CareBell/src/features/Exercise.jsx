@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from "react";
 import { API } from "../shared/config";
 import { useTranslation } from "react-i18next";
+import { playTts } from "../shared/tts";
 
 function Exercise() {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const [exercises, setExercises] = useState([]);
   const [filteredExercises, setFilteredExercises] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -13,18 +14,16 @@ function Exercise() {
   const [selectedExercise, setSelectedExercise] = useState(null);
   const [speaking, setSpeaking] = useState(false);
   const [currentSpeakingId, setCurrentSpeakingId] = useState(null);
+  const [audioObj, setAudioObj] = useState(null);
 
   // Fetch exercises when component mounts
   useEffect(() => {
     fetchExercises();
-    
-    // Clean up speech on unmount
-    return () => {
-      if (window.speechSynthesis) {
-        window.speechSynthesis.cancel();
-      }
-    };
   }, []);
+
+  useEffect(() => () => {
+    if (audioObj) audioObj.pause();
+  }, [audioObj]);
 
   // Filter exercises when filters change
   useEffect(() => {
@@ -78,58 +77,39 @@ function Exercise() {
   };
 
   // Text-to-speech function with native voice selection
-  const speakText = (text, exerciseId) => {
+  const speakText = async (text, exerciseId) => {
     // Stop any ongoing speech
     stopSpeaking();
-    
+
     if (!text) return;
-    
+
     try {
-      const utterance = new SpeechSynthesisUtterance(text);
-      
-      // Set properties for elderly-friendly speech
-      utterance.rate = 0.8;  // Slower speed for elderly
-      utterance.pitch = 1;   // Normal pitch
-      utterance.volume = 1;  // Full volume
-      
-      // Try to get a native American English voice
-      const voices = window.speechSynthesis.getVoices();
-      const bestVoice = voices.find(voice => 
-        voice.lang === 'en-US' && 
-        (voice.name.includes('Samantha') || 
-         voice.name.includes('Alex') ||     
-         voice.name.includes('Daniel') ||  
-         voice.name.includes('David'))
-      ) || voices.find(voice => voice.lang === 'en-US');
-      
-      if (bestVoice) {
-        utterance.voice = bestVoice;
-      }
-      
-      // Start and end events
-      utterance.onstart = () => {
-        setSpeaking(true);
-        setCurrentSpeakingId(exerciseId);
-      };
-      utterance.onend = () => {
+      const lang = i18n.language.split('-')[0];
+      const audio = await playTts(text, lang);
+
+      audio.onended = () => {
         setSpeaking(false);
         setCurrentSpeakingId(null);
+        setAudioObj(null);
       };
-      
-      // Speak the text
-      window.speechSynthesis.speak(utterance);
+
+      setSpeaking(true);
+      setCurrentSpeakingId(exerciseId);
+      setAudioObj(audio);
     } catch (err) {
-      console.error("Speech synthesis error:", err);
+      console.error('TTS error:', err);
     }
   };
 
   // Stop speaking function
   const stopSpeaking = () => {
-    if (window.speechSynthesis) {
-      window.speechSynthesis.cancel();
-      setSpeaking(false);
-      setCurrentSpeakingId(null);
+    if (audioObj) {
+      audioObj.pause();
+      audioObj.currentTime = 0;
+      setAudioObj(null);
     }
+    setSpeaking(false);
+    setCurrentSpeakingId(null);
   };
 
   // Create exercise description for speech
