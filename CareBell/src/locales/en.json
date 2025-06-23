@@ -99,7 +99,8 @@
     "duration": "It lasts for: ",
     "benefitsIntro": "Key benefits include",
     "fetchError": "Error fetching exercises: {{message}}",
-    "targets": "Targets"
+    "targets": "Targets",
+    "loadingSpeech": "Loading..."
   },
   "Header": {
     "Emergency": "Emergency",
@@ -121,6 +122,7 @@
     "ingredientsLabel": "Ingredients:",
     "loadingLabel": "Loading...",
     "SpeakingLabel": "Speaking... (Tap to Stop)",
+    "loadingSpeech": "Loading...",
     "barcodeLabel": "Barcode:",
     "availableFoodsLabel": "Available Foods",
     "positionLabel": "Position QR code within the red frame",
@@ -240,7 +242,8 @@
   },
   "News": {
     "latestNews": "Latest News",
-    "readMore": "Read more"
+    "readMore": "Read more",
+    "loadingSpeech": "Loading..."
   },
   "RightSide": {
     "callContacts":     "Call Contacts",

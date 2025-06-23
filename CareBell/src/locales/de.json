@@ -97,7 +97,8 @@
     "difficultyIntro": "Diese Übung hat den Schwierigkeitsgrad {{level}}",
     "benefitsIntro": "Hauptvorteile sind",
     "fetchError": "Fehler beim Laden der Übungen: {{message}}",
-    "targets": "Zielbereiche"
+    "targets": "Zielbereiche",
+    "loadingSpeech": "Laden..."
   },
   "Header": {
     "Emergency": "Notfall",
@@ -118,6 +119,7 @@
     "ingredientsLabel": "Zutaten:",
     "loadingLabel": "Laden...",
     "SpeakingLabel": "Sprechen... (Zum Stoppen tippen)",
+    "loadingSpeech": "Laden...",
     "barcodeLabel": "Barcode:",
     "availableFoodsLabel": "Verfügbare Lebensmittel",
     "positionLabel": "Barcode innerhalb des roten Rahmens positionieren",
@@ -236,7 +238,8 @@
   },
   "News": {
     "latestNews": "Neueste Nachrichten",
-    "readMore": "Weiterlesen"
+    "readMore": "Weiterlesen",
+    "loadingSpeech": "Laden..."
   },
   "RightSide": {
     "callContacts":     "Kontakte anrufen",

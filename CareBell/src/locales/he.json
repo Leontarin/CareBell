@@ -100,8 +100,9 @@
     "durationInfo": "משך: {{duration}} דקות",
     "benefitsIntro": "היתרונות המרכזיים כוללים",
     "fetchError": "שגיאה בטעינת תרגילים: {{message}}",
-    "targets": "ממוקד על"
-    
+    "targets": "ממוקד על",
+    "loadingSpeech": "...טוען"
+
   },
   "Header": {
     "Emergency": "לחצן מצוקה",
@@ -122,6 +123,7 @@
     "ingredientsLabel": ":מרכיבים",
     "loadingLabel": "...טוען",
     "SpeakingLabel": "מדבר... (הקש כדי לעצור)",
+    "loadingSpeech": "...טוען",
     "barcodeLabel": "קוד:",
     "availableFoodsLabel": "מאכלים זמינים",
     "positionLabel": "מקם את הQR קוד בתוך המסגרת האדומה",
@@ -238,7 +240,8 @@
   },
   "News": {
     "latestNews": "החדשות האחרונות",
-    "readMore": "קרא עוד"
+    "readMore": "קרא עוד",
+    "loadingSpeech": "...טוען"
   },
   "RightSide": {
     "callContacts":     "אנשי קשר",

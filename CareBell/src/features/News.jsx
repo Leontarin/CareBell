@@ -1,5 +1,5 @@
 // src/components/News.jsx
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { API } from "../shared/config";
 import { useTranslation } from "react-i18next";
 import { playTts } from "../shared/tts";
@@ -12,12 +12,15 @@ export default function News() {
   const [speaking, setSpeaking] = useState(false);
   const [currentArticleIndex, setCurrentArticleIndex] = useState(null);
   const [audioObj, setAudioObj] = useState(null);
+  const [ttsLoading, setTtsLoading] = useState(false);
+  const abortRef = useRef(null);
 
   useEffect(() => {
     fetchTodaysNews();
   }, []);
 
   useEffect(() => () => {
+    if (abortRef.current) abortRef.current.abort();
     if (audioObj) audioObj.pause();
   }, [audioObj]);
 
@@ -56,6 +59,10 @@ export default function News() {
   };
 
   const stopSpeaking = () => {
+    if (abortRef.current) {
+      abortRef.current.abort();
+      abortRef.current = null;
+    }
     if (audioObj) {
       audioObj.pause();
       audioObj.currentTime = 0;
@@ -63,14 +70,20 @@ export default function News() {
     }
     setSpeaking(false);
     setCurrentArticleIndex(null);
+    setTtsLoading(false);
   };
 
   const speakText = async (text, index) => {
     stopSpeaking();
     if (!text) return;
+    const controller = new AbortController();
+    abortRef.current = controller;
+    setTtsLoading(true);
     try {
       const lang = i18n.language.split('-')[0];
-      const audio = await playTts(text, lang);
+      const audio = await playTts(text, lang, controller.signal);
+      abortRef.current = null;
+      setTtsLoading(false);
       setAudioObj(audio);
       setSpeaking(true);
       setCurrentArticleIndex(index);
@@ -80,7 +93,8 @@ export default function News() {
         setAudioObj(null);
       };
     } catch (err) {
-      console.error('TTS error:', err);
+      if (err.name !== 'AbortError') console.error('TTS error:', err);
+      setTtsLoading(false);
       setSpeaking(false);
       setCurrentArticleIndex(null);
     }
@@ -127,7 +141,7 @@ export default function News() {
         <div>
           <div className="mb-6 flex justify-between items-center">
             <p className="text-lg text-gray-600 dark:text-gray-300">{news.length} Artikel für heute gefunden</p>
-            <button onClick={stopSpeaking} className={`px-5 py-3 rounded-lg text-lg font-semibold ${speaking ? 'bg-red-500 text-white' : 'bg-gray-300 text-gray-500'}`} disabled={!speaking}>
+            <button onClick={stopSpeaking} className={`px-5 py-3 rounded-lg text-lg font-semibold ${(speaking || ttsLoading) ? 'bg-red-500 text-white' : 'bg-gray-300 text-gray-500'}`} disabled={!(speaking || ttsLoading)}>
               <span className="mr-2 text-xl">🔇</span>Vorlesen stoppen
             </button>
           </div>
@@ -139,7 +153,15 @@ export default function News() {
                     <h3 className="text-2xl font-bold text-gray-800 dark:text-gray-100">{article.title}</h3>
                     <p className="text-gray-500 dark:text-gray-300 mt-1">Quelle: {article.source} | {formatDate(article.published_at)}</p>
                   </div>
-                  {currentArticleIndex===idx && speaking ? (
+                  {currentArticleIndex===idx && ttsLoading ? (
+                    <button onClick={stopSpeaking} className="flex items-center px-4 py-2 rounded-lg text-lg font-semibold bg-gray-400 text-white">
+                      <svg className="animate-spin h-5 w-5 mr-2" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none"></circle>
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"></path>
+                      </svg>
+                      {t('News.loadingSpeech')}
+                    </button>
+                  ) : currentArticleIndex===idx && speaking ? (
                     <button onClick={stopSpeaking} className="flex items-center px-4 py-2 rounded-lg text-lg font-semibold bg-yellow-500 text-white">
                       <span className="mr-2 text-xl">🔇</span>Stoppen
                     </button>

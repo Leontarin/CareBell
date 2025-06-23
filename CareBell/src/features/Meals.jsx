@@ -1,5 +1,5 @@
 // src/components/Meals.jsx
-import React, { useState, useEffect, useContext } from "react";
+import React, { useState, useEffect, useContext, useRef } from "react";
 import BarcodeScannerComponent from "react-qr-barcode-scanner";
 import { API } from "../shared/config";
 import { useTranslation } from "react-i18next";
@@ -21,6 +21,8 @@ export default function Meals() {
   const [error,         setError]         = useState("");
   const [speaking,      setSpeaking]      = useState(false);
   const [audioObj,      setAudioObj]      = useState(null);
+  const [ttsLoading,    setTtsLoading]    = useState(false);
+  const abortRef = useRef(null);
 
   /* ---------- effects ---------- */
   useEffect(() => {
@@ -28,6 +30,7 @@ export default function Meals() {
   }, []);
 
   useEffect(() => () => {
+    if (abortRef.current) abortRef.current.abort();
     if (audioObj) audioObj.pause();
   }, [audioObj]);
 
@@ -62,9 +65,14 @@ export default function Meals() {
   const speakText = async text => {
     stopSpeaking();
     if (!text) return;
+    const controller = new AbortController();
+    abortRef.current = controller;
+    setTtsLoading(true);
     try {
       const lang = i18n.language.split('-')[0];
-      const audio = await playTts(text, lang);
+      const audio = await playTts(text, lang, controller.signal);
+      abortRef.current = null;
+      setTtsLoading(false);
       setAudioObj(audio);
       setSpeaking(true);
       audio.onended = () => {
@@ -72,17 +80,23 @@ export default function Meals() {
         setAudioObj(null);
       };
     } catch (err) {
-      console.error('TTS error:', err);
+      if (err.name !== 'AbortError') console.error('TTS error:', err);
+      setTtsLoading(false);
     }
   };
 
   const stopSpeaking = () => {
+    if (abortRef.current) {
+      abortRef.current.abort();
+      abortRef.current = null;
+    }
     if (audioObj) {
       audioObj.pause();
       audioObj.currentTime = 0;
       setAudioObj(null);
     }
     setSpeaking(false);
+    setTtsLoading(false);
   };
 
   const createFoodDescription = item => {
@@ -219,7 +233,18 @@ export default function Meals() {
               </p>
             </div>
 
-            {speaking ? (
+            {ttsLoading ? (
+              <button
+                onClick={stopSpeaking}
+                className="flex items-center px-5 py-3 rounded-lg bg-gray-400 text-white"
+              >
+                <svg className="animate-spin h-5 w-5 mr-2" viewBox="0 0 24 24">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none"></circle>
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"></path>
+                </svg>
+                {t('Meals.loadingSpeech')}
+              </button>
+            ) : speaking ? (
               <button
                 onClick={stopSpeaking}
                 className="flex items-center px-5 py-3 rounded-lg bg-yellow-500 text-white"

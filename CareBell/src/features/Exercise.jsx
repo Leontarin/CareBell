@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { API } from "../shared/config";
 import { useTranslation } from "react-i18next";
 import { playTts } from "../shared/tts";
@@ -15,6 +15,8 @@ function Exercise() {
   const [speaking, setSpeaking] = useState(false);
   const [currentSpeakingId, setCurrentSpeakingId] = useState(null);
   const [audioObj, setAudioObj] = useState(null);
+  const [ttsLoading, setTtsLoading] = useState(false);
+  const abortRef = useRef(null);
 
   // Fetch exercises when component mounts
   useEffect(() => {
@@ -22,6 +24,7 @@ function Exercise() {
   }, []);
 
   useEffect(() => () => {
+    if (abortRef.current) abortRef.current.abort();
     if (audioObj) audioObj.pause();
   }, [audioObj]);
 
@@ -83,9 +86,14 @@ function Exercise() {
 
     if (!text) return;
 
+    const controller = new AbortController();
+    abortRef.current = controller;
+    setTtsLoading(true);
     try {
       const lang = i18n.language.split('-')[0];
-      const audio = await playTts(text, lang);
+      const audio = await playTts(text, lang, controller.signal);
+      abortRef.current = null;
+      setTtsLoading(false);
       setAudioObj(audio);
       setSpeaking(true);
       setCurrentSpeakingId(exerciseId);
@@ -95,12 +103,17 @@ function Exercise() {
         setAudioObj(null);
       };
     } catch (err) {
-      console.error('TTS error:', err);
+      if (err.name !== 'AbortError') console.error('TTS error:', err);
+      setTtsLoading(false);
     }
   };
 
   // Stop speaking function
   const stopSpeaking = () => {
+    if (abortRef.current) {
+      abortRef.current.abort();
+      abortRef.current = null;
+    }
     if (audioObj) {
       audioObj.pause();
       audioObj.currentTime = 0;
@@ -108,6 +121,7 @@ function Exercise() {
     }
     setSpeaking(false);
     setCurrentSpeakingId(null);
+    setTtsLoading(false);
   };
 
   // Create exercise description for speech
@@ -371,7 +385,18 @@ function Exercise() {
                       {t("Exercise.view_details")}
                     </button>
                     
-                    {currentSpeakingId === exercise._id && speaking ? (
+                    {currentSpeakingId === exercise._id && ttsLoading ? (
+                      <button
+                        onClick={stopSpeaking}
+                        className="flex-1 sm:flex-none sm:w-auto px-4 py-3 bg-gray-400 text-white text-lg font-semibold rounded-lg"
+                      >
+                        <svg className="animate-spin h-5 w-5 mr-2" viewBox="0 0 24 24">
+                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none"></circle>
+                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"></path>
+                        </svg>
+                        {t('Exercise.loadingSpeech')}
+                      </button>
+                    ) : currentSpeakingId === exercise._id && speaking ? (
                       <button
                         onClick={stopSpeaking}
                         className="flex-1 sm:flex-none sm:w-auto px-4 py-3 bg-yellow-500 text-white text-lg font-semibold rounded-lg"
@@ -476,12 +501,25 @@ function Exercise() {
                 )}
                 
                 <div className="flex gap-4 pt-4 border-t dark:border-yellow-300">
-                  <button
-                    onClick={() => speakText(createExerciseDescription(selectedExercise), selectedExercise._id)}
-                    className="px-6 py-3 bg-blue-600 text-white text-lg font-semibold rounded-lg hover:bg-blue-700 transition-colors"
-                  >
-                    <span className="mr-2">🔊</span>{t("Exercise.readInstructions")}
-                  </button>
+                  {currentSpeakingId === selectedExercise._id && ttsLoading ? (
+                    <button
+                      onClick={stopSpeaking}
+                      className="px-6 py-3 bg-gray-400 text-white text-lg font-semibold rounded-lg"
+                    >
+                      <svg className="animate-spin h-5 w-5 mr-2" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none"></circle>
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"></path>
+                      </svg>
+                      {t('Exercise.loadingSpeech')}
+                    </button>
+                  ) : (
+                    <button
+                      onClick={() => speakText(createExerciseDescription(selectedExercise), selectedExercise._id)}
+                      className="px-6 py-3 bg-blue-600 text-white text-lg font-semibold rounded-lg hover:bg-blue-700 transition-colors"
+                    >
+                      <span className="mr-2">🔊</span>{t("Exercise.readInstructions")}
+                    </button>
+                  )}
                   
                   {selectedExercise.videoUrl && (
                     <a

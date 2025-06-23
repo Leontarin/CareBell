@@ -99,7 +99,8 @@
     "duration": "Se kestää: ",
     "benefitsIntro": "Keskeisiä etuja ovat mm.",
     "fetchError": "Virhe harjoitusten noutamisessa: {{message}}",
-    "targets": "Kohteet"
+    "targets": "Kohteet",
+    "loadingSpeech": "Ladataan..."
   },
   "Header": {
     "Emergency": "Hätätilanne",
@@ -120,6 +121,7 @@
     "ingredientsLabel": "Ainesosat:",
     "loadingLabel": "Ladataan...",
     "SpeakingLabel": "Puhutaan... (Napauta lopettaaksesi)",
+    "loadingSpeech": "Ladataan...",
     "barcodeLabel": "Viivakoodi:",
     "availableFoodsLabel": "Saatavilla olevat ruoat",
     "positionLabel": "Aseta viivakoodi punaisen kehyksen sisään",
@@ -236,7 +238,8 @@
   },
   "News": {
     "latestNews": "Viimeisimmät uutiset",
-    "readMore": "Lue lisää"
+    "readMore": "Lue lisää",
+    "loadingSpeech": "Ladataan..."
   },
   "RightSide": {
     "callContacts":     "Soita yhteystiedoille",
