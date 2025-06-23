@@ -1,43 +1,25 @@
 // src/components/News.jsx
 import React, { useState, useEffect } from "react";
 import { API } from "../shared/config";
+import { playTts } from "../shared/tts";
+import { useTranslation } from "react-i18next";
 
 export default function News() {
+  const { i18n } = useTranslation();
   const [news, setNews] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [speaking, setSpeaking] = useState(false);
   const [currentArticleIndex, setCurrentArticleIndex] = useState(null);
+  const [audioObj, setAudioObj] = useState(null);
 
   useEffect(() => {
     fetchTodaysNews();
+  }, []);
 
-    // Load speechSynthesis voices
-    if (window.speechSynthesis) {
-      let voicesLoaded = false;
-      const loadVoices = () => {
-        const voices = window.speechSynthesis.getVoices();
-        if (voices.length > 0) {
-          voicesLoaded = true;
-          const germanVoices = voices.filter(v => v.lang.startsWith("de"));
-          console.log("Available German voices:", germanVoices.map(v => `${v.name} (${v.lang})`));
-        }
-      };
-      loadVoices();
-      if (window.speechSynthesis.onvoiceschanged !== undefined) {
-        window.speechSynthesis.onvoiceschanged = loadVoices;
-      }
-      if (!voicesLoaded) setTimeout(loadVoices, 1000);
-    }
-
-    return () => {
-      if (window.speechSynthesis) {
-        window.speechSynthesis.cancel();
-        if (window.speechSynthesis.onvoiceschanged !== undefined) {
-          window.speechSynthesis.onvoiceschanged = null;
-        }
-      }
-    };
+  useEffect(() => () => {
+    if (audioObj) audioObj.pause();
+  }, [audioObj]);
   }, []);
 
   const fetchTodaysNews = async () => {
@@ -75,30 +57,31 @@ export default function News() {
   };
 
   const stopSpeaking = () => {
-    if (window.speechSynthesis) {
-      window.speechSynthesis.cancel();
-      setSpeaking(false);
-      setCurrentArticleIndex(null);
+    if (audioObj) {
+      audioObj.pause();
+      audioObj.currentTime = 0;
+      setAudioObj(null);
     }
+    setSpeaking(false);
+    setCurrentArticleIndex(null);
   };
 
-  const speakText = (text, index) => {
+  const speakText = async (text, index) => {
     stopSpeaking();
     if (!text) return;
     try {
-      const utterance = new SpeechSynthesisUtterance(text);
-      utterance.rate = 0.8;
-      const voices = window.speechSynthesis.getVoices();
-      let selected = voices.find(v => v.lang === 'de-DE');
-      if (!selected) selected = voices.find(v => v.lang.startsWith('de')) || voices[0];
-      if (selected) utterance.voice = selected;
+      const lang = i18n.language.split('-')[0];
+      const audio = await playTts(text, lang);
       setCurrentArticleIndex(index);
-      utterance.onstart = () => setSpeaking(true);
-      utterance.onend = () => { setSpeaking(false); setCurrentArticleIndex(null); };
-      utterance.onerror = () => { setSpeaking(false); setCurrentArticleIndex(null); };
-      window.speechSynthesis.speak(utterance);
+      setSpeaking(true);
+      setAudioObj(audio);
+      audio.onended = () => {
+        setSpeaking(false);
+        setCurrentArticleIndex(null);
+        setAudioObj(null);
+      };
     } catch (err) {
-      console.error("Speech synthesis error:", err);
+      console.error('TTS error:', err);
       setSpeaking(false);
       setCurrentArticleIndex(null);
     }
