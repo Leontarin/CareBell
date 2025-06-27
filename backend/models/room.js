@@ -5,11 +5,12 @@ const roomSchema = new mongoose.Schema({
   participants: [{ type: String, required: true }],
   createdAt: { type: Date, default: Date.now },
   isActive: { type: Boolean, default: false },
+  isTemporary: { type: Boolean, default: true }, // true = temporary, false = default/permanent
 });
 
-// Auto-delete room when no participants remain
+// Auto-delete room when no participants remain - BUT ONLY IF IT'S TEMPORARY
 roomSchema.pre('save', function(next) {
-  if (this.participants.length === 0) {
+  if (this.participants.length === 0 && this.isTemporary) {
     this.deleteOne();
     return;
   }
