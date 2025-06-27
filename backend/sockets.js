@@ -161,18 +161,31 @@ module.exports = function (io) {
     });
 
     socket.on('disconnect', () => {
-      console.log(`🔌 Socket ${socket.id} disconnected`);
-      
-      const userId = socketToUser.get(socket.id);
-      const roomId = socketToRoom.get(socket.id);
-      
-      if (roomId && userId) {
-        console.log(`🧹 Cleaning up user ${userId} from room ${roomId}`);
-        cleanupUserFromRoom(userId, roomId);
+  console.log(`🔌 Socket ${socket.id} disconnected`);
+  
+  const userId = socketToUser.get(socket.id);
+  const roomId = socketToRoom.get(socket.id);
+  
+  if (roomId && userId) {
+    console.log(`🧹 Cleaning up user ${userId} from room ${roomId}`);
+    cleanupUserFromRoom(userId, roomId);
+    
+    // IMPORTANT: Also update the database
+    // Call the same logic as /rooms/leave endpoint
+    Room.findOne({ name: roomId }).then(room => {
+      if (room) {
+        room.participants = room.participants.filter(id => id !== userId);
+        if (room.participants.length === 0) {
+          room.deleteOne();
+        } else {
+          room.save();
+        }
       }
-      
-      socketToUser.delete(socket.id);
-      socketToRoom.delete(socket.id);
-    });
+    }).catch(err => console.error('Error cleaning up room in DB:', err));
+  }
+  
+  socketToUser.delete(socket.id);
+  socketToRoom.delete(socket.id);
+});
   });
 };

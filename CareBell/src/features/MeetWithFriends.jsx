@@ -49,17 +49,15 @@ export default function MeetWithFriends() {
   const retryAttempts = useRef(new Map()); 
 
   // cleanup when user closes browser tab
-  useEffect(() => {
+ useEffect(() => {
   const handleBeforeUnload = () => {
     if (joinedRoom && user?.id) {
-      // Use sendBeacon for reliable cleanup on page unload
-      navigator.sendBeacon(
-        `${API}/rooms/leave`,
-        JSON.stringify({
-          roomName: joinedRoom,
-          userId: user.id
-        })
-      );
+      // Create proper FormData for sendBeacon
+      const formData = new FormData();
+      formData.append('roomName', joinedRoom);
+      formData.append('userId', user.id);
+      
+      navigator.sendBeacon(`${API}/rooms/leave`, formData);
     }
   };
 
