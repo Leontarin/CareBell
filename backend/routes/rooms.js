@@ -130,7 +130,36 @@ router.post('/leave', upload.none(), async (req, res) => {
 router.get('/', async (req, res) => {
   try {
     const rooms = await Room.find();
-    res.json(rooms);
+    const User = require('../models/user');
+    
+    // Add participant details to each room
+    const roomsWithDetails = await Promise.all(
+      rooms.map(async (room) => {
+        const participantDetails = await Promise.all(
+          room.participants.map(async (userId) => {
+            try {
+              const user = await User.findOne({ id: userId });
+              return {
+                userId: userId,
+                fullName: user ? user.fullName : `User ${userId.slice(-4)}`
+              };
+            } catch (error) {
+              return {
+                userId: userId,
+                fullName: `User ${userId.slice(-4)}`
+              };
+            }
+          })
+        );
+        
+        return {
+          ...room.toObject(),
+          participantDetails: participantDetails
+        };
+      })
+    );
+    
+    res.json(roomsWithDetails);
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -170,6 +199,46 @@ router.patch('/:roomId/status', async (req, res) => {
     );
     if (!room) return res.status(404).json({ error: 'Room not found' });
     res.json(room);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+
+
+router.get('/details/:roomName', async (req, res) => {
+  try {
+    const { roomName } = req.params;
+    const room = await Room.findOne({ name: roomName });
+    
+    if (!room) {
+      return res.status(404).json({ error: 'Room not found' });
+    }
+
+    // Get participant details from User collection
+    const User = require('../models/user'); // Import User model
+    const participantDetails = await Promise.all(
+      room.participants.map(async (userId) => {
+        try {
+          const user = await User.findOne({ id: userId });
+          return {
+            userId: userId,
+            fullName: user ? user.fullName : `User ${userId.slice(-4)}` // Fallback name
+          };
+        } catch (error) {
+          console.error(`Error fetching user ${userId}:`, error);
+          return {
+            userId: userId,
+            fullName: `User ${userId.slice(-4)}`
+          };
+        }
+      })
+    );
+
+    res.json({
+      ...room.toObject(),
+      participantDetails: participantDetails
+    });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }

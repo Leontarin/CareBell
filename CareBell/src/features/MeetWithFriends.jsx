@@ -21,6 +21,8 @@ export default function MeetWithFriends() {
   const [newRoomName, setNewRoomName] = useState("");
   const [socket, setSocket] = useState(null);
 
+  const [participantNames, setParticipantNames] = useState(new Map());
+
   // P2P Video call state
   const [isInCall, setIsInCall] = useState(false);
   const [localStream, setLocalStream] = useState(null);
@@ -111,25 +113,35 @@ export default function MeetWithFriends() {
     });
 
     newSocket.on('room-updated', (room) => {
-      console.log('🔄 Real-time: Room updated', room.name, 'participants:', room.participants.length);
-      setRooms(prev => prev.map(r => r.name === room.name ? room : r));
-      
-      // If we're in this room, update our participants
-      if (joinedRoom === room.name) {
-        const currentParticipants = participants;
-        const newParticipants = room.participants || [];
-        
-        // Find who left
-        const leftParticipants = currentParticipants.filter(p => !newParticipants.includes(p));
-        
-        // Clean up connections for participants who left
-        leftParticipants.forEach(participantId => {
-          if (participantId !== user.id) {
-            cleanupP2PConnection(participantId);
-          }
-        });
+  console.log('🔄 Real-time: Room updated', room.name, 'participants:', room.participants?.length || 0);
+  
+  // Update participant names if available
+  if (room.participantDetails) {
+    const nameMap = new Map();
+    room.participantDetails.forEach(p => {
+      nameMap.set(p.userId, p.fullName);
+    });
+    setParticipantNames(prev => new Map([...prev, ...nameMap]));
+  }
+  
+  setRooms(prev => prev.map(r => r.name === room.name ? room : r));
+  
+  // If we're in this room, update our participants
+  if (joinedRoom === room.name) {
+    const currentParticipants = participants;
+    const newParticipants = room.participants || [];
+    
+    // Find who left
+    const leftParticipants = currentParticipants.filter(p => !newParticipants.includes(p));
+    
+    // Clean up connections for participants who left
+    leftParticipants.forEach(participantId => {
+      if (participantId !== user.id) {
+        cleanupP2PConnection(participantId);
       }
     });
+  }
+});
 
     newSocket.on('room-deleted', (data) => {
       console.log('🗑️ Real-time: Room deleted', data.name);
@@ -268,6 +280,25 @@ export default function MeetWithFriends() {
       });
     }, 100);
   };
+
+  const fetchParticipantNames = async (userIds) => {
+  const nameMap = new Map();
+  
+  await Promise.all(
+    userIds.map(async (userId) => {
+      try {
+        const response = await axios.get(`${API}/users/${userId}`);
+        nameMap.set(userId, response.data.fullName || `User ${userId.slice(-4)}`);
+      } catch (error) {
+        console.error(`Error fetching user ${userId}:`, error);
+        nameMap.set(userId, `User ${userId.slice(-4)}`);
+      }
+    })
+  );
+  
+  setParticipantNames(prev => new Map([...prev, ...nameMap]));
+  return nameMap;
+};
 
   // FETCH ROOMS INITIALLY AND SET UP PERIODIC REFRESH
   useEffect(() => {
@@ -513,45 +544,48 @@ export default function MeetWithFriends() {
 
   // Join room with P2P mesh
   async function joinRoom(roomName) {
-    if (!user?.id) {
-      return;
-    }
-
-    try {
-      // Notify backend that user is joining
-      const response = await axios.post(`${API}/rooms/join`, {
-        roomName: roomName,
-        userId: user.id
-      });
-
-      setJoinedRoom(roomName);
-
-      // Get media access with P2P optimized settings
-      const stream = await navigator.mediaDevices.getUserMedia({
-        video: P2P_CONFIG.VIDEO_CONSTRAINTS,
-        audio: P2P_CONFIG.AUDIO_CONSTRAINTS
-      });
-
-      setLocalStream(stream);
-      setIsInCall(true);
-
-      // Reset media control states
-      setIsAudioMuted(false);
-      setIsVideoOff(false);
-
-      // Set local video
-      if (localVideoRef.current) {
-        localVideoRef.current.srcObject = stream;
-      }
-
-      // Note: Deno signaling connection will be established by the useEffect above
-
-    } catch (error) {
-      const errorMsg = error.response?.data?.error || error.message;
-      alert('Could not join room: ' + errorMsg);
-      setJoinedRoom(null);
-    }
+  if (!user?.id) {
+    return;
   }
+
+  try {
+    // Notify backend that user is joining
+    const response = await axios.post(`${API}/rooms/join`, {
+      roomName: roomName,
+      userId: user.id
+    });
+
+    setJoinedRoom(roomName);
+
+    // Fetch participant names for the room
+    if (response.data.participants) {
+      await fetchParticipantNames(response.data.participants);
+    }
+
+    // Get media access with P2P optimized settings
+    const stream = await navigator.mediaDevices.getUserMedia({
+      video: P2P_CONFIG.VIDEO_CONSTRAINTS,
+      audio: P2P_CONFIG.AUDIO_CONSTRAINTS
+    });
+
+    setLocalStream(stream);
+    setIsInCall(true);
+
+    // Reset media control states
+    setIsAudioMuted(false);
+    setIsVideoOff(false);
+
+    // Set local video
+    if (localVideoRef.current) {
+      localVideoRef.current.srcObject = stream;
+    }
+
+  } catch (error) {
+    const errorMsg = error.response?.data?.error || error.message;
+    alert('Could not join room: ' + errorMsg);
+    setJoinedRoom(null);
+  }
+}
 
   // Stop P2P video call
   function leaveRoom() {
@@ -656,7 +690,7 @@ return (
      {!joinedRoom ? (
        <div className="flex flex-col items-center justify-center h-full p-8">
          <h2 className="text-black dark:text-white text-3xl mb-4 font-bold">
-           {t("MeetWithFriends.Title")}1
+           {t("MeetWithFriends.Title")}2
          </h2>
          <div className="mb-8 flex items-center">
        <input
@@ -681,69 +715,93 @@ return (
          {t("MeetWithFriends.availableRooms")} ({rooms.length})
        </h3>
        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-         {rooms.map((room) => {
-           const participantCount = room.participants?.length || 0;
-           const isRoomFull = participantCount >= MAX_P2P_PARTICIPANTS;
-           
-           return (
-             <div
-               key={room._id}
-               className={`flex flex-col justify-between border rounded-xl p-6 shadow-md hover:shadow-xl transition duration-300 ${
-                 isRoomFull 
-                   ? 'bg-red-100 dark:bg-red-900 border-red-500' 
-                   : room.isTemporary === false
-                   ? 'bg-yellow-100 dark:bg-yellow-900 border-yellow-500'
-                   : 'bg-blue-100 dark:bg-[#2b2b2f] border-blue-700 dark:border-yellow-400'
-               }`}
-               style={{ minHeight: '200px' }}
-             >
-               <div>
-                 <h4 className={`text-xl font-semibold mb-1 flex items-center gap-2 ${
-                   isRoomFull ? 'text-red-900 dark:text-red-300' 
-                   : room.isTemporary === false ? 'text-yellow-900 dark:text-yellow-300'
-                   : 'text-blue-900 dark:text-white'
-                 }`}>
-                   {room.isTemporary === false && <span title="Default Room">⭐</span>}
-                   {room.name}
-                 </h4>
-                 <p className="text-gray-700 dark:text-gray-400 text-sm">
-                   👥 {participantCount}/{MAX_P2P_PARTICIPANTS} participants
-                 </p>
-                 {room.isActive && (
-                   <p className="text-green-600 dark:text-green-400 text-xs mt-1">
-                     🟢 Active Call
-                   </p>
-                 )}
-                 {isRoomFull && (
-                   <p className="text-red-600 dark:text-red-400 text-xs mt-1">
-                     🚫 Room Full - P2P Limit Reached
-                   </p>
-                 )}
-                 {room.isTemporary === false && (
-                   <p className="text-yellow-600 dark:text-yellow-400 text-xs mt-1">
-                     ⭐ Default Room
-                   </p>
-                 )}
-                 <p className="text-gray-500 dark:text-gray-500 text-xs mt-1">
-                   Created: {new Date(room.createdAt).toLocaleTimeString()}
-                 </p>
-               </div>
+  {rooms.map((room) => {
+    const participantCount = room.participants?.length || 0;
+    const isRoomFull = participantCount >= MAX_P2P_PARTICIPANTS;
+    
+    return (
+      <div
+        key={room._id}
+        className={`flex flex-col justify-between border rounded-xl p-6 shadow-md hover:shadow-xl transition duration-300 ${
+          isRoomFull 
+            ? 'bg-red-100 dark:bg-red-900 border-red-500' 
+            : room.isTemporary === false
+            ? 'bg-yellow-100 dark:bg-yellow-900 border-yellow-500'
+            : 'bg-blue-100 dark:bg-[#2b2b2f] border-blue-700 dark:border-yellow-400'
+        }`}
+        style={{ minHeight: '250px' }} // Increased height for participant names
+      >
+        <div>
+          <h4 className={`text-xl font-semibold mb-1 flex items-center gap-2 ${
+            isRoomFull ? 'text-red-900 dark:text-red-300' 
+            : room.isTemporary === false ? 'text-yellow-900 dark:text-yellow-300'
+            : 'text-blue-900 dark:text-white'
+          }`}>
+            {room.isTemporary === false && <span title="Default Room">⭐</span>}
+            {room.name}
+          </h4>
+          
+          <p className="text-gray-700 dark:text-gray-400 text-sm mb-2">
+            👥 {participantCount}/{MAX_P2P_PARTICIPANTS} participants
+          </p>
+          
+          {/* Show participant names */}
+          {room.participantDetails && room.participantDetails.length > 0 && (
+            <div className="mb-3">
+              <p className="text-xs text-gray-600 dark:text-gray-500 mb-1">Participants:</p>
+              <div className="flex flex-wrap gap-1">
+                {room.participantDetails.slice(0, 3).map((participant) => (
+                  <span 
+                    key={participant.userId}
+                    className="bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 px-2 py-1 rounded text-xs"
+                  >
+                    {participant.fullName}
+                  </span>
+                ))}
+                {room.participantDetails.length > 3 && (
+                  <span className="text-gray-500 text-xs">
+                    +{room.participantDetails.length - 3} more
+                  </span>
+                )}
+              </div>
+            </div>
+          )}
+          
+          {room.isActive && (
+            <p className="text-green-600 dark:text-green-400 text-xs mt-1">
+              🟢 Active Call
+            </p>
+          )}
+          {isRoomFull && (
+            <p className="text-red-600 dark:text-red-400 text-xs mt-1">
+              🚫 Room Full - P2P Limit Reached
+            </p>
+          )}
+          {room.isTemporary === false && (
+            <p className="text-yellow-600 dark:text-yellow-400 text-xs mt-1">
+              ⭐ Default Room
+            </p>
+          )}
+          <p className="text-gray-500 dark:text-gray-500 text-xs mt-1">
+            Created: {new Date(room.createdAt).toLocaleTimeString()}
+          </p>
+        </div>
 
-               <button
-                 onClick={() => joinRoom(room.name)}
-                 disabled={isRoomFull}
-                 className={`mt-4 font-semibold py-2 px-4 rounded-lg text-center transition-all ${
-                   isRoomFull
-                     ? 'bg-gray-400 text-gray-600 cursor-not-allowed'
-                     : 'bg-[#4f46e5] hover:bg-[#4338ca] text-white'
-                 }`}
-               >
-                 {isRoomFull ? '🚫 Room Full' : '🔗 Join Call'}
-               </button>
-             </div>
-           );
-         })}
-       </div>
+        <button
+          onClick={() => joinRoom(room.name)}
+          disabled={isRoomFull}
+          className={`mt-4 font-semibold py-2 px-4 rounded-lg text-center transition-all ${
+            isRoomFull
+              ? 'bg-gray-400 text-gray-600 cursor-not-allowed'
+              : 'bg-[#4f46e5] hover:bg-[#4338ca] text-white'
+          }`}
+        >
+          {isRoomFull ? '🚫 Room Full' : '🔗 Join Call'}
+        </button>
+      </div>
+    );
+  })}
+</div>
 
        {rooms.length === 0 && (
          <div className="text-center py-8">
@@ -848,61 +906,53 @@ return (
 
         {/* P2P Remote Videos */}
         {participants.filter(pid => pid !== user.id).map((participantId) => {
-          if (!remoteVideoRefs.current.has(participantId)) {
-            remoteVideoRefs.current.set(participantId, React.createRef());
-          }
-          
-          const videoRef = remoteVideoRefs.current.get(participantId);
-          const stream = remoteStreams.get(participantId);
-          const connectionState = connectionStates.get(participantId) || 'unknown';
-          
-          return (
-            <div key={participantId} className="relative bg-gray-800 rounded-xl overflow-hidden shadow-2xl border-2 border-blue-500">
-              <video
-                ref={videoRef}
-                autoPlay
-                playsInline
-                controls={false}
-                volume={1.0}
-                muted={false}
-                className="w-full h-full object-cover"
-                onLoadedMetadata={(e) => {
-                  console.log('📊 P2P Video metadata loaded for', participantId);
-                }}
-                onPlay={() => {
-                  console.log('▶️ P2P Video started playing for', participantId);
-                }}
-                onError={(e) => {
-                  console.error('❌ P2P Video error for', participantId, ':', e);
-                }}
-              />
-              
-              {/* Connection state overlay */}
-              {!stream && (
-                <div className="absolute inset-0 bg-gray-900 bg-opacity-80 flex items-center justify-center">
-                  <div className="text-center text-white">
-                    <div className="text-4xl mb-2">
-                      {connectionState === 'connecting' && '🔄'}
-                      {connectionState === 'connected' && '✅'}
-                      {connectionState === 'failed' && '❌'}
-                      {connectionState === 'unknown' && '⏳'}
-                    </div>
-                    <p className="text-sm font-semibold capitalize">
-                      {connectionState === 'connecting' && 'Connecting...'}
-                      {connectionState === 'connected' && 'Connected'}
-                      {connectionState === 'failed' && 'Connection Failed'}
-                      {connectionState === 'unknown' && 'Waiting...'}
-                    </p>
-                  </div>
-                </div>
-              )}
-              
-              <div className="absolute bottom-2 left-2 bg-black bg-opacity-50 text-white px-2 py-1 rounded text-xs font-semibold">
-                User {participantId.slice(-4)}
-              </div>
+  if (!remoteVideoRefs.current.has(participantId)) {
+    remoteVideoRefs.current.set(participantId, React.createRef());
+  }
+  
+  const videoRef = remoteVideoRefs.current.get(participantId);
+  const stream = remoteStreams.get(participantId);
+  const connectionState = connectionStates.get(participantId) || 'unknown';
+  const participantName = participantNames.get(participantId) || `User ${participantId.slice(-4)}`;
+  
+  return (
+    <div key={participantId} className="relative bg-gray-800 rounded-xl overflow-hidden shadow-2xl border-2 border-blue-500">
+      <video
+        ref={videoRef}
+        autoPlay
+        playsInline
+        controls={false}
+        volume={1.0}
+        muted={false}
+        className="w-full h-full object-cover"
+      />
+      
+      {/* Connection state overlay */}
+      {!stream && (
+        <div className="absolute inset-0 bg-gray-900 bg-opacity-80 flex items-center justify-center">
+          <div className="text-center text-white">
+            <div className="text-4xl mb-2">
+              {connectionState === 'connecting' && '🔄'}
+              {connectionState === 'connected' && '✅'}
+              {connectionState === 'failed' && '❌'}
+              {connectionState === 'unknown' && '⏳'}
             </div>
-          );
-        })}
+            <p className="text-sm font-semibold capitalize">
+              {connectionState === 'connecting' && 'Connecting...'}
+              {connectionState === 'connected' && 'Connected'}
+              {connectionState === 'failed' && 'Connection Failed'}
+              {connectionState === 'unknown' && 'Waiting...'}
+            </p>
+          </div>
+        </div>
+      )}
+      
+      <div className="absolute bottom-2 left-2 bg-black bg-opacity-50 text-white px-2 py-1 rounded text-xs font-semibold">
+        {participantName}
+      </div>
+    </div>
+  );
+})}
       </div>
     </div>
   </div>

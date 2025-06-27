@@ -6,50 +6,107 @@ module.exports = function (io) {
   const socketToUser = new Map();
   const socketToRoom = new Map(); 
 
-  async function cleanupUserFromRoom(userId, roomId) {
-    if (roomParticipants.has(roomId)) {
-      roomParticipants.get(roomId).delete(userId);
-      if (roomParticipants.get(roomId).size === 0) {
-        roomParticipants.delete(roomId);
-        console.log(`🗑️ Room ${roomId} deleted - no participants left`);
-      } else {
-        const currentParticipants = Array.from(roomParticipants.get(roomId));
-        console.log(`👥 Room ${roomId} now has participants:`, currentParticipants);
-        
-        // Notify remaining participants
-        io.to(roomId).emit('room-participants', currentParticipants);
-        
-        // Broadcast updated participant count to ALL clients
-        io.emit('room-participant-count', { roomName: roomId, count: currentParticipants.length });
-      }
-    }
-
-    // IMPORTANT: Also update the database
-    try {
-      const room = await Room.findOne({ name: roomId });
-      if (room) {
-        room.participants = room.participants.filter(id => id !== userId);
-        if (room.participants.length === 0) {
-          if (room.isTemporary) {
-            await room.deleteOne();
-            io.emit('room-deleted', { name: roomId });
-            console.log(`🗑️ Database: Temporary room ${roomId} deleted`);
-          } else {
-            room.isActive = false;
-            await room.save();
-            io.emit('room-updated', room);
-            console.log(`💤 Database: Default room ${roomId} marked inactive`);
+  // In backend/sockets.js - Update the cleanupUserFromRoom function
+async function cleanupUserFromRoom(userId, roomId) {
+  if (roomParticipants.has(roomId)) {
+    roomParticipants.get(roomId).delete(userId);
+    if (roomParticipants.get(roomId).size === 0) {
+      roomParticipants.delete(roomId);
+      console.log(`🗑️ Room ${roomId} deleted - no participants left`);
+    } else {
+      const currentParticipants = Array.from(roomParticipants.get(roomId));
+      console.log(`👥 Room ${roomId} now has participants:`, currentParticipants);
+      
+      // Get participant details
+      const User = require('./models/user');
+      const participantDetails = await Promise.all(
+        currentParticipants.map(async (userId) => {
+          try {
+            const user = await User.findOne({ id: userId });
+            return {
+              userId: userId,
+              fullName: user ? user.fullName : `User ${userId.slice(-4)}`
+            };
+          } catch (error) {
+            return {
+              userId: userId,
+              fullName: `User ${userId.slice(-4)}`
+            };
           }
-        } else {
-          await room.save();
-          io.emit('room-updated', room);
-          console.log(`🔄 Database: Room ${roomId} updated`);
-        }
-      }
-    } catch (error) {
-      console.error('❌ Error cleaning up room in DB:', error);
+        })
+      );
+      
+      // Notify remaining participants with details
+      io.to(roomId).emit('room-participants', currentParticipants, participantDetails);
+      
+      // Broadcast updated participant count to ALL clients
+      io.emit('room-participant-count', { roomName: roomId, count: currentParticipants.length });
     }
   }
+
+  try {
+    const room = await Room.findOne({ name: roomId });
+    if (room) {
+      room.participants = room.participants.filter(id => id !== userId);
+      if (room.participants.length === 0) {
+        if (room.isTemporary) {
+          await room.deleteOne();
+          io.emit('room-deleted', { name: roomId });
+          console.log(`🗑️ Database: Temporary room ${roomId} deleted`);
+        } else {
+          room.isActive = false;
+          await room.save();
+          
+          const User = require('./models/user');
+          const participantDetails = await Promise.all(
+            room.participants.map(async (userId) => {
+              try {
+                const user = await User.findOne({ id: userId });
+                return {
+                  userId: userId,
+                  fullName: user ? user.fullName : `User ${userId.slice(-4)}`
+                };
+              } catch (error) {
+                return {
+                  userId: userId,
+                  fullName: `User ${userId.slice(-4)}`
+                };
+              }
+            })
+          );
+          
+          io.emit('room-updated', { ...room.toObject(), participantDetails });
+          console.log(`💤 Database: Default room ${roomId} marked inactive`);
+        }
+      } else {
+        await room.save();
+        
+        const User = require('./models/user');
+        const participantDetails = await Promise.all(
+          room.participants.map(async (userId) => {
+            try {
+              const user = await User.findOne({ id: userId });
+              return {
+                userId: userId,
+                fullName: user ? user.fullName : `User ${userId.slice(-4)}`
+              };
+            } catch (error) {
+              return {
+                userId: userId,
+                fullName: `User ${userId.slice(-4)}`
+              };
+            }
+          })
+        );
+        
+        io.emit('room-updated', { ...room.toObject(), participantDetails });
+        console.log(`🔄 Database: Room ${roomId} updated`);
+      }
+    }
+  } catch (error) {
+    console.error('❌ Error cleaning up room in DB:', error);
+  }
+}
 
   io.on('connection', socket => {
     console.log(`🔌 New socket connection: ${socket.id}`);
