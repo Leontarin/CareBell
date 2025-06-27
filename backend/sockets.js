@@ -1,10 +1,12 @@
 // backend/sockets.js
-module.exports = function (io) {
-  const roomParticipants = new Map(); // roomId -> Set of userIds
-  const socketToUser = new Map(); // socketId -> userId
-  const socketToRoom = new Map(); // socketId -> roomId
+const Room = require('./models/room'); 
 
-  function cleanupUserFromRoom(userId, roomId) {
+module.exports = function (io) {
+  const roomParticipants = new Map(); 
+  const socketToUser = new Map();
+  const socketToRoom = new Map(); 
+
+  async function cleanupUserFromRoom(userId, roomId) {
     if (roomParticipants.has(roomId)) {
       roomParticipants.get(roomId).delete(userId);
       if (roomParticipants.get(roomId).size === 0) {
@@ -20,6 +22,32 @@ module.exports = function (io) {
         // Broadcast updated participant count to ALL clients
         io.emit('room-participant-count', { roomName: roomId, count: currentParticipants.length });
       }
+    }
+
+    // IMPORTANT: Also update the database
+    try {
+      const room = await Room.findOne({ name: roomId });
+      if (room) {
+        room.participants = room.participants.filter(id => id !== userId);
+        if (room.participants.length === 0) {
+          if (room.isTemporary) {
+            await room.deleteOne();
+            io.emit('room-deleted', { name: roomId });
+            console.log(`🗑️ Database: Temporary room ${roomId} deleted`);
+          } else {
+            room.isActive = false;
+            await room.save();
+            io.emit('room-updated', room);
+            console.log(`💤 Database: Default room ${roomId} marked inactive`);
+          }
+        } else {
+          await room.save();
+          io.emit('room-updated', room);
+          console.log(`🔄 Database: Room ${roomId} updated`);
+        }
+      }
+    } catch (error) {
+      console.error('❌ Error cleaning up room in DB:', error);
     }
   }
 
@@ -161,31 +189,18 @@ module.exports = function (io) {
     });
 
     socket.on('disconnect', () => {
-  console.log(`🔌 Socket ${socket.id} disconnected`);
-  
-  const userId = socketToUser.get(socket.id);
-  const roomId = socketToRoom.get(socket.id);
-  
-  if (roomId && userId) {
-    console.log(`🧹 Cleaning up user ${userId} from room ${roomId}`);
-    cleanupUserFromRoom(userId, roomId);
-    
-    // IMPORTANT: Also update the database
-    // Call the same logic as /rooms/leave endpoint
-    Room.findOne({ name: roomId }).then(room => {
-      if (room) {
-        room.participants = room.participants.filter(id => id !== userId);
-        if (room.participants.length === 0) {
-          room.deleteOne();
-        } else {
-          room.save();
-        }
+      console.log(`🔌 Socket ${socket.id} disconnected`);
+      
+      const userId = socketToUser.get(socket.id);
+      const roomId = socketToRoom.get(socket.id);
+      
+      if (roomId && userId) {
+        console.log(`🧹 Cleaning up user ${userId} from room ${roomId}`);
+        cleanupUserFromRoom(userId, roomId);
       }
-    }).catch(err => console.error('Error cleaning up room in DB:', err));
-  }
-  
-  socketToUser.delete(socket.id);
-  socketToRoom.delete(socket.id);
-});
+      
+      socketToUser.delete(socket.id);
+      socketToRoom.delete(socket.id);
+    });
   });
 };

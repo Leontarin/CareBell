@@ -49,38 +49,37 @@ export default function MeetWithFriends() {
   const retryAttempts = useRef(new Map()); 
 
   // cleanup when user closes browser tab
- useEffect(() => {
-  const handleBeforeUnload = () => {
-    if (joinedRoom && user?.id) {
-      // Create proper FormData for sendBeacon
-      const formData = new FormData();
-      formData.append('roomName', joinedRoom);
-      formData.append('userId', user.id);
-      
-      navigator.sendBeacon(`${API}/rooms/leave`, formData);
-    }
-  };
-
-  const handleVisibilityChange = () => {
-    if (document.hidden && joinedRoom) {
-      // Optionally pause video when tab is hidden
-      if (localStream) {
-        localStream.getVideoTracks().forEach(track => {
-          track.enabled = false;
-        });
+  useEffect(() => {
+    const handleBeforeUnload = () => {
+      if (joinedRoom && user?.id) {
+        // Create proper FormData for sendBeacon
+        const formData = new FormData();
+        formData.append('roomName', joinedRoom);
+        formData.append('userId', user.id);
+        
+        navigator.sendBeacon(`${API}/rooms/leave`, formData);
       }
-    }
-  };
+    };
 
-  window.addEventListener('beforeunload', handleBeforeUnload);
-  document.addEventListener('visibilitychange', handleVisibilityChange);
+    const handleVisibilityChange = () => {
+      if (document.hidden && joinedRoom) {
+        // Optionally pause video when tab is hidden
+        if (localStream) {
+          localStream.getVideoTracks().forEach(track => {
+            track.enabled = false;
+          });
+        }
+      }
+    };
 
-  return () => {
-    window.removeEventListener('beforeunload', handleBeforeUnload);
-    document.removeEventListener('visibilitychange', handleVisibilityChange);
-  };
-}, [joinedRoom, user?.id, localStream]);
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    document.addEventListener('visibilitychange', handleVisibilityChange);
 
+    return () => {
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
+  }, [joinedRoom, user?.id, localStream]);
 
   // Socket.IO connection for real-time room updates
   useEffect(() => {
@@ -92,14 +91,17 @@ export default function MeetWithFriends() {
 
     newSocket.on('connect', () => {
       console.log('✅ Connected to room management socket');
+      // Register user for real-time updates
+      newSocket.emit('register', user.id);
     });
 
     newSocket.on('disconnect', () => {
       console.log('🔌 Disconnected from room management socket');
     });
 
-    // Listen for real-time room updates
+    // REAL-TIME ROOM UPDATES
     newSocket.on('room-created', (room) => {
+      console.log('🆕 Real-time: Room created', room.name);
       setRooms(prev => {
         // Avoid duplicates
         const exists = prev.find(r => r.name === room.name);
@@ -109,26 +111,28 @@ export default function MeetWithFriends() {
     });
 
     newSocket.on('room-updated', (room) => {
-  setRooms(prev => prev.map(r => r.name === room.name ? room : r));
-  
-  // If we're in this room, update our participants
-  if (joinedRoom === room.name) {
-    const currentParticipants = participants;
-    const newParticipants = room.participants || [];
-    
-    // Find who left
-    const leftParticipants = currentParticipants.filter(p => !newParticipants.includes(p));
-    
-    // Clean up connections for participants who left
-    leftParticipants.forEach(participantId => {
-      if (participantId !== user.id) {
-        cleanupP2PConnection(participantId);
+      console.log('🔄 Real-time: Room updated', room.name, 'participants:', room.participants.length);
+      setRooms(prev => prev.map(r => r.name === room.name ? room : r));
+      
+      // If we're in this room, update our participants
+      if (joinedRoom === room.name) {
+        const currentParticipants = participants;
+        const newParticipants = room.participants || [];
+        
+        // Find who left
+        const leftParticipants = currentParticipants.filter(p => !newParticipants.includes(p));
+        
+        // Clean up connections for participants who left
+        leftParticipants.forEach(participantId => {
+          if (participantId !== user.id) {
+            cleanupP2PConnection(participantId);
+          }
+        });
       }
     });
-  }
-});
 
     newSocket.on('room-deleted', (data) => {
+      console.log('🗑️ Real-time: Room deleted', data.name);
       setRooms(prev => prev.filter(r => r.name !== data.name));
       
       // If user was in the deleted room, handle cleanup
@@ -137,12 +141,22 @@ export default function MeetWithFriends() {
       }
     });
 
+    // REAL-TIME PARTICIPANT COUNT UPDATES
+    newSocket.on('room-participant-count', ({ roomName, count }) => {
+      console.log(`📊 Real-time: Participant count for ${roomName}: ${count}`);
+      setRooms(prev => prev.map(room => 
+        room.name === roomName 
+          ? { ...room, participants: new Array(count).fill('participant') } // Just for count display
+          : room
+      ));
+    });
+
     setSocket(newSocket);
 
     return () => {
       newSocket.disconnect();
     };
-  }, [user?.id]);
+  }, [user?.id, joinedRoom, participants]);
 
   // Fullscreen toggle function
   const toggleFullscreen = () => {
@@ -176,7 +190,6 @@ export default function MeetWithFriends() {
   useEffect(() => {
     if (!joinedRoom || !user?.id) return;
 
-    
     const signaling = new DenoP2PSignaling(joinedRoom, user.id);
     
     // Set up signaling event handlers
@@ -194,24 +207,23 @@ export default function MeetWithFriends() {
 
     // Handle participants updates from Deno server
     signaling.onParticipantsUpdate = (participantList, newUser, leftUser) => {
-  // Enforce P2P mesh limit
-  if (participantList.length > MAX_P2P_PARTICIPANTS) {
-    alert(`Room limited to ${MAX_P2P_PARTICIPANTS} participants for optimal P2P performance.`);
-    participantList = participantList.slice(0, MAX_P2P_PARTICIPANTS);
-  }
-  
-  setParticipants(participantList);
+      // Enforce P2P mesh limit
+      if (participantList.length > MAX_P2P_PARTICIPANTS) {
+        alert(`Room limited to ${MAX_P2P_PARTICIPANTS} participants for optimal P2P performance.`);
+        participantList = participantList.slice(0, MAX_P2P_PARTICIPANTS);
+      }
+      
+      setParticipants(participantList);
 
-  // NEW: Handle when someone leaves
-  if (leftUser && leftUser !== user.id) {
-    console.log('🚪 Participant left:', leftUser);
-    cleanupP2PConnection(leftUser);
-  }
-};
+      // NEW: Handle when someone leaves
+      if (leftUser && leftUser !== user.id) {
+        console.log('🚪 Participant left:', leftUser);
+        cleanupP2PConnection(leftUser);
+      }
+    };
 
     // Handle P2P WebRTC signals from Deno server
     signaling.onP2PSignal = (fromUserId, signal) => {
-
       setP2pConnections(currentConnections => {
         const manager = currentConnections.get(fromUserId);
         if (manager) {
@@ -257,17 +269,25 @@ export default function MeetWithFriends() {
     }, 100);
   };
 
-  // Fetch rooms from Vercel backend (non-P2P API calls)
+  // FETCH ROOMS INITIALLY AND SET UP PERIODIC REFRESH
   useEffect(() => {
     async function fetchRooms() {
       try {
         const res = await axios.get(`${API}/rooms`);
+        console.log('📋 Fetched rooms:', res.data.length);
         setRooms(res.data);
       } catch (e) {
         console.error("❌ Error fetching rooms:", e);
       }
     }
+    
+    // Initial fetch
     fetchRooms();
+    
+    // Periodic refresh every 30 seconds as backup
+    const interval = setInterval(fetchRooms, 30000);
+    
+    return () => clearInterval(interval);
   }, []);
 
   // Handle P2P mesh connections when participants change
@@ -326,7 +346,6 @@ export default function MeetWithFriends() {
 
       // Set up connection failure handling
       manager.onConnectionFailed = () => {
-        
         // Increment retry count
         const newAttempts = (retryAttempts.current.get(participantId) || 0) + 1;
         retryAttempts.current.set(participantId, newAttempts);
@@ -354,7 +373,6 @@ export default function MeetWithFriends() {
 
       // Handle remote stream
       manager.onRemoteStream = (stream) => {
-       
         // Update state
         setRemoteStreams(prev => {
           const newMap = new Map(prev);
@@ -399,64 +417,64 @@ export default function MeetWithFriends() {
   };
 
   const cleanupP2PConnection = (participantId) => {
-  console.log('🧹 Cleaning up P2P connection for:', participantId);
-  
-  // Clear any pending timeouts
-  const timeoutId = connectionTimeouts.current.get(participantId);
-  if (timeoutId) {
-    clearTimeout(timeoutId);
-    connectionTimeouts.current.delete(participantId);
-  }
+    console.log('🧹 Cleaning up P2P connection for:', participantId);
+    
+    // Clear any pending timeouts
+    const timeoutId = connectionTimeouts.current.get(participantId);
+    if (timeoutId) {
+      clearTimeout(timeoutId);
+      connectionTimeouts.current.delete(participantId);
+    }
 
-  // Cleanup manager
-  setP2pConnections(prev => {
-    const manager = prev.get(participantId);
-    if (manager) {
-      try {
-        manager.destroy();
-      } catch (e) {
-        console.warn('⚠️ Error destroying P2P manager for', participantId, ':', e);
+    // Cleanup manager
+    setP2pConnections(prev => {
+      const manager = prev.get(participantId);
+      if (manager) {
+        try {
+          manager.destroy();
+        } catch (e) {
+          console.warn('⚠️ Error destroying P2P manager for', participantId, ':', e);
+        }
       }
+      
+      const newMap = new Map(prev);
+      newMap.delete(participantId);
+      return newMap;
+    });
+
+    // Cleanup stream
+    setRemoteStreams(prev => {
+      const stream = prev.get(participantId);
+      if (stream) {
+        stream.getTracks().forEach(track => {
+          track.stop();
+          console.log('🎥 Stopped remote track for', participantId, ':', track.kind);
+        });
+      }
+      
+      const newMap = new Map(prev);
+      newMap.delete(participantId);
+      return newMap;
+    });
+
+    // Cleanup video ref
+    const videoRef = remoteVideoRefs.current.get(participantId);
+    if (videoRef?.current) {
+      videoRef.current.srcObject = null;
+      videoRef.current.pause();
     }
+    remoteVideoRefs.current.delete(participantId);
     
-    const newMap = new Map(prev);
-    newMap.delete(participantId);
-    return newMap;
-  });
+    // Cleanup connection state
+    setConnectionStates(prev => {
+      const newMap = new Map(prev);
+      newMap.delete(participantId);
+      return newMap;
+    });
 
-  // Cleanup stream
-  setRemoteStreams(prev => {
-    const stream = prev.get(participantId);
-    if (stream) {
-      stream.getTracks().forEach(track => {
-        track.stop();
-        console.log('🎥 Stopped remote track for', participantId, ':', track.kind);
-      });
-    }
-    
-    const newMap = new Map(prev);
-    newMap.delete(participantId);
-    return newMap;
-  });
-
-  // Cleanup video ref
-  const videoRef = remoteVideoRefs.current.get(participantId);
-  if (videoRef?.current) {
-    videoRef.current.srcObject = null;
-    videoRef.current.pause();
-  }
-  remoteVideoRefs.current.delete(participantId);
-  
-  // Cleanup connection state
-  setConnectionStates(prev => {
-    const newMap = new Map(prev);
-    newMap.delete(participantId);
-    return newMap;
-  });
-
-  // Clear retry attempts
-  retryAttempts.current.delete(participantId);
-};
+    // Clear retry attempts
+    retryAttempts.current.delete(participantId);
+  };
 
   const updateP2PStats = () => {
     const states = Array.from(connectionStates.values());
@@ -477,7 +495,12 @@ export default function MeetWithFriends() {
         userId: user.id,
       });
       
+      console.log('✅ Room created:', data.name);
       setNewRoomName("");
+      
+      // FORCE REFRESH ROOMS AFTER CREATING
+      const res = await axios.get(`${API}/rooms`);
+      setRooms(res.data);
       
       // Automatically join the created room
       await joinRoom(data.name);
@@ -494,7 +517,6 @@ export default function MeetWithFriends() {
       return;
     }
 
-    
     try {
       // Notify backend that user is joining
       const response = await axios.post(`${API}/rooms/join`, {
@@ -533,74 +555,80 @@ export default function MeetWithFriends() {
 
   // Stop P2P video call
   function leaveRoom() {
-  console.log('🚪 Leaving room:', joinedRoom);
+    console.log('🚪 Leaving room:', joinedRoom);
 
-  // Reset fullscreen when leaving room
-  setMeetFullscreen(false);
+    // Reset fullscreen when leaving room
+    setMeetFullscreen(false);
 
-  // Notify backend that user is leaving
-  if (joinedRoom && user?.id) {
-    axios.post(`${API}/rooms/leave`, {
-      roomName: joinedRoom,
-      userId: user.id
-    }).then(() => {
-      console.log('Successfully left room on backend');
-    }).catch(error => {
-      console.error('Error leaving room on backend:', error);
-    });
-  }
-
-  // Stop local stream
-  if (localStream) {
-    localStream.getTracks().forEach(track => {
-      track.stop();
-      console.log('🎥 Stopped track:', track.kind);
-    });
-    setLocalStream(null);
-  }
-
-  // Clean up all P2P connections
-  p2pConnections.forEach((manager, participantId) => {
-    cleanupP2PConnection(participantId);
-  });
-
-  // Clear timeouts and retry attempts
-  connectionTimeouts.current.forEach(timeoutId => clearTimeout(timeoutId));
-  connectionTimeouts.current.clear();
-  retryAttempts.current.clear();
-
-  // Disconnect from Deno signaling
-  if (denoSignaling) {
-    denoSignaling.disconnect();
-    setDenoSignaling(null);
-  }
-
-  // NEW: Clear all video refs
-  if (localVideoRef.current) {
-    localVideoRef.current.srcObject = null;
-  }
-  
-  remoteVideoRefs.current.forEach((ref, participantId) => {
-    if (ref.current) {
-      ref.current.srcObject = null;
+    // Notify backend that user is leaving
+    if (joinedRoom && user?.id) {
+      axios.post(`${API}/rooms/leave`, {
+        roomName: joinedRoom,
+        userId: user.id
+      }).then(() => {
+        console.log('✅ Successfully left room on backend');
+        
+        // FORCE REFRESH ROOMS AFTER LEAVING
+        axios.get(`${API}/rooms`).then(res => {
+          setRooms(res.data);
+        }).catch(err => console.error('Failed to refresh rooms:', err));
+        
+      }).catch(error => {
+        console.error('❌ Error leaving room on backend:', error);
+      });
     }
-  });
 
-  setIsInCall(false);
-  setParticipants([]);
-  setP2pConnections(new Map());
-  setRemoteStreams(new Map());
-  setConnectionStates(new Map());
-  setP2pStats({ totalConnections: 0, connectedPeers: 0, failedConnections: 0 });
-  setSignalingConnected(false);
-  remoteVideoRefs.current.clear();
+    // Stop local stream
+    if (localStream) {
+      localStream.getTracks().forEach(track => {
+        track.stop();
+        console.log('🎥 Stopped track:', track.kind);
+      });
+      setLocalStream(null);
+    }
 
-  // Reset media control states
-  setIsAudioMuted(false);
-  setIsVideoOff(false);
+    // Clean up all P2P connections
+    p2pConnections.forEach((manager, participantId) => {
+      cleanupP2PConnection(participantId);
+    });
 
-  setJoinedRoom(null);
-}
+    // Clear timeouts and retry attempts
+    connectionTimeouts.current.forEach(timeoutId => clearTimeout(timeoutId));
+    connectionTimeouts.current.clear();
+    retryAttempts.current.clear();
+
+    // Disconnect from Deno signaling
+    if (denoSignaling) {
+      denoSignaling.disconnect();
+      setDenoSignaling(null);
+    }
+
+    // NEW: Clear all video refs
+    if (localVideoRef.current) {
+      localVideoRef.current.srcObject = null;
+    }
+    
+    remoteVideoRefs.current.forEach((ref, participantId) => {
+      if (ref.current) {
+        ref.current.srcObject = null;
+      }
+    });
+
+    setIsInCall(false);
+    setParticipants([]);
+    setP2pConnections(new Map());
+    setRemoteStreams(new Map());
+    setConnectionStates(new Map());
+    setP2pStats({ totalConnections: 0, connectedPeers: 0, failedConnections: 0 });
+    setSignalingConnected(false);
+    remoteVideoRefs.current.clear();
+
+    // Reset media control states
+    setIsAudioMuted(false);
+    setIsVideoOff(false);
+
+    setJoinedRoom(null);
+  }
 
   // Send P2P message to all connected peers
   const sendP2PMessageToAll = (message) => {
@@ -611,269 +639,275 @@ export default function MeetWithFriends() {
       }
     });
     return sentCount;
-  };
-
-  if (!user?.id) {
-    return (
-      <div className="w-full h-full bg-gradient-to-br from-gray-800 to-gray-900 flex items-center justify-center">
-        <div className="text-center p-12 bg-blue-300 dark:bg-gray-800 rounded-2xl shadow-2xl border border-gray-700">
-          <div className="text-6xl mb-6">🔐</div>
-         <h2 className="text-white text-3xl font-bold mb-4">Authentication Required</h2>
-         <p className="text-gray-300 text-lg">Please log in to access P2P video rooms</p>
-       </div>
-     </div>
-   );
- }
-
- return (
+    };
+if (!user?.id) {
+return (
+<div className="w-full h-full bg-gradient-to-br from-gray-800 to-gray-900 flex items-center justify-center">
+<div className="text-center p-12 bg-blue-300 dark:bg-gray-800 rounded-2xl shadow-2xl border border-gray-700">
+<div className="text-6xl mb-6">🔐</div>
+<h2 className="text-white text-3xl font-bold mb-4">Authentication Required</h2>
+<p className="text-gray-300 text-lg">Please log in to access P2P video rooms</p>
+</div>
+</div>
+);
+}
+return (
    <div className="w-full h-full bg-blue-300 dark:bg-gray-900 relative overflow-hidden">
      {!joinedRoom ? (
        <div className="flex flex-col items-center justify-center h-full p-8">
          <h2 className="text-black dark:text-white text-3xl mb-4 font-bold">
-           {t("MeetWithFriends.Title")}5
+           {t("MeetWithFriends.Title")}1
          </h2>
-         
-
          <div className="mb-8 flex items-center">
-           <input
-             type="text"
-             className="px-4 py-2 rounded-l border-none outline-none text-lg"
-             placeholder="Enter room name"
-             value={newRoomName}
-             onChange={(e) => setNewRoomName(e.target.value)}
-             onKeyPress={(e) => e.key === 'Enter' && createRoom()}
-           />
-           <button
-             className="px-6 py-2 bg-green-600 text-white rounded-r hover:bg-green-700 text-lg font-semibold transition-colors"
-             onClick={createRoom}
-             disabled={!newRoomName.trim()}
-           >
-             {t("MeetWithFriends.createRoom")}
-           </button>
-         </div>
+       <input
+         type="text"
+         className="px-4 py-2 rounded-l border-none outline-none text-lg"
+         placeholder="Enter room name"
+         value={newRoomName}
+         onChange={(e) => setNewRoomName(e.target.value)}
+         onKeyPress={(e) => e.key === 'Enter' && createRoom()}
+       />
+       <button
+         className="px-6 py-2 bg-green-600 text-white rounded-r hover:bg-green-700 text-lg font-semibold transition-colors"
+         onClick={createRoom}
+         disabled={!newRoomName.trim()}
+       >
+         {t("MeetWithFriends.createRoom")}
+       </button>
+     </div>
 
-         <div className="w-full max-w-2xl">
-           <h3 className="text-black dark:text-white text-xl mb-4">
-             {t("MeetWithFriends.availableRooms")} ({rooms.length})
-           </h3>
-           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-             {rooms.map((room) => {
-               const participantCount = room.participants?.length || 0;
-               const isRoomFull = participantCount >= MAX_P2P_PARTICIPANTS;
-               
-               return (
-                 <div
-                   key={room._id}
-                   className={`flex flex-col justify-between border rounded-xl p-6 shadow-md hover:shadow-xl transition duration-300 ${
-                     isRoomFull 
-                       ? 'bg-red-100 dark:bg-red-900 border-red-500' 
-                       : 'bg-blue-100 dark:bg-[#2b2b2f] border-blue-700 dark:border-yellow-400'
-                   }`}
-                   style={{ minHeight: '200px' }}
-                 >
-                   <div>
-                     <h4 className={`text-xl font-semibold mb-1 ${
-                       isRoomFull ? 'text-red-900 dark:text-red-300' : 'text-blue-900 dark:text-white'
-                     }`}>
-                       {room.name}
-                     </h4>
-                     <p className="text-gray-700 dark:text-gray-400 text-sm">
-                       👥 {participantCount}/{MAX_P2P_PARTICIPANTS} participants
-                     </p>
-                     {room.isActive && (
-                       <p className="text-green-600 dark:text-green-400 text-xs mt-1">
-                         🟢 Active Call
-                       </p>
-                     )}
-                     {isRoomFull && (
-                       <p className="text-red-600 dark:text-red-400 text-xs mt-1">
-                         🚫 Room Full - P2P Limit Reached
-                       </p>
-                     )}
-                     <p className="text-gray-500 dark:text-gray-500 text-xs mt-1">
-                       Created: {new Date(room.createdAt).toLocaleTimeString()}
-                     </p>
-                   </div>
-
-                   <button
-                     onClick={() => joinRoom(room.name)}
-                     disabled={isRoomFull}
-                     className={`mt-4 font-semibold py-2 px-4 rounded-lg text-center transition-all ${
-                       isRoomFull
-                         ? 'bg-gray-400 text-gray-600 cursor-not-allowed'
-                         : 'bg-[#4f46e5] hover:bg-[#4338ca] text-white'
-                     }`}
-                   >
-                     {isRoomFull ? '🚫 Room Full' : '🔗 Join Call'}
-                   </button>
-                 </div>
-               );
-             })}
-           </div>
-
-           {rooms.length === 0 && (
-             <div className="text-center py-8">
-               <p className="text-gray-400 text-lg mb-2">
-                 {t("MeetWithFriends.noRooms")}
-               </p>
-               <p className="text-gray-500 text-sm">
-                 Create the first room to get started! 🚀
-               </p>
-             </div>
-           )}
-         </div>
-       </div>
-     ) : (
-       <div className="w-full h-full flex flex-col bg-gray-900">
-         {/* P2P Room Header */}
-         <div className="flex justify-between items-center w-full p-6 bg-gray-800 border-b border-gray-700">
-           <div>
-             <h2 className="text-white text-2xl font-bold">
-               {joinedRoom} Room
-             </h2>
-             <p className="text-gray-300 text-sm mt-1">
-               👥 {participants.length}/{MAX_P2P_PARTICIPANTS} participants 
-               {signalingConnected && <span className="text-green-400 ml-2">🟢 Connected</span>}
-               {!signalingConnected && <span className="text-red-400 ml-2">🔴 Connecting...</span>}
-             </p>
-           </div>
+     <div className="w-full max-w-2xl">
+       <h3 className="text-black dark:text-white text-xl mb-4">
+         {t("MeetWithFriends.availableRooms")} ({rooms.length})
+       </h3>
+       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+         {rooms.map((room) => {
+           const participantCount = room.participants?.length || 0;
+           const isRoomFull = participantCount >= MAX_P2P_PARTICIPANTS;
            
-           <div className="flex gap-3">
-             {/* Fullscreen Toggle Button */}
-             <button
-               onClick={toggleFullscreen}
-               className="px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg font-semibold text-sm shadow-lg transition-colors flex items-center gap-2"
-               title={meetFullscreen ? 'Exit fullscreen' : 'Enter fullscreen'}
-             >
-               {meetFullscreen ? <FaCompress /> : <FaExpand />}
-               {meetFullscreen ? 'Exit Fullscreen' : 'Fullscreen'}
-             </button>
-
-             {/* Media Control Buttons */}
-             <button
-               onClick={toggleAudio}
-               className={`px-4 py-2 rounded-lg font-semibold text-sm shadow-lg transition-colors ${
-                 isAudioMuted 
-                   ? 'bg-red-600 hover:bg-red-700 text-white' 
-                   : 'bg-green-600 hover:bg-green-700 text-white'
+           return (
+             <div
+               key={room._id}
+               className={`flex flex-col justify-between border rounded-xl p-6 shadow-md hover:shadow-xl transition duration-300 ${
+                 isRoomFull 
+                   ? 'bg-red-100 dark:bg-red-900 border-red-500' 
+                   : room.isTemporary === false
+                   ? 'bg-yellow-100 dark:bg-yellow-900 border-yellow-500'
+                   : 'bg-blue-100 dark:bg-[#2b2b2f] border-blue-700 dark:border-yellow-400'
                }`}
-               title={isAudioMuted ? 'Unmute microphone' : 'Mute microphone'}>
-              {isAudioMuted ? '🔇 Unmute' : '🎤 Mute'}
-            </button>
+               style={{ minHeight: '200px' }}
+             >
+               <div>
+                 <h4 className={`text-xl font-semibold mb-1 flex items-center gap-2 ${
+                   isRoomFull ? 'text-red-900 dark:text-red-300' 
+                   : room.isTemporary === false ? 'text-yellow-900 dark:text-yellow-300'
+                   : 'text-blue-900 dark:text-white'
+                 }`}>
+                   {room.isTemporary === false && <span title="Default Room">⭐</span>}
+                   {room.name}
+                 </h4>
+                 <p className="text-gray-700 dark:text-gray-400 text-sm">
+                   👥 {participantCount}/{MAX_P2P_PARTICIPANTS} participants
+                 </p>
+                 {room.isActive && (
+                   <p className="text-green-600 dark:text-green-400 text-xs mt-1">
+                     🟢 Active Call
+                   </p>
+                 )}
+                 {isRoomFull && (
+                   <p className="text-red-600 dark:text-red-400 text-xs mt-1">
+                     🚫 Room Full - P2P Limit Reached
+                   </p>
+                 )}
+                 {room.isTemporary === false && (
+                   <p className="text-yellow-600 dark:text-yellow-400 text-xs mt-1">
+                     ⭐ Default Room
+                   </p>
+                 )}
+                 <p className="text-gray-500 dark:text-gray-500 text-xs mt-1">
+                   Created: {new Date(room.createdAt).toLocaleTimeString()}
+                 </p>
+               </div>
 
-            <button
-              onClick={toggleVideo}
-              className={`px-4 py-2 rounded-lg font-semibold text-sm shadow-lg transition-colors ${
-                isVideoOff 
-                  ? 'bg-red-600 hover:bg-red-700 text-white' 
-                  : 'bg-blue-600 hover:bg-blue-700 text-white'
-              }`}
-              title={isVideoOff ? 'Turn on camera' : 'Turn off camera'}
-            >
-              {isVideoOff ? '📹 Video On' : '📹 Video Off'}
-            </button>
+               <button
+                 onClick={() => joinRoom(room.name)}
+                 disabled={isRoomFull}
+                 className={`mt-4 font-semibold py-2 px-4 rounded-lg text-center transition-all ${
+                   isRoomFull
+                     ? 'bg-gray-400 text-gray-600 cursor-not-allowed'
+                     : 'bg-[#4f46e5] hover:bg-[#4338ca] text-white'
+                 }`}
+               >
+                 {isRoomFull ? '🚫 Room Full' : '🔗 Join Call'}
+               </button>
+             </div>
+           );
+         })}
+       </div>
 
-            <button
-              onClick={leaveRoom}
-              className="px-6 py-3 bg-gray-600 text-white rounded-lg hover:bg-gray-700 font-semibold text-lg shadow-lg transition-colors"
-            >
-              🚪 Leave Room
-            </button>
-          </div>
-        </div>
-
-        {/* P2P Video Grid */}
-        <div className="flex-1 bg-black p-6 overflow-hidden">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 h-full min-h-0">
-            {/* Local Video */}
-            <div className="relative bg-gray-800 rounded-xl overflow-hidden shadow-2xl border-2 border-green-500">
-              <video
-                ref={localVideoRef}
-                autoPlay
-                muted
-                playsInline
-                className="w-full h-full object-cover"
-              />
-              {/* Media status indicators */}
-              <div className="absolute top-2 left-2 flex gap-1">
-                {isAudioMuted && (
-                  <div className="bg-red-600 text-white px-2 py-1 rounded text-xs font-semibold">
-                    🔇 MUTED
-                  </div>
-                )}
-                {isVideoOff && (
-                  <div className="bg-red-600 text-white px-2 py-1 rounded text-xs font-semibold">
-                    📹 OFF
-                  </div>
-                )}
-              </div>
-            
-            </div>
-
-            {/* P2P Remote Videos */}
-            {participants.filter(pid => pid !== user.id).map((participantId) => {
-              if (!remoteVideoRefs.current.has(participantId)) {
-                remoteVideoRefs.current.set(participantId, React.createRef());
-              }
-              
-              const videoRef = remoteVideoRefs.current.get(participantId);
-              const stream = remoteStreams.get(participantId);
-              const connectionState = connectionStates.get(participantId) || 'unknown';
-              
-              return (
-                <div key={participantId} className="relative bg-gray-800 rounded-xl overflow-hidden shadow-2xl border-2 border-blue-500">
-                  <video
-                    ref={videoRef}
-                    autoPlay
-                    playsInline
-                    controls={false}
-                    volume={1.0}
-                    muted={false}
-                    className="w-full h-full object-cover"
-                    onLoadedMetadata={(e) => {
-                      console.log('📊 P2P Video metadata loaded for', participantId);
-                    }}
-                    onPlay={() => {
-                      console.log('▶️ P2P Video started playing for', participantId);
-                    }}
-                    onError={(e) => {
-                      console.error('❌ P2P Video error for', participantId, ':', e);
-                    }}
-                  />
-                  
-                  {/* Connection state overlay */}
-                  {!stream && (
-                    <div className="absolute inset-0 bg-gray-900 bg-opacity-80 flex items-center justify-center">
-                      <div className="text-center text-white">
-                        <div className="text-4xl mb-2">
-                          {connectionState === 'connecting' && '🔄'}
-                          {connectionState === 'connected' && '✅'}
-                          {connectionState === 'failed' && '❌'}
-                          {connectionState === 'unknown' && '⏳'}
-                        </div>
-                        <p className="text-sm font-semibold capitalize">
-                          {connectionState === 'connecting' && 'Connecting...'}
-                          {connectionState === 'connected' && 'Connected'}
-                          {connectionState === 'failed' && 'Connection Failed'}
-                          {connectionState === 'unknown' && 'Waiting...'}
-                        </p>
-                      </div>
-                    </div>
-                  )}
-                  
-             
-      
-                </div>
-              );
-            })}
-
-          </div>
-
+       {rooms.length === 0 && (
+         <div className="text-center py-8">
+           <p className="text-gray-400 text-lg mb-2">
+             {t("MeetWithFriends.noRooms")}
+           </p>
+           <p className="text-gray-500 text-sm">
+             Create the first room to get started! 🚀
+           </p>
+         </div>
+       )}
+     </div>
+   </div>
+ ) : (
+   <div className="w-full h-full flex flex-col bg-gray-900">
+     {/* P2P Room Header */}
+     <div className="flex justify-between items-center w-full p-6 bg-gray-800 border-b border-gray-700">
+       <div>
+         <h2 className="text-white text-2xl font-bold">
+           {joinedRoom} Room
+         </h2>
+         <p className="text-gray-300 text-sm mt-1">
+           👥 {participants.length}/{MAX_P2P_PARTICIPANTS} participants 
+           {signalingConnected && <span className="text-green-400 ml-2">🟢 Connected</span>}
+           {!signalingConnected && <span className="text-red-400 ml-2">🔴 Connecting...</span>}
+         </p>
+       </div>
        
+       <div className="flex gap-3">
+         {/* Fullscreen Toggle Button */}
+         <button
+           onClick={toggleFullscreen}
+           className="px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg font-semibold text-sm shadow-lg transition-colors flex items-center gap-2"
+           title={meetFullscreen ? 'Exit fullscreen' : 'Enter fullscreen'}
+         >
+           {meetFullscreen ? <FaCompress /> : <FaExpand />}
+           {meetFullscreen ? 'Exit Fullscreen' : 'Fullscreen'}
+         </button>
 
-        </div>
+         {/* Media Control Buttons */}
+         <button
+           onClick={toggleAudio}
+           className={`px-4 py-2 rounded-lg font-semibold text-sm shadow-lg transition-colors ${
+             isAudioMuted 
+               ? 'bg-red-600 hover:bg-red-700 text-white' 
+               : 'bg-green-600 hover:bg-green-700 text-white'
+           }`}
+           title={isAudioMuted ? 'Unmute microphone' : 'Mute microphone'}>
+          {isAudioMuted ? '🔇 Unmute' : '🎤 Mute'}
+        </button>
+
+        <button
+          onClick={toggleVideo}
+          className={`px-4 py-2 rounded-lg font-semibold text-sm shadow-lg transition-colors ${
+            isVideoOff 
+              ? 'bg-red-600 hover:bg-red-700 text-white' 
+              : 'bg-blue-600 hover:bg-blue-700 text-white'
+          }`}
+          title={isVideoOff ? 'Turn on camera' : 'Turn off camera'}
+        >
+          {isVideoOff ? '📹 Video On' : '📹 Video Off'}
+        </button>
+
+        <button
+          onClick={leaveRoom}
+          className="px-6 py-3 bg-gray-600 text-white rounded-lg hover:bg-gray-700 font-semibold text-lg shadow-lg transition-colors"
+        >
+          🚪 Leave Room
+        </button>
       </div>
-    )}
+    </div>
+
+    {/* P2P Video Grid */}
+    <div className="flex-1 bg-black p-6 overflow-hidden">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 h-full min-h-0">
+        {/* Local Video */}
+        <div className="relative bg-gray-800 rounded-xl overflow-hidden shadow-2xl border-2 border-green-500">
+          <video
+            ref={localVideoRef}
+            autoPlay
+            muted
+            playsInline
+            className="w-full h-full object-cover"
+          />
+          {/* Media status indicators */}
+          <div className="absolute top-2 left-2 flex gap-1">
+            {isAudioMuted && (
+              <div className="bg-red-600 text-white px-2 py-1 rounded text-xs font-semibold">
+                🔇 MUTED
+              </div>
+            )}
+            {isVideoOff && (
+              <div className="bg-red-600 text-white px-2 py-1 rounded text-xs font-semibold">
+                📹 OFF
+              </div>
+            )}
+          </div>
+          <div className="absolute bottom-2 left-2 bg-black bg-opacity-50 text-white px-2 py-1 rounded text-xs font-semibold">
+            You
+          </div>
+        </div>
+
+        {/* P2P Remote Videos */}
+        {participants.filter(pid => pid !== user.id).map((participantId) => {
+          if (!remoteVideoRefs.current.has(participantId)) {
+            remoteVideoRefs.current.set(participantId, React.createRef());
+          }
+          
+          const videoRef = remoteVideoRefs.current.get(participantId);
+          const stream = remoteStreams.get(participantId);
+          const connectionState = connectionStates.get(participantId) || 'unknown';
+          
+          return (
+            <div key={participantId} className="relative bg-gray-800 rounded-xl overflow-hidden shadow-2xl border-2 border-blue-500">
+              <video
+                ref={videoRef}
+                autoPlay
+                playsInline
+                controls={false}
+                volume={1.0}
+                muted={false}
+                className="w-full h-full object-cover"
+                onLoadedMetadata={(e) => {
+                  console.log('📊 P2P Video metadata loaded for', participantId);
+                }}
+                onPlay={() => {
+                  console.log('▶️ P2P Video started playing for', participantId);
+                }}
+                onError={(e) => {
+                  console.error('❌ P2P Video error for', participantId, ':', e);
+                }}
+              />
+              
+              {/* Connection state overlay */}
+              {!stream && (
+                <div className="absolute inset-0 bg-gray-900 bg-opacity-80 flex items-center justify-center">
+                  <div className="text-center text-white">
+                    <div className="text-4xl mb-2">
+                      {connectionState === 'connecting' && '🔄'}
+                      {connectionState === 'connected' && '✅'}
+                      {connectionState === 'failed' && '❌'}
+                      {connectionState === 'unknown' && '⏳'}
+                    </div>
+                    <p className="text-sm font-semibold capitalize">
+                      {connectionState === 'connecting' && 'Connecting...'}
+                      {connectionState === 'connected' && 'Connected'}
+                      {connectionState === 'failed' && 'Connection Failed'}
+                      {connectionState === 'unknown' && 'Waiting...'}
+                    </p>
+                  </div>
+                </div>
+              )}
+              
+              <div className="absolute bottom-2 left-2 bg-black bg-opacity-50 text-white px-2 py-1 rounded text-xs font-semibold">
+                User {participantId.slice(-4)}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </div>
   </div>
+)}
+
+</div>
 );
 }
