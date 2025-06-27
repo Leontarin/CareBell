@@ -6,6 +6,49 @@ const Room = require('../models/room');
 const multer = require('multer');
 const upload = multer(); // for parsing multipart/form-data
 
+
+
+// Seed default rooms (call this once to create permanent rooms)
+router.post('/seed-defaults', async (req, res) => {
+  try {
+    const defaultRooms = [
+ 'Health',
+ 'Gardening', 
+ 'Chess',
+ 'Cooking',
+ 'Travel',
+ 'Books',
+ 'Exercise',
+ 'Family',
+ 'Crafts',
+ 'Technology'
+];
+    
+    const createdRooms = [];
+    
+    for (const roomName of defaultRooms) {
+      const existingRoom = await Room.findOne({ name: roomName });
+      if (!existingRoom) {
+        const room = new Room({
+          name: roomName,
+          participants: [],
+          isActive: false,
+          isTemporary: false
+        });
+        await room.save();
+        createdRooms.push(room);
+      }
+    }
+    
+    res.json({ 
+      message: `Created ${createdRooms.length} default rooms`,
+      rooms: createdRooms 
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // Create default/permanent rooms (admin function or seed data)
 router.post('/create-default', async (req, res) => {
   try {
@@ -144,46 +187,7 @@ router.get('/default', async (req, res) => {
   }
 });
 
-// Seed default rooms (call this once to create permanent rooms)
-router.post('/seed-defaults', async (req, res) => {
-  try {
-    const defaultRooms = [
- 'Health',
- 'Gardening', 
- 'Chess',
- 'Cooking',
- 'Travel',
- 'Books',
- 'Exercise',
- 'Family',
- 'Crafts',
- 'Technology'
-];
-    
-    const createdRooms = [];
-    
-    for (const roomName of defaultRooms) {
-      const existingRoom = await Room.findOne({ name: roomName });
-      if (!existingRoom) {
-        const room = new Room({
-          name: roomName,
-          participants: [],
-          isActive: false,
-          isTemporary: false
-        });
-        await room.save();
-        createdRooms.push(room);
-      }
-    }
-    
-    res.json({ 
-      message: `Created ${createdRooms.length} default rooms`,
-      rooms: createdRooms 
-    });
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-});
+
 
 // Get room by ID with participants
 router.get('/:roomId', async (req, res) => {
