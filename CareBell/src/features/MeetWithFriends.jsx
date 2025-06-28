@@ -690,7 +690,7 @@ return (
      {!joinedRoom ? (
        <div className="flex flex-col items-center justify-center h-full p-8">
          <h2 className="text-black dark:text-white text-3xl mb-4 font-bold">
-           {t("MeetWithFriends.Title")}3
+           {t("MeetWithFriends.Title")}4
          </h2>
          <div className="mb-8 flex items-center">
        <input
