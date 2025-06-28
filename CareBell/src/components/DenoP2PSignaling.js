@@ -1,5 +1,5 @@
 // CareBell/src/components/DenoP2PSignaling.js
-import { P2P_CONFIG } from '../shared/config';
+import { P2P_CONFIG, P2P_SIGNALING_URL } from '../shared/config';
 
 class DenoP2PSignaling {
   constructor(localVideoRef, remoteVideoRef, denoSignaling, roomId, userId, targetUserId, polite) {
@@ -43,6 +43,25 @@ class DenoP2PSignaling {
     };
     
     this.qualityMonitorInterval = null;
+
+    // —— Added back from v1 ——
+    this.ws = null;
+    this.isConnected = false;
+    this.messageQueue = [];
+    
+    this.onP2PSignal = null;
+    this.onParticipantsUpdate = null;
+    this.onConnected = null;
+    this.onDisconnected = null;
+    this.onError = null;
+
+    this.reconnectAttempts = 0;
+    this.maxReconnectAttempts = 5;
+    this.reconnectDelay = 1000;
+    
+    this.pingInterval = null;
+    this.lastPong = Date.now();
+    // ——————————————
   }
 
   async initialize(localStream, isInitiator = false) {
@@ -342,7 +361,6 @@ class DenoP2PSignaling {
       }
       
       await this.peerConnection.setRemoteDescription(offerDesc);
-      
       await this.processQueuedIceCandidates();
       
       const answer = await this.peerConnection.createAnswer();
@@ -454,67 +472,234 @@ class DenoP2PSignaling {
           down: Math.round((bytesReceived * 8) / timeDiff / 1024)
         },
         lastUpdate: now
-     };
+      };
 
-     if (this.onQualityChange) {
-       this.onQualityChange(this.connectionQuality);
-     }
-   }
- }
+      if (this.onQualityChange) {
+        this.onQualityChange(this.connectionQuality);
+      }
+    }
+  }
 
- getConnectionQuality() {
-   return this.connectionQuality;
- }
+  getConnectionQuality() {
+    return this.connectionQuality;
+  }
 
- getConnectionState() {
-   if (!this.peerConnection || this.isDestroyed) return 'destroyed';
-   return {
-     connectionState: this.peerConnection.connectionState,
-     iceConnectionState: this.peerConnection.iceConnectionState,
-     signalingState: this.peerConnection.signalingState,
-     attempts: this.connectionAttempts,
-     targetUser: this.targetUserId,
-     p2pState: this.connectionState,
-     quality: this.connectionQuality
-   };
- }
+  getConnectionState() {
+    if (!this.peerConnection || this.isDestroyed) return 'destroyed';
+    return {
+      connectionState: this.peerConnection.connectionState,
+      iceConnectionState: this.peerConnection.iceConnectionState,
+      signalingState: this.peerConnection.signalingState,
+      attempts: this.connectionAttempts,
+      targetUser: this.targetUserId,
+      p2pState: this.connectionState,
+      quality: this.connectionQuality
+    };
+  }
 
- destroy() {
-   if (this.isDestroyed) return;
-   
-   this.isDestroyed = true;
-   
-   if (this.connectionTimeout) {
-     clearTimeout(this.connectionTimeout);
-     this.connectionTimeout = null;
-   }
-   
-   if (this.qualityMonitorInterval) {
-     clearInterval(this.qualityMonitorInterval);
-     this.qualityMonitorInterval = null;
-   }
-   
-   if (this.dataChannel) {
-     this.dataChannel.close();
-     this.dataChannel = null;
-   }
-   
-   if (this.peerConnection) {
-     this.peerConnection.close();
-     this.peerConnection = null;
-   }
-   
-   if (this._remoteStream) {
-     this._remoteStream.getTracks().forEach(t => t.stop());
-     this._remoteStream = null;
-   }
-   
-   this.queuedIceCandidates = [];
- }
+  // ———— v1 methods re-added verbatim ————
 
- cleanup() {
-   this.destroy();
- }
+  async connect() {
+    try {
+      console.log('🔌 Connecting to Deno P2P signaling server:', P2P_SIGNALING_URL);
+      if (this.ws) {
+        this.ws.close();
+        this.ws = null;
+      }
+      this.ws = new WebSocket(P2P_SIGNALING_URL);
+
+      const connectionTimeout = setTimeout(() => {
+        if (this.ws && this.ws.readyState === WebSocket.CONNECTING) {
+          console.error('⏰ WebSocket connection timeout');
+          this.ws.close();
+          this.handleConnectionError(new Error('Connection timeout'));
+        }
+      }, 10000);
+
+      this.ws.onopen = () => {
+        clearTimeout(connectionTimeout);
+        console.log('✅ Connected to Deno P2P signaling server');
+        this.isConnected = true;
+        this.reconnectAttempts = 0;
+        this.lastPong = Date.now();
+
+        this.startHealthCheck();
+
+        this.send({
+          type: 'join-room',
+          roomId: this.roomId,
+          userId: this.userId
+        });
+
+        this.messageQueue.forEach(msg => this.send(msg));
+        this.messageQueue = [];
+
+        if (this.onConnected) this.onConnected();
+      };
+
+      this.ws.onmessage = (event) => {
+        try {
+          const data = JSON.parse(event.data);
+          console.log('📥 Received from Deno signaling:', data.type, data);
+
+          switch (data.type) {
+            case 'connected':
+              console.log('🚀 Deno P2P server welcome:', data.message);
+              break;
+            case 'room-participants':
+              console.log('👥 Participants update:', data.participants);
+              if (this.onParticipantsUpdate) {
+                this.onParticipantsUpdate(data.participants, data.newUser, data.leftUser);
+              }
+              break;
+            case 'p2p-signal':
+              console.log('📡 P2P signal from', data.fromUserId, data.signal.type);
+              if (this.onP2PSignal) {
+                this.onP2PSignal(data.fromUserId, data.signal);
+              }
+              break;
+            case 'pong':
+              this.lastPong = Date.now();
+              console.log('🏓 Received pong from server');
+              break;
+            case 'error':
+              console.error('❌ Server error:', data.message);
+              if (this.onError) this.onError(new Error(data.message));
+              break;
+            default:
+              console.log('❓ Unknown message type from Deno signaling:', data.type);
+          }
+        } catch (err) {
+          console.error('❌ Error parsing Deno signaling message:', err);
+        }
+      };
+
+      this.ws.onclose = (event) => {
+        clearTimeout(connectionTimeout);
+        this.stopHealthCheck();
+        console.log('🔌 Deno P2P signaling connection closed:', event.code, event.reason);
+        this.isConnected = false;
+        if (this.onDisconnected) this.onDisconnected();
+
+        if (event.code !== 1000 && this.reconnectAttempts < this.maxReconnectAttempts) {
+          this.reconnectAttempts++;
+          const delay = this.reconnectDelay * Math.pow(2, this.reconnectAttempts - 1);
+          console.log(`🔄 Reconnect attempt ${this.reconnectAttempts}/${this.maxReconnectAttempts} in ${delay}ms`);
+          setTimeout(() => this.connect(), delay);
+        } else if (this.reconnectAttempts >= this.maxReconnectAttempts) {
+          console.error('❌ Max reconnection attempts reached');
+          if (this.onError) this.onError(new Error('Failed to connect after maximum retry attempts'));
+        }
+      };
+
+      this.ws.onerror = (error) => {
+        clearTimeout(connectionTimeout);
+        console.error('❌ Deno P2P signaling WebSocket error:', error);
+        this.handleConnectionError(error);
+      };
+    } catch (error) {
+      console.error('❌ Failed to connect to Deno P2P signaling:', error);
+      this.handleConnectionError(error);
+    }
+  }
+
+  startHealthCheck() {
+    this.pingInterval = setInterval(() => {
+      if (this.isConnected && this.ws?.readyState === WebSocket.OPEN) {
+        if (Date.now() - this.lastPong > 60000) {
+          console.warn('⚠️ No pong received, closing stale connection');
+          this.ws.close();
+          return;
+        }
+        this.send({ type: 'ping', timestamp: Date.now() });
+      }
+    }, 30000);
+  }
+
+  stopHealthCheck() {
+    if (this.pingInterval) {
+      clearInterval(this.pingInterval);
+      this.pingInterval = null;
+    }
+  }
+
+  handleConnectionError(error) {
+    if (this.onError) this.onError(error);
+  }
+
+  send(message) {
+    if (this.isConnected && this.ws?.readyState === WebSocket.OPEN) {
+      try {
+        this.ws.send(JSON.stringify(message));
+        return true;
+      } catch (err) {
+        console.error('❌ Failed to send message to Deno signaling:', err);
+        return false;
+      }
+    } else {
+      console.log('📦 Queueing message for Deno signaling (not connected)');
+      this.messageQueue.push(message);
+      return false;
+    }
+  }
+
+  sendOffer(targetUserId, offer) {
+    return this.send({
+      type: 'offer',
+      roomId: this.roomId,
+      userId: this.userId,
+      targetUserId,
+      signal: { type: 'offer', sdp: offer }
+    });
+  }
+
+  sendAnswer(targetUserId, answer) {
+    return this.send({
+      type: 'answer',
+      roomId: this.roomId,
+      userId: this.userId,
+      targetUserId,
+      signal: { type: 'answer', sdp: answer }
+    });
+  }
+
+  sendIceCandidate(targetUserId, candidate) {
+    return this.send({
+      type: 'ice-candidate',
+      roomId: this.roomId,
+      userId: this.userId,
+      targetUserId,
+      signal: { type: 'ice-candidate', candidate }
+    });
+  }
+
+  disconnect() {
+    this.stopHealthCheck();
+    if (this.isConnected) {
+      this.send({ type: 'leave-room', roomId: this.roomId, userId: this.userId });
+    }
+    if (this.ws) {
+      this.ws.close(1000, 'User disconnected');
+      this.ws = null;
+    }
+    this.isConnected = false;
+    this.reconnectAttempts = 0;
+    console.log('👋 Disconnected from Deno P2P signaling');
+  }
+
+  getStatus() {
+    return {
+      connected: this.isConnected,
+      readyState: this.ws?.readyState,
+      reconnectAttempts: this.reconnectAttempts,
+      lastPong: this.lastPong
+    };
+  }
+
+  // cleanup() already calls destroy()
+  cleanup() {
+    this.destroy();
+  }
 }
 
 export { DenoP2PSignaling };
