@@ -766,7 +766,7 @@ export default function MeetWithFriends() {
       {!joinedRoom ? (
         <div className="flex flex-col items-center justify-center h-full p-8">
           <h2 className="text-black dark:text-white text-3xl mb-4 font-bold">
-            {t("MeetWithFriends.Title")}
+            {t("MeetWithFriends.Title")}2
           </h2>
           <div className="mb-8 flex items-center">
             <input
@@ -827,8 +827,8 @@ export default function MeetWithFriends() {
                           onClick={() => showParticipants(room)}
                           className="flex items-center gap-2 text-sm text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 mb-3 transition-colors"
                         >
-                          <FaUsers size={14} />
-                          View Participants ({room.participantDetails.length})
+                          
+                          View Participants
                         </button>
                       )}
                       
