@@ -85,7 +85,11 @@ router.post('/analyze', async (req, res) => {
     const labels = cls.labels;
     const scores = cls.scores;
     const topLabel = labels[0];
-    console.log(`→ topLabel: ${topLabel} (score ${scores[0].toFixed(3)})`);
+    const isPersonal = topLabel === 'personal info';
+    console.log(
+      `→ classification: ${topLabel} (score ${scores[0].toFixed(3)})`);
+    console.log(
+      `→ result: ${isPersonal ? 'PERSONAL' : 'NOT PERSONAL'}`);
 
     if (topLabel === 'personal info') {
       const embeddingResp = await hf.featureExtraction({
