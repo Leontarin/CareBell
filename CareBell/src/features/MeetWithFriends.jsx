@@ -227,6 +227,20 @@ export default function MeetWithFriends() {
       });
     });
 
+    newSocket.on('p2p-signal', (data) => {
+  const { fromUserId, signal } = data;
+  
+  if (signal.type === 'mute-state') {
+    console.log(`🔇 MUTE: Received mute state via Socket.IO from ${fromUserId}: ${signal.isMuted ? 'muted' : 'unmuted'}`);
+    setParticipantMuteStates(prev => {
+      const newMap = new Map(prev);
+      newMap.set(fromUserId, signal.isMuted);
+      return newMap;
+    });
+    return;
+  }
+});
+
     setSocket(newSocket);
 
     return () => {
@@ -278,40 +292,42 @@ export default function MeetWithFriends() {
   };
 
   const sendMuteStateToAllPeers = (isMuted) => {
-    console.log('🎤 MUTE: sendMuteStateToAllPeers called with isMuted:', isMuted);
-    console.log('🎤 MUTE: p2pConnections size:', p2pConnections.size);
-    console.log('🎤 MUTE: denoSignaling exists:', !!denoSignaling);
-    console.log('🎤 MUTE: signalingConnected:', signalingConnected);
-    
-    let sentViaDataChannel = 0;
-    let sentViaSignaling = 0;
-    
-    // Try sending via WebRTC data channels first
-    p2pConnections.forEach((manager, participantId) => {
-      if (manager.sendMuteState && manager.sendMuteState(isMuted)) {
-        sentViaDataChannel++;
-        console.log(`✅ MUTE: Sent mute state via data channel to ${participantId}`);
-      } else {
-        console.log(`❌ MUTE: Failed to send mute state via data channel to ${participantId}`);
+  console.log('🎤 MUTE: sendMuteStateToAllPeers called with isMuted:', isMuted);
+  
+  let sentViaDataChannel = 0;
+  let sentViaSignaling = 0;
+  let sentViaSocketIO = 0;
+  
+  // Try sending via WebRTC data channels first
+  p2pConnections.forEach((manager, participantId) => {
+    if (manager.sendMuteState && manager.sendMuteState(isMuted)) {
+      sentViaDataChannel++;
+    }
+  });
+  
+  // Send via Deno signaling
+  if (denoSignaling && signalingConnected) {
+    denoSignaling.broadcastMuteState(isMuted);
+    sentViaSignaling++;
+  }
+  
+  // ALSO send via Socket.IO as fallback
+  if (socket && joinedRoom) {
+    socket.emit('broadcast-mute-state', {
+      roomId: joinedRoom,
+      userId: user.id,
+      signal: { 
+        type: 'mute-state', 
+        isMuted: isMuted,
+        timestamp: Date.now()
       }
     });
-    
-    // ALWAYS send via Deno signaling as well for reliability
-    if (denoSignaling && signalingConnected) {
-      console.log('📡 MUTE: Attempting to send via Deno signaling...');
-      const result = denoSignaling.broadcastMuteState(isMuted);
-      console.log('📡 MUTE: Deno signaling result:', result);
-      sentViaSignaling++;
-      console.log('📡 MUTE: Sent mute state via Deno signaling to all participants');
-    } else {
-      console.error('❌ MUTE: Cannot send via Deno signaling:', {
-        hasDenoSignaling: !!denoSignaling,
-        signalingConnected: signalingConnected
-      });
-    }
-    
-    console.log(`🎤 MUTE: Mute state sent: ${sentViaDataChannel} via data channel, ${sentViaSignaling} via signaling`);
-  };
+    sentViaSocketIO++;
+    console.log('📡 MUTE: Also sent via Socket.IO fallback');
+  }
+  
+  console.log(`🎤 MUTE: Mute state sent: ${sentViaDataChannel} via data channel, ${sentViaSignaling} via Deno signaling, ${sentViaSocketIO} via Socket.IO`);
+};
 
   const toggleVideo = () => {
     if (!localStream) return;
@@ -822,7 +838,7 @@ export default function MeetWithFriends() {
       {!joinedRoom ? (
         <div className="flex flex-col items-center justify-center h-full p-8">
           <h2 className="text-black dark:text-white text-3xl mb-4 font-bold">
-            {t("MeetWithFriends.Title")}8
+            {t("MeetWithFriends.Title")}9
           </h2>
           <div className="mb-8 flex items-center">
             <input
