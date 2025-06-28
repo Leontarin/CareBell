@@ -720,7 +720,7 @@ export default function MeetWithFriends() {
 
   return (
     <div className="w-full h-full bg-blue-300 dark:bg-gray-900 relative overflow-hidden">
-      {/* Participants Modal */}
+      {/* Participants Modal*/}
       <ParticipantsModal
         isOpen={showParticipantsModal}
         onClose={() => setShowParticipantsModal(false)}
