@@ -224,6 +224,56 @@ async function cleanupUserFromRoom(userId, roomId) {
       }
     });
 
+    // Add mute state handling
+    socket.on('broadcast-mute-state', ({ roomId, userId, signal }) => {
+      try {
+        console.log(`🔇 Broadcasting mute state from ${userId} in room ${roomId}: ${signal.isMuted ? 'muted' : 'unmuted'}`);
+        
+        if (!roomParticipants.has(roomId) || !roomParticipants.get(roomId).has(userId)) {
+          console.warn(`⚠️ User ${userId} not in room ${roomId}, ignoring mute state`);
+          return;
+        }
+        
+        // Broadcast to all other participants in the room
+        socket.to(roomId).emit('p2p-signal', {
+          fromUserId: userId,
+          signal: signal
+        });
+        
+        console.log(`✅ Successfully broadcasted mute state from ${userId} to room ${roomId}`);
+      } catch (error) {
+        console.error('❌ Error handling mute state broadcast:', error);
+      }
+    });
+
+    socket.on('mute-state', ({ roomId, userId, targetUserId, signal }) => {
+      try {
+        console.log(`🔇 Routing mute state from ${userId} to ${targetUserId} in room ${roomId}`);
+        
+        if (!roomParticipants.has(roomId) || 
+            !roomParticipants.get(roomId).has(userId) || 
+            !roomParticipants.get(roomId).has(targetUserId)) {
+          console.warn(`⚠️ Mute state routing failed - users not in room ${roomId}`);
+          return;
+        }
+        
+        // Send to specific target user
+        const targetSockets = Array.from(io.sockets.sockets.values())
+          .filter(s => s.userId === targetUserId && s.roomId === roomId);
+        
+        targetSockets.forEach(targetSocket => {
+          targetSocket.emit('p2p-signal', {
+            fromUserId: userId,
+            signal: signal
+          });
+        });
+        
+        console.log(`✅ Successfully routed mute state from ${userId} to ${targetUserId}`);
+      } catch (error) {
+        console.error('❌ Error handling mute state:', error);
+      }
+    });
+
     // Original WebRTC signaling (kept for fallback)
     socket.on('signal', ({ roomId, userId, signal }) => {
       try {
@@ -235,46 +285,46 @@ async function cleanupUserFromRoom(userId, roomId) {
         }
         
         if (!roomParticipants.has(roomId) || !roomParticipants.get(roomId).has(userId)) {
-          console.warn(`⚠️ User ${userId} not in room ${roomId}, ignoring signal`);
-          return;
-        }
-        
-        const enrichedSignal = {
-          ...signal,
-          timestamp: Date.now(),
-          fromUser: userId
-        };
-        
-        socket.to(roomId).emit('signal', {
-          userId: userId,
-          signal: enrichedSignal
-        });
-        
-        console.log(`✅ Successfully relayed ${signal.type} signal from ${userId} to room ${roomId}`);
-      } catch (error) {
-        console.error('❌ Error handling signal:', error);
-      }
-    });
+         console.warn(`⚠️ User ${userId} not in room ${roomId}, ignoring signal`);
+         return;
+       }
+       
+       const enrichedSignal = {
+         ...signal,
+         timestamp: Date.now(),
+         fromUser: userId
+       };
+       
+       socket.to(roomId).emit('signal', {
+         userId: userId,
+         signal: enrichedSignal
+       });
+       
+       console.log(`✅ Successfully relayed ${signal.type} signal from ${userId} to room ${roomId}`);
+     } catch (error) {
+       console.error('❌ Error handling signal:', error);
+     }
+   });
 
-    socket.on('get-room-participant-count', (roomName) => {
-      const count = roomParticipants.has(roomName) ? roomParticipants.get(roomName).size : 0;
-      console.log(`📊 Requested participant count for room ${roomName}: ${count}`);
-      socket.emit('room-participant-count', { roomName, count });
-    });
+   socket.on('get-room-participant-count', (roomName) => {
+     const count = roomParticipants.has(roomName) ? roomParticipants.get(roomName).size : 0;
+     console.log(`📊 Requested participant count for room ${roomName}: ${count}`);
+     socket.emit('room-participant-count', { roomName, count });
+   });
 
-    socket.on('disconnect', () => {
-      console.log(`🔌 Socket ${socket.id} disconnected`);
-      
-      const userId = socketToUser.get(socket.id);
-      const roomId = socketToRoom.get(socket.id);
-      
-      if (roomId && userId) {
-        console.log(`🧹 Cleaning up user ${userId} from room ${roomId}`);
-        cleanupUserFromRoom(userId, roomId);
-      }
-      
-      socketToUser.delete(socket.id);
-      socketToRoom.delete(socket.id);
-    });
-  });
+   socket.on('disconnect', () => {
+     console.log(`🔌 Socket ${socket.id} disconnected`);
+     
+     const userId = socketToUser.get(socket.id);
+     const roomId = socketToRoom.get(socket.id);
+     
+     if (roomId && userId) {
+       console.log(`🧹 Cleaning up user ${userId} from room ${roomId}`);
+       cleanupUserFromRoom(userId, roomId);
+     }
+     
+     socketToUser.delete(socket.id);
+     socketToRoom.delete(socket.id);
+   });
+ });
 };

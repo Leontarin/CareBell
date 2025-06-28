@@ -241,6 +241,35 @@ export class DenoP2PSignaling {
     });
   }
 
+  // Send mute state to specific peer
+  sendMuteState(targetUserId, isMuted) {
+    return this.send({
+      type: 'mute-state',
+      roomId: this.roomId,
+      userId: this.userId,
+      targetUserId: targetUserId,
+      signal: { 
+        type: 'mute-state', 
+        isMuted: isMuted,
+        timestamp: Date.now()
+      }
+    });
+  }
+
+  // Broadcast mute state to all participants in room
+  broadcastMuteState(isMuted) {
+    return this.send({
+      type: 'broadcast-mute-state',
+      roomId: this.roomId,
+      userId: this.userId,
+      signal: { 
+        type: 'mute-state', 
+        isMuted: isMuted,
+        timestamp: Date.now()
+      }
+    });
+  }
+
   // Leave room and disconnect
   disconnect() {
     this.stopHealthCheck();
