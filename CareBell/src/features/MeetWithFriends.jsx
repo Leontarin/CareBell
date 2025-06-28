@@ -277,43 +277,74 @@ export default function MeetWithFriends() {
   };
 
   // Media control functions
-  const toggleAudio = () => {
-    if (!localStream) return;
+const toggleAudio = () => {
+  console.log('🎤 toggleAudio called, localStream exists:', !!localStream);
+  
+  if (!localStream) {
+    console.error('❌ No local stream available');
+    return;
+  }
 
-    const audioTracks = localStream.getAudioTracks();
-    if (audioTracks.length > 0) {
-      const newMutedState = !isAudioMuted;
-      audioTracks[0].enabled = !newMutedState;
-      setIsAudioMuted(newMutedState);
-      
-      console.log(`🎤 ${newMutedState ? 'Muted' : 'Unmuted'} audio for user ${user.id}`);
-      
-      // Send mute state via both data channel AND signaling server
-      sendMuteStateToAllPeers(newMutedState);
-    }
-  };
-
-  // Add this new function
-  const sendMuteStateToAllPeers = (isMuted) => {
-    let sentViaDataChannel = 0;
-    let sentViaSignaling = 0;
+  const audioTracks = localStream.getAudioTracks();
+  console.log('🎤 Audio tracks found:', audioTracks.length);
+  
+  if (audioTracks.length > 0) {
+    const newMutedState = !isAudioMuted;
+    console.log(`🎤 Changing mute state from ${isAudioMuted} to ${newMutedState}`);
     
-    // Try sending via WebRTC data channels first
-    p2pConnections.forEach((manager, participantId) => {
-      if (manager.sendMuteState && manager.sendMuteState(isMuted)) {
-        sentViaDataChannel++;
-      }
+    audioTracks[0].enabled = !newMutedState;
+    setIsAudioMuted(newMutedState);
+    
+    console.log(`🎤 ${newMutedState ? 'Muted' : 'Unmuted'} audio for user ${user.id}`);
+    console.log('🎤 About to call sendMuteStateToAllPeers with:', newMutedState);
+    
+    // Send mute state via both data channel AND signaling server
+    sendMuteStateToAllPeers(newMutedState);
+  } else {
+    console.error('❌ No audio tracks found in local stream');
+  }
+};
+
+ const sendMuteStateToAllPeers = (isMuted) => {
+  console.log('🎤 sendMuteStateToAllPeers called with isMuted:', isMuted);
+  console.log('🎤 p2pConnections size:', p2pConnections.size);
+  console.log('🎤 denoSignaling exists:', !!denoSignaling);
+  console.log('🎤 signalingConnected:', signalingConnected);
+  
+  let sentViaDataChannel = 0;
+  let sentViaSignaling = 0;
+  
+  // Try sending via WebRTC data channels first
+  p2pConnections.forEach((manager, participantId) => {
+    console.log(`🎤 Checking manager for participant ${participantId}:`, {
+      hasManager: !!manager,
+      hasSendMuteState: !!(manager && manager.sendMuteState)
     });
     
-    // ALWAYS send via Deno signaling as well for reliability
-    if (denoSignaling && signalingConnected) {
-      denoSignaling.broadcastMuteState(isMuted);
-      sentViaSignaling++;
-      console.log('📡 Sent mute state via Deno signaling to all participants');
+    if (manager.sendMuteState && manager.sendMuteState(isMuted)) {
+      sentViaDataChannel++;
+      console.log(`✅ Sent mute state via data channel to ${participantId}`);
+    } else {
+      console.log(`❌ Failed to send mute state via data channel to ${participantId}`);
     }
-    
-    console.log(`🎤 Mute state sent: ${sentViaDataChannel} via data channel, ${sentViaSignaling} via signaling`);
-  };
+  });
+  
+  // ALWAYS send via Deno signaling as well for reliability
+  if (denoSignaling && signalingConnected) {
+    console.log('📡 Attempting to send via Deno signaling...');
+    const result = denoSignaling.broadcastMuteState(isMuted);
+    console.log('📡 Deno signaling result:', result);
+    sentViaSignaling++;
+    console.log('📡 Sent mute state via Deno signaling to all participants');
+  } else {
+    console.error('❌ Cannot send via Deno signaling:', {
+      hasDenoSignaling: !!denoSignaling,
+      signalingConnected: signalingConnected
+    });
+  }
+  
+  console.log(`🎤 Mute state sent: ${sentViaDataChannel} via data channel, ${sentViaSignaling} via signaling`);
+};
 
   const toggleVideo = () => {
     if (!localStream) return;
@@ -890,7 +921,7 @@ return (
     {!joinedRoom ? (
       <div className="flex flex-col items-center justify-center h-full p-8">
         <h2 className="text-black dark:text-white text-3xl mb-4 font-bold">
-          {t("MeetWithFriends.Title")}
+          {t("MeetWithFriends.Title")}1
         </h2>
         <div className="mb-8 flex items-center">
           <input
@@ -1039,7 +1070,7 @@ return (
             >
               🧪 Test Mute UI
             </button>
-            
+
            {/* Media Control Buttons */}
            <button
              onClick={toggleAudio}

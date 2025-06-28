@@ -226,25 +226,27 @@ async function cleanupUserFromRoom(userId, roomId) {
 
     // Add mute state handling
     socket.on('broadcast-mute-state', ({ roomId, userId, signal }) => {
-      try {
-        console.log(`🔇 Broadcasting mute state from ${userId} in room ${roomId}: ${signal.isMuted ? 'muted' : 'unmuted'}`);
-        
-        if (!roomParticipants.has(roomId) || !roomParticipants.get(roomId).has(userId)) {
-          console.warn(`⚠️ User ${userId} not in room ${roomId}, ignoring mute state`);
-          return;
-        }
-        
-        // Broadcast to all other participants in the room
-        socket.to(roomId).emit('p2p-signal', {
-          fromUserId: userId,
-          signal: signal
-        });
-        
-        console.log(`✅ Successfully broadcasted mute state from ${userId} to room ${roomId}`);
-      } catch (error) {
-        console.error('❌ Error handling mute state broadcast:', error);
-      }
+  try {
+    console.log(`🔇 [BACKEND] Broadcasting mute state from ${userId} in room ${roomId}: ${signal.isMuted ? 'muted' : 'unmuted'}`);
+    
+    if (!roomParticipants.has(roomId) || !roomParticipants.get(roomId).has(userId)) {
+      console.warn(`⚠️ [BACKEND] User ${userId} not in room ${roomId}, ignoring mute state`);
+      return;
+    }
+    
+    console.log(`📡 [BACKEND] Broadcasting to room ${roomId}, participants:`, Array.from(roomParticipants.get(roomId)));
+    
+    // Broadcast to all other participants in the room
+    socket.to(roomId).emit('p2p-signal', {
+      fromUserId: userId,
+      signal: signal
     });
+    
+    console.log(`✅ [BACKEND] Successfully broadcasted mute state from ${userId} to room ${roomId}`);
+  } catch (error) {
+    console.error('❌ [BACKEND] Error handling mute state broadcast:', error);
+  }
+});
 
     socket.on('mute-state', ({ roomId, userId, targetUserId, signal }) => {
       try {

@@ -192,21 +192,25 @@ export class DenoP2PSignaling {
   }
 
   send(message) {
-    if (this.isConnected && this.ws?.readyState === WebSocket.OPEN) {
-      try {
-        this.ws.send(JSON.stringify(message));
-        return true;
-      } catch (error) {
-        console.error('❌ Failed to send message to Deno signaling:', error);
-        return false;
-      }
-    } else {
-      // Queue message for when connection is ready
-      console.log('📦 Queueing message for Deno signaling (not connected yet)');
-      this.messageQueue.push(message);
+  console.log('📡 DenoP2PSignaling.send called with message type:', message.type);
+  console.log('📡 Connection state:', this.isConnected, 'WebSocket readyState:', this.ws?.readyState);
+  
+  if (this.isConnected && this.ws?.readyState === WebSocket.OPEN) {
+    try {
+      this.ws.send(JSON.stringify(message));
+      console.log('✅ Message sent successfully:', message.type);
+      return true;
+    } catch (error) {
+      console.error('❌ Failed to send message to Deno signaling:', error);
       return false;
     }
+  } else {
+    // Queue message for when connection is ready
+    console.log('📦 Queueing message for Deno signaling (not connected yet):', message.type);
+    this.messageQueue.push(message);
+    return false;
   }
+}
 
   // Send WebRTC offer to specific peer
   sendOffer(targetUserId, offer) {
@@ -257,18 +261,26 @@ export class DenoP2PSignaling {
   }
 
   // Broadcast mute state to all participants in room
-  broadcastMuteState(isMuted) {
-    return this.send({
-      type: 'broadcast-mute-state',
-      roomId: this.roomId,
-      userId: this.userId,
-      signal: { 
-        type: 'mute-state', 
-        isMuted: isMuted,
-        timestamp: Date.now()
-      }
-    });
-  }
+broadcastMuteState(isMuted) {
+  console.log('📡 DenoP2PSignaling.broadcastMuteState called with:', isMuted);
+  console.log('📡 Connection state:', this.isConnected, 'WebSocket state:', this.ws?.readyState);
+  
+  const message = {
+    type: 'broadcast-mute-state',
+    roomId: this.roomId,
+    userId: this.userId,
+    signal: { 
+      type: 'mute-state', 
+      isMuted: isMuted,
+      timestamp: Date.now()
+    }
+  };
+  
+  console.log('📡 Sending message:', message);
+  const result = this.send(message);
+  console.log('📡 Send result:', result);
+  return result;
+}
 
   // Leave room and disconnect
   disconnect() {
