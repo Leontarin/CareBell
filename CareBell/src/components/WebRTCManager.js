@@ -87,16 +87,16 @@ class WebRTCManager {
 
       this.setupPeerConnectionHandlers();
       
-if (isInitiator) {
-  // Reduce delay and add randomization to prevent simultaneous offers
-  const delay = 500 + Math.random() * 500; // 500-1000ms random delay
-  setTimeout(async () => {
-    if (!this.isDestroyed && this.peerConnection && this.peerConnection.signalingState === 'stable' && !this.makingOffer) {
-      console.log(`🎯 P2P Initiator creating offer for ${this.targetUserId}`);
-      await this.createOffer();
-    }
-  }, delay);
-}
+      if (isInitiator) {
+        // Minimal delay for collision prevention
+        const delay = 100 + Math.random() * 100; // 100-200ms delay
+        setTimeout(async () => {
+          if (!this.isDestroyed && this.peerConnection && this.peerConnection.signalingState === 'stable' && !this.makingOffer) {
+            console.log(`🎯 P2P Initiator creating offer for ${this.targetUserId}`);
+            await this.createOffer();
+          }
+        }, delay);
+      }
 
       return true;
     } catch (error) {

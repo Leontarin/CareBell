@@ -145,15 +145,13 @@ async function cleanupUserFromRoom(userId, roomId) {
       const currentParticipants = Array.from(roomParticipants.get(roomId));
       console.log(`👥 Room ${roomId} now has participants:`, currentParticipants);
       
-      // Notify all in room with a delay
-      setTimeout(() => {
-        io.to(roomId).emit('room-participants', currentParticipants);
-        console.log(`📢 Notified room ${roomId} of participants:`, currentParticipants);
+      // Notify all in room - Immediate update
+      io.to(roomId).emit('room-participants', currentParticipants);
+      console.log(`📢 Notified room ${roomId} of participants:`, currentParticipants);
 
-        // Broadcast updated participant count to ALL clients
-        io.emit('room-participant-count', { roomName: roomId, count: currentParticipants.length });
-        console.log(`📊 Broadcasting participant count for room ${roomId}: ${currentParticipants.length}`);
-      }, 200);
+      // Broadcast updated participant count to ALL clients
+      io.emit('room-participant-count', { roomName: roomId, count: currentParticipants.length });
+      console.log(`📊 Broadcasting participant count for room ${roomId}: ${currentParticipants.length}`);
     });
 
     socket.on('leave-room', ({ roomId, userId }) => {
