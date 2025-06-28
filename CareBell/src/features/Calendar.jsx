@@ -148,7 +148,7 @@ export default function Calendar({ onClose }) {
   while (grid.length < 42) grid.push(null);
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-30 flex text-black dark:text-white">
+    <div className="fixed inset-0 bg-black bg-opacity-30 flex text-black dark:text-white  z-50">
       {/* Calendar panel */}
       <div className="bg-blue-200 dark:bg-gray-800 rounded-lg shadow-lg m-2 flex flex-col w-full h-screen max-h-screen">
 

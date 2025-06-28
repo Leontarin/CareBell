@@ -13,18 +13,17 @@
     "exitFullscreen": "Exit Fullscreen",
     "warningMessage": "Please do not give Bella personal information (passwords, last names, bank account, etc..)",
     "menus": {
-      "kontakte öffnen":           "call-contacts",
-      "kontakt öffnen":            "call-contacts",
-      "freunde öffnen":            "meet-with-friends",
-      "treffen mit freunden öffnen":"meet-with-friends",
-      "medikament öffnen":         "medicine",
-      "medikamente öffnen":        "medicine",
-      "mahlzeiten öffnen":         "meals",
-      "mahlzeit öffnen":           "meals",
-      "essen öffnen":              "meals",
-      "nachrichten öffnen":        "news",
-      "übung öffnen":              "exercise",
-      "workout öffnen":            "exercise"
+      "open contact":           "call-contacts",
+      "open call":            "call-contacts",
+      "open meet":            "meet-with-friends",
+      "open friends":"meet-with-friends",
+      "open medicine":         "medicine",
+      "open medication":        "medicine",
+      "open meals":         "meals",
+      "open meal":           "meals",
+      "open new":        "news",
+      "open exercise":              "exercise",
+      "open exercises":            "exercise"
     }
   },
   "Calendar": {
