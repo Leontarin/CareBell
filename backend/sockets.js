@@ -122,37 +122,56 @@ async function cleanupUserFromRoom(userId, roomId) {
       });
     });
 
-    socket.on('join-room', ({ roomId, userId }) => {
-      console.log(`🚪 User ${userId} joining room ${roomId}`);
-      
-      // Clean up any previous room membership
-      const previousRoom = socketToRoom.get(socket.id);
-      if (previousRoom && previousRoom !== roomId) {
-        socket.leave(previousRoom);
-        cleanupUserFromRoom(userId, previousRoom);
+    socket.on('join-room', async ({ roomId, userId }) => {
+  console.log(`🚪 User ${userId} joining room ${roomId}`);
+  
+  // Clean up any previous room membership
+  const previousRoom = socketToRoom.get(socket.id);
+  if (previousRoom && previousRoom !== roomId) {
+    socket.leave(previousRoom);
+    cleanupUserFromRoom(userId, previousRoom);
+  }
+  
+  socket.join(roomId);
+  socket.roomId = roomId;
+  socket.userId = userId;
+  socketToRoom.set(socket.id, roomId);
+
+  if (!roomParticipants.has(roomId)) {
+    roomParticipants.set(roomId, new Set());
+  }
+  roomParticipants.get(roomId).add(userId);
+
+  const currentParticipants = Array.from(roomParticipants.get(roomId));
+  console.log(`👥 Room ${roomId} now has participants:`, currentParticipants);
+  
+  // FETCH PARTICIPANT DETAILS IMMEDIATELY
+  const User = require('./models/user');
+  const participantDetails = await Promise.all(
+    currentParticipants.map(async (userId) => {
+      try {
+        const user = await User.findOne({ id: userId });
+        return {
+          userId: userId,
+          fullName: user ? user.fullName : `User ${userId.slice(-4)}`
+        };
+      } catch (error) {
+        return {
+          userId: userId,
+          fullName: `User ${userId.slice(-4)}`
+        };
       }
-      
-      socket.join(roomId);
-      socket.roomId = roomId;
-      socket.userId = userId;
-      socketToRoom.set(socket.id, roomId);
+    })
+  );
+  
+  // Send participants with details immediately
+  io.to(roomId).emit('room-participants', currentParticipants, participantDetails);
+  console.log(`📢 Notified room ${roomId} of participants with details:`, participantDetails);
 
-      if (!roomParticipants.has(roomId)) {
-        roomParticipants.set(roomId, new Set());
-      }
-      roomParticipants.get(roomId).add(userId);
-
-      const currentParticipants = Array.from(roomParticipants.get(roomId));
-      console.log(`👥 Room ${roomId} now has participants:`, currentParticipants);
-      
-      // Notify all in room - Immediate update
-      io.to(roomId).emit('room-participants', currentParticipants);
-      console.log(`📢 Notified room ${roomId} of participants:`, currentParticipants);
-
-      // Broadcast updated participant count to ALL clients
-      io.emit('room-participant-count', { roomName: roomId, count: currentParticipants.length });
-      console.log(`📊 Broadcasting participant count for room ${roomId}: ${currentParticipants.length}`);
-    });
+  // Broadcast updated participant count to ALL clients
+  io.emit('room-participant-count', { roomName: roomId, count: currentParticipants.length });
+  console.log(`📊 Broadcasting participant count for room ${roomId}: ${currentParticipants.length}`);
+});
 
     socket.on('leave-room', ({ roomId, userId }) => {
       console.log(`🚪 User ${userId} leaving room ${roomId}`);

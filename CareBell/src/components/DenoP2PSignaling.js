@@ -86,7 +86,12 @@ export class DenoP2PSignaling {
             case 'room-participants':
               console.log('👥 Participants update:', data.participants);
               if (this.onParticipantsUpdate) {
-                this.onParticipantsUpdate(data.participants, data.newUser, data.leftUser);
+                this.onParticipantsUpdate(
+                  data.participants, 
+                  data.newUser, 
+                  data.leftUser,
+                  data.participantDetails
+                );
               }
               break;
 

@@ -256,6 +256,20 @@ export default function MeetWithFriends() {
     };
   }, [user?.id, joinedRoom, participants, updateRoomAndParticipants]);
 
+
+  useEffect(() => {
+  if (participants.length > 0) {
+    // Fetch names for any participants we don't have names for
+    const participantsNeedingNames = participants.filter(pid => 
+      pid !== user.id && !participantNames.has(pid)
+    );
+    
+    if (participantsNeedingNames.length > 0) {
+      fetchParticipantNames(participantsNeedingNames);
+    }
+  }
+}, [participants, user?.id, participantNames]);
+
   // Fullscreen toggle function
   const toggleFullscreen = () => {
     setMeetFullscreen(!meetFullscreen);
@@ -304,7 +318,7 @@ export default function MeetWithFriends() {
     };
 
     // Handle participants updates from Deno server
-    signaling.onParticipantsUpdate = (participantList, newUser, leftUser) => {
+    signaling.onParticipantsUpdate = (participantList, newUser, leftUser, participantDetails) => {
       // Enforce P2P mesh limit
       if (participantList.length > MAX_P2P_PARTICIPANTS) {
         alert(`Room limited to ${MAX_P2P_PARTICIPANTS} participants for optimal P2P performance.`);
@@ -312,6 +326,23 @@ export default function MeetWithFriends() {
       }
       
       setParticipants(participantList);
+
+      // Update participant names if provided
+      if (participantDetails) {
+        const nameMap = new Map();
+        participantDetails.forEach(p => {
+          nameMap.set(p.userId, p.fullName);
+        });
+        setParticipantNames(prev => new Map([...prev, ...nameMap]));
+      } else {
+        // Fallback: fetch names for participants we don't have
+        const participantsNeedingNames = participantList.filter(pid => 
+          pid !== user.id && !participantNames.has(pid)
+        );
+        if (participantsNeedingNames.length > 0) {
+          fetchParticipantNames(participantsNeedingNames);
+        }
+      }
 
       // Handle when someone leaves
       if (leftUser && leftUser !== user.id) {
@@ -784,7 +815,7 @@ export default function MeetWithFriends() {
       {!joinedRoom ? (
         <div className="flex flex-col items-center justify-center h-full p-8">
           <h2 className="text-black dark:text-white text-3xl mb-4 font-bold">
-            {t("MeetWithFriends.Title")}
+            {t("MeetWithFriends.Title")}2
           </h2>
           <div className="mb-8 flex items-center">
             <input
@@ -987,7 +1018,7 @@ export default function MeetWithFriends() {
                const videoRef = remoteVideoRefs.current.get(participantId);
                const stream = remoteStreams.get(participantId);
                const connectionState = connectionStates.get(participantId) || 'unknown';
-               const participantName = participantNames.get(participantId) || `User ${participantId.slice(-4)}`;
+               const participantName = participantNames.get(participantId) || 'Loading...';
                
                return (
                  <div key={participantId} className="relative bg-gray-800 rounded-xl overflow-hidden shadow-2xl border-2 border-blue-500">

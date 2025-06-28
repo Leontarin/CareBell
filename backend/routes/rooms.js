@@ -75,10 +75,10 @@ router.post('/join', async (req, res) => {
     
     if (!room.participants.includes(userId)) {
       room.participants.push(userId);
-      room.isActive = true; // Mark room as active when someone joins
+      room.isActive = true;
       await room.save();
       
-      // Emit participant update
+      // Emit immediately after save - no delays
       req.app.get('io').emit('room-updated', room);
     }
     
