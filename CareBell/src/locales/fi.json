@@ -230,6 +230,8 @@
     "online":"verkossa",
     "s":"",
     "participant":"osallistujia",
+    "viewParticipants":"Näytä osallistujat",
+    "hideParticipants":"Piilota osallistujat",
     "availableRooms": "Huoneet:",
     "createRoom": "Luo huone",
     "Title":"Videohuoneet"

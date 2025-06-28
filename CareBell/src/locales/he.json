@@ -245,6 +245,8 @@
     "online":"מחובר/ים",
     "s":"ים/",
     "participant":"משתתף",
+    "viewParticipants":"הצג משתתפים",
+    "hideParticipants":"הסתר משתתפים",
     "availableRooms": ":חדרים זמינים",
     "createRoom": "צור חדר",
     "Title":" חדרי וידאו"

@@ -28,6 +28,8 @@ export default function MeetWithFriends() {
   const [participants, setParticipants] = useState([]);
   const [p2pConnections, setP2pConnections] = useState(new Map()); // userId -> WebRTCManager
   const [connectionStates, setConnectionStates] = useState(new Map()); // userId -> connectionState
+  const [remoteMediaStates, setRemoteMediaStates] = useState(new Map()); // userId -> {audioMuted, videoOff}
+  const [expandedRooms, setExpandedRooms] = useState(new Set());
   const [p2pStats, setP2pStats] = useState({
     totalConnections: 0,
     connectedPeers: 0,
@@ -160,6 +162,7 @@ export default function MeetWithFriends() {
       const newMutedState = !isAudioMuted;
       audioTracks[0].enabled = !newMutedState;
       setIsAudioMuted(newMutedState);
+      sendMediaStateToAll(newMutedState, isVideoOff);
     }
   };
 
@@ -171,6 +174,7 @@ export default function MeetWithFriends() {
       const newVideoOffState = !isVideoOff;
       videoTracks[0].enabled = !newVideoOffState;
       setIsVideoOff(newVideoOffState);
+      sendMediaStateToAll(isAudioMuted, newVideoOffState);
     }
   };
 
@@ -352,6 +356,7 @@ export default function MeetWithFriends() {
       manager.onConnectionEstablished = (targetUserId) => {
         updateConnectionState(targetUserId, 'connected');
         retryAttempts.current.delete(targetUserId); // Reset retry count
+        manager.sendMediaState(isAudioMuted, isVideoOff);
       };
 
       // Handle remote stream
@@ -381,6 +386,17 @@ export default function MeetWithFriends() {
             });
           }
         }, 100);
+      };
+
+      manager.onMediaStateReceived = (state) => {
+        setRemoteMediaStates(prev => {
+          const newMap = new Map(prev);
+          newMap.set(participantId, {
+            audioMuted: state.audioMuted,
+            videoOff: state.videoOff
+          });
+          return newMap;
+        });
       };
 
       // Store manager
@@ -451,6 +467,12 @@ export default function MeetWithFriends() {
   
   // Cleanup connection state
   setConnectionStates(prev => {
+    const newMap = new Map(prev);
+    newMap.delete(participantId);
+    return newMap;
+  });
+
+  setRemoteMediaStates(prev => {
     const newMap = new Map(prev);
     newMap.delete(participantId);
     return newMap;
@@ -593,6 +615,7 @@ export default function MeetWithFriends() {
   setP2pConnections(new Map());
   setRemoteStreams(new Map());
   setConnectionStates(new Map());
+  setRemoteMediaStates(new Map());
   setP2pStats({ totalConnections: 0, connectedPeers: 0, failedConnections: 0 });
   setSignalingConnected(false);
   remoteVideoRefs.current.clear();
@@ -613,6 +636,25 @@ export default function MeetWithFriends() {
       }
     });
     return sentCount;
+  };
+
+  function sendMediaStateToAll(audioMuted, videoOff) {
+    sendP2PMessageToAll({
+      type: 'media-state',
+      userId: user.id,
+      audioMuted,
+      videoOff,
+      timestamp: Date.now()
+    });
+  }
+
+  const toggleParticipantsList = (roomName) => {
+    setExpandedRooms(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(roomName)) newSet.delete(roomName);
+      else newSet.add(roomName);
+      return newSet;
+    });
   };
 
   if (!user?.id) {
@@ -697,20 +739,38 @@ export default function MeetWithFriends() {
                      </p>
                    </div>
 
-                   <button
-                     onClick={() => joinRoom(room.name)}
-                     disabled={isRoomFull}
-                     className={`mt-4 font-semibold py-2 px-4 rounded-lg text-center transition-all ${
-                       isRoomFull
-                         ? 'bg-gray-400 text-gray-600 cursor-not-allowed'
-                         : 'bg-[#4f46e5] hover:bg-[#4338ca] text-white'
-                     }`}
-                   >
-                     {isRoomFull ? '🚫 Room Full' : '🔗 Join Call'}
-                   </button>
-                 </div>
-               );
-             })}
+                  <button
+                    onClick={() => joinRoom(room.name)}
+                    disabled={isRoomFull}
+                    className={`mt-4 font-semibold py-2 px-4 rounded-lg text-center transition-all ${
+                      isRoomFull
+                        ? 'bg-gray-400 text-gray-600 cursor-not-allowed'
+                        : 'bg-[#4f46e5] hover:bg-[#4338ca] text-white'
+                    }`}
+                  >
+                    {isRoomFull ? '🚫 Room Full' : '🔗 Join Call'}
+                  </button>
+
+                  {participantCount > 0 && (
+                    <div className="mt-2">
+                      <button
+                        onClick={() => toggleParticipantsList(room.name)}
+                        className="text-sm text-blue-700 dark:text-blue-300 underline"
+                      >
+                        {expandedRooms.has(room.name) ? t('MeetWithFriends.hideParticipants') : t('MeetWithFriends.viewParticipants')}
+                      </button>
+                      {expandedRooms.has(room.name) && (
+                        <ul className="ml-4 mt-1 list-disc text-sm text-gray-700 dark:text-gray-300">
+                          {room.participantDetails?.map(p => (
+                            <li key={p.userId}>{p.fullName}</li>
+                          ))}
+                        </ul>
+                      )}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
            </div>
 
            {rooms.length === 0 && (
@@ -842,6 +902,20 @@ export default function MeetWithFriends() {
                       console.error('❌ P2P Video error for', participantId, ':', e);
                     }}
                   />
+
+                  {/* Remote media status */}
+                  <div className="absolute top-2 left-2 flex gap-1">
+                    {remoteMediaStates.get(participantId)?.audioMuted && (
+                      <div className="bg-red-600 text-white px-2 py-1 rounded text-xs font-semibold">
+                        🔇 MUTED
+                      </div>
+                    )}
+                    {remoteMediaStates.get(participantId)?.videoOff && (
+                      <div className="bg-red-600 text-white px-2 py-1 rounded text-xs font-semibold">
+                        📹 OFF
+                      </div>
+                    )}
+                  </div>
                   
                   {/* Connection state overlay */}
                   {!stream && (

@@ -248,6 +248,8 @@
     "online":"online",
     "s":"s",
     "participant":"participant",
+    "viewParticipants":"View Participants",
+    "hideParticipants":"Hide Participants",
     "availableRooms": "Available Rooms:",
     "createRoom": "Create Room",
     "Title":"Video Rooms"

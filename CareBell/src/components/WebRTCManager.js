@@ -30,6 +30,7 @@ class WebRTCManager {
     this.connectionState       = 'new';
     this.dataChannel          = null;
     this.onConnectionEstablished = null;
+    this.onMediaStateReceived = null;
 
     // Use the updated RTC config from P2P_CONFIG
     this.rtcConfig = P2P_CONFIG.RTC_CONFIG;
@@ -116,6 +117,10 @@ class WebRTCManager {
         } else if (data.type === 'audio-mute-state' && this.onMuteStateReceived) {
           console.log(`🔇 Received mute state via data channel from ${this.targetUserId}: ${data.isMuted ? 'muted' : 'unmuted'}`);
           this.onMuteStateReceived(data.userId, data.isMuted);
+        } else if (data.message && data.message.type === 'media-state' && this.onMediaStateReceived) {
+          this.onMediaStateReceived(data.message);
+        } else if (data.type === 'media-state' && this.onMediaStateReceived) {
+          this.onMediaStateReceived(data);
         }
       } catch (error) {
         console.error('Error parsing P2P message:', error);
@@ -173,6 +178,17 @@ class WebRTCManager {
     }
     
     return sentViaDataChannel;
+  }
+
+  sendMediaState(audioMuted, videoOff) {
+    const stateMessage = {
+      type: 'media-state',
+      userId: this.userId,
+      audioMuted,
+      videoOff,
+      timestamp: Date.now()
+    };
+    return this.sendP2PMessage(stateMessage);
   }
 
   setupPeerConnectionHandlers() {
