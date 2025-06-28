@@ -690,7 +690,7 @@ return (
      {!joinedRoom ? (
        <div className="flex flex-col items-center justify-center h-full p-8">
          <h2 className="text-black dark:text-white text-3xl mb-4 font-bold">
-           {t("MeetWithFriends.Title")}4
+           {t("MeetWithFriends.Title")}5
          </h2>
          <div className="mb-8 flex items-center">
        <input
@@ -777,14 +777,6 @@ return (
               🚫 Room Full - P2P Limit Reached
             </p>
           )}
-          {room.isTemporary === false && (
-            <p className="text-yellow-600 dark:text-yellow-400 text-xs mt-1">
-              ⭐ Default Room
-            </p>
-          )}
-          <p className="text-gray-500 dark:text-gray-500 text-xs mt-1">
-            Created: {new Date(room.createdAt).toLocaleTimeString()}
-          </p>
         </div>
 
         <button
