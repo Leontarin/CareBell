@@ -1,7 +1,7 @@
-// CareBell/src/components/WebRTCManager.js
+// CareBell/src/components/DenoP2PSignaling.js
 import { P2P_CONFIG } from '../shared/config';
 
-class WebRTCManager {
+class DenoP2PSignaling {
   constructor(localVideoRef, remoteVideoRef, denoSignaling, roomId, userId, targetUserId, polite) {
     this.localVideoRef       = localVideoRef;
     this.remoteVideoRef      = remoteVideoRef;
@@ -517,4 +517,4 @@ class WebRTCManager {
  }
 }
 
-export { WebRTCManager };
+export { DenoP2PSignaling };

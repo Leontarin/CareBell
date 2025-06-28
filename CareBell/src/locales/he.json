@@ -11,7 +11,20 @@
     "noReminders": "אין לך תזכורות שמורות.",
     "fullscreen": "מסך מלא",
     "exitFullscreen": "צא ממסך מלא",
-    "warningMessage": "אנא אל תמסור לבלה מידע אישי (סיסמאות, שמות משפחה, פרטי חשבון בנק וכו׳)"
+    "warningMessage": "אנא אל תמסור לבלה מידע אישי (סיסמאות, שמות משפחה, פרטי חשבון בנק וכו׳)",
+    "menus": {
+      "פתח אנשי קשר":     "call-contacts",
+      "פתח חבר":      "meet-with-friends",
+      "פתח פגוש חבר":      "meet-with-friends",
+      "פתח תרופות":     "medicine",
+      "פתח ארוחות":        "meals",
+      "פתח מנת היום":        "meals",
+      "פתח אוכל":        "meals",
+      "פתח מזון":        "meals",
+      "פתח חדשות":         "news",
+      "פתח אימונ":     "exercise",
+      "פתח אימון":     "exercise"
+    }
   },
   "Calendar": {
     "Mon": "שני",

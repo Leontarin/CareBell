@@ -18,7 +18,6 @@ export default function Bella() {
   const [callStatus, setCallStatus] = useState('ready');   // 'ready' | 'calling' | 'in-call'
   const [messages, setMessages]     = useState([]);
   const [isChatOpen, setIsChatOpen] = useState(false);
-
   const vapiRef = useRef(null);
   const chatRef = useRef(null);
 
@@ -26,20 +25,8 @@ export default function Bella() {
   async function classifyIntent(text) {
     const lc = text.toLowerCase().trim();
     // open menu
-    const menus = {
-      'open contacts':     'call-contacts',
-      'open contact':     'call-contacts',
-      'open friends':      'meet-with-friends',
-      'open meet with friends':      'meet-with-friends',
-      'open medicine':     'medicine',
-      'open medication':     'medicine',
-      'open meals':        'meals',
-      'open meal':        'meals',
-      'open food':        'meals',
-      'open news':         'news',
-      'open exercise':     'exercise',
-      'open workout':     'exercise'
-    };
+    const menus = t('Bella.menus', {returnObjects: true});
+    console.log(menus);
     for (let phrase in menus) {
       if (lc.includes(phrase)) {
         return { intent: 'open_menu', slot: menus[phrase] };
@@ -92,7 +79,6 @@ export default function Bella() {
   // init Vapi
   useEffect(() => {
     const vapi = vapiRef.current = new Vapi(import.meta.env.VITE_VAPI_PUBLIC_KEY);
-
     // inject reminders
     vapi.on('call-start', async () => {
       setCallStatus('in-call');

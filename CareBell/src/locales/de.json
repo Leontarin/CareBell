@@ -11,7 +11,21 @@
     "noReminders": "Du hast keine gespeicherten Erinnerungen.",
     "fullscreen": "Vollbild",
     "exitFullscreen": "Vollbild verlassen",
-    "warningMessage": "Geef Bella geen persoonlijke informatie (wachtwoorden, achternamen, bankrekening, enz.)"
+    "warningMessage": "Geef Bella geen persoonlijke informatie (wachtwoorden, achternamen, bankrekening, enz.)",
+    "menus": {
+      "kontakte öffnen":           "call-contacts",
+      "kontakt öffnen":            "call-contacts",
+      "freunde öffnen":            "meet-with-friends",
+      "treffen mit freunden öffnen":"meet-with-friends",
+      "medikament öffnen":         "medicine",
+      "medikamente öffnen":        "medicine",
+      "mahlzeiten öffnen":         "meals",
+      "mahlzeit öffnen":           "meals",
+      "essen öffnen":              "meals",
+      "nachrichten öffnen":        "news",
+      "übung öffnen":              "exercise",
+      "workout öffnen":            "exercise"
+    }
   },
   "Calendar": {
     "Mon": "Montag",
