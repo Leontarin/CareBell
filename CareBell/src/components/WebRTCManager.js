@@ -105,7 +105,7 @@ class WebRTCManager {
     }
   }
 
- setupDataChannel(channel) {
+setupDataChannel(channel) {
   channel.onopen = () => {
     console.log(`📡 Data channel opened with ${this.targetUserId}`);
   };
@@ -115,8 +115,12 @@ class WebRTCManager {
       const data = JSON.parse(event.data);
       console.log(`💬 Received P2P message from ${this.targetUserId}:`, data);
       
-      // Handle audio mute state messages
-      if (data.type === 'audio-mute-state' && this.onMuteStateReceived) {
+      // Handle different message types
+      if (data.message && data.message.type === 'audio-mute-state' && this.onMuteStateReceived) {
+        console.log(`🔇 Processing audio mute state from ${this.targetUserId}: ${data.message.isMuted ? 'muted' : 'unmuted'}`);
+        this.onMuteStateReceived(data.message.userId, data.message.isMuted);
+      } else if (data.type === 'audio-mute-state' && this.onMuteStateReceived) {
+        console.log(`🔇 Processing direct audio mute state from ${this.targetUserId}: ${data.isMuted ? 'muted' : 'unmuted'}`);
         this.onMuteStateReceived(data.userId, data.isMuted);
       }
     } catch (error) {
@@ -133,12 +137,19 @@ class WebRTCManager {
     // Check if data channel is ready
     if (this.dataChannel && this.dataChannel.readyState === 'open') {
       try {
-        this.dataChannel.send(JSON.stringify({
-          type: 'p2p-message',
-          from: this.userId,
-          message: message,
-          timestamp: Date.now()
-        }));
+        // If it's a mute state message, send it directly
+        if (message.type === 'audio-mute-state') {
+          this.dataChannel.send(JSON.stringify(message));
+          console.log(`📡 Sent mute state directly via data channel to ${this.targetUserId}:`, message);
+        } else {
+          // Wrap other messages
+          this.dataChannel.send(JSON.stringify({
+            type: 'p2p-message',
+            from: this.userId,
+            message: message,
+            timestamp: Date.now()
+          }));
+        }
         return true;
       } catch (error) {
         console.warn('⚠️ Failed to send P2P message via data channel:', error);

@@ -380,13 +380,16 @@ export default function MeetWithFriends() {
     };
 
     // Handle P2P WebRTC signals from Deno server
-    signaling.onP2PSignal = (fromUserId, signal) => {
+     signaling.onP2PSignal = (fromUserId, signal) => {
       // Handle mute state signals from Deno server
       if (signal.type === 'mute-state') {
         console.log(`🔇 Received mute state from ${fromUserId}: ${signal.isMuted ? 'muted' : 'unmuted'}`);
+        console.log(`🔍 Before update - participantMuteStates:`, Array.from(participantMuteStates.entries()));
+        
         setParticipantMuteStates(prev => {
           const newMap = new Map(prev);
           newMap.set(fromUserId, signal.isMuted);
+          console.log(`🔍 After update - participantMuteStates:`, Array.from(newMap.entries()));
           return newMap;
         });
         return;
@@ -1018,6 +1021,25 @@ return (
              {meetFullscreen ? 'Exit Fullscreen' : 'Fullscreen'}
            </button>
 
+             <button
+              onClick={() => {
+                console.log('🧪 Testing mute state update');
+                setParticipantMuteStates(prev => {
+                  const newMap = new Map(prev);
+                  participants.forEach(pid => {
+                    if (pid !== user.id) {
+                      newMap.set(pid, !newMap.get(pid));
+                    }
+                  });
+                  console.log('🧪 Test mute states:', Array.from(newMap.entries()));
+                  return newMap;
+                });
+              }}
+              className="px-4 py-2 bg-yellow-600 hover:bg-yellow-700 text-white rounded-lg font-semibold text-sm"
+            >
+              🧪 Test Mute UI
+            </button>
+            
            {/* Media Control Buttons */}
            <button
              onClick={toggleAudio}
@@ -1083,63 +1105,66 @@ return (
 
            {/* P2P Remote Videos */}
            {participants.filter(pid => pid !== user.id).map((participantId) => {
-            if (!remoteVideoRefs.current.has(participantId)) {
-              remoteVideoRefs.current.set(participantId, React.createRef());
-            }
-            
-            const videoRef = remoteVideoRefs.current.get(participantId);
-            const stream = remoteStreams.get(participantId);
-            const connectionState = connectionStates.get(participantId) || 'unknown';
-            const participantName = participantNames.get(participantId) || 'Loading...';
-            const isParticipantMuted = participantMuteStates.get(participantId) || false;
-            
-            return (
-              <div key={participantId} className="relative bg-gray-800 rounded-xl overflow-hidden shadow-2xl border-2 border-blue-500">
-                <video
-                  ref={videoRef}
-                  autoPlay
-                  playsInline
-                  controls={false}
-                  volume={1.0}
-                  muted={false}
-                  className="w-full h-full object-cover"
-                />
-                
-                {/* Mute status indicator for other participants */}
-                {isParticipantMuted && (
-                  <div className="absolute top-2 left-2">
-                    <div className="bg-red-600 text-white px-2 py-1 rounded text-xs font-semibold">
-                      🔇 MUTED
-                    </div>
-                  </div>
-                )}
-                
-                {/* Connection state overlay */}
-                {!stream && (
-                  <div className="absolute inset-0 bg-gray-900 bg-opacity-80 flex items-center justify-center">
-                    <div className="text-center text-white">
-                      <div className="text-4xl mb-2">
-                        {connectionState === 'connecting' && '🔄'}
-                        {connectionState === 'connected' && '✅'}
-                        {connectionState === 'failed' && '❌'}
-                        {connectionState === 'unknown' && '⏳'}
-                      </div>
-                      <p className="text-sm font-semibold capitalize">
-                        {connectionState === 'connecting' && 'Connecting...'}
-                        {connectionState === 'connected' && 'Connected'}
-                        {connectionState === 'failed' && 'Connection Failed'}
-                        {connectionState === 'unknown' && 'Waiting...'}
-                      </p>
-                    </div>
-                  </div>
-                )}
-                
-                <div className="absolute bottom-2 left-2 bg-black bg-opacity-50 text-white px-2 py-1 rounded text-xs font-semibold">
-                  {participantName}
-                </div>
-              </div>
-            );
-          })}
+             if (!remoteVideoRefs.current.has(participantId)) {
+               remoteVideoRefs.current.set(participantId, React.createRef());
+             }
+             
+             const videoRef = remoteVideoRefs.current.get(participantId);
+             const stream = remoteStreams.get(participantId);
+             const connectionState = connectionStates.get(participantId) || 'unknown';
+             const participantName = participantNames.get(participantId) || 'Loading...';
+             const isParticipantMuted = participantMuteStates.get(participantId);
+             
+             // Debug logging for mute state
+             console.log(`🔍 Rendering participant ${participantId}: muted=${isParticipantMuted}, muteStates:`, Array.from(participantMuteStates.entries()));
+             
+             return (
+               <div key={participantId} className="relative bg-gray-800 rounded-xl overflow-hidden shadow-2xl border-2 border-blue-500">
+                 <video
+                   ref={videoRef}
+                   autoPlay
+                   playsInline
+                   controls={false}
+                   volume={1.0}
+                   muted={false}
+                   className="w-full h-full object-cover"
+                 />
+                 
+                 {/* Mute status indicator for other participants - FIXED LOGIC */}
+                 {isParticipantMuted === true && (
+                   <div className="absolute top-2 left-2">
+                     <div className="bg-red-600 text-white px-2 py-1 rounded text-xs font-semibold">
+                       🔇 MUTED
+                     </div>
+                   </div>
+                 )}
+                 
+                 {/* Connection state overlay */}
+                 {!stream && (
+                   <div className="absolute inset-0 bg-gray-900 bg-opacity-80 flex items-center justify-center">
+                     <div className="text-center text-white">
+                       <div className="text-4xl mb-2">
+                         {connectionState === 'connecting' && '🔄'}
+                         {connectionState === 'connected' && '✅'}
+                         {connectionState === 'failed' && '❌'}
+                         {connectionState === 'unknown' && '⏳'}
+                       </div>
+                       <p className="text-sm font-semibold capitalize">
+                         {connectionState === 'connecting' && 'Connecting...'}
+                         {connectionState === 'connected' && 'Connected'}
+                         {connectionState === 'failed' && 'Connection Failed'}
+                         {connectionState === 'unknown' && 'Waiting...'}
+                       </p>
+                     </div>
+                   </div>
+                 )}
+                 
+                 <div className="absolute bottom-2 left-2 bg-black bg-opacity-50 text-white px-2 py-1 rounded text-xs font-semibold">
+                   {participantName}
+                 </div>
+               </div>
+             );
+           })}
          </div>
        </div>
      </div>
