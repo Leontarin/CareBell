@@ -1,12 +1,12 @@
 // routes/bellaReminders.js
 require('dotenv').config();
 const express = require('express');
-const axios = require('axios');
+const { HfInference } = require('@huggingface/inference');
 const router = express.Router();
 const BellaReminder = require('../models/bellaReminder');
 
-const HF_API_URL = process.env.HF_API_URL;
 const HF_TOKEN = process.env.HF_API_TOKEN;
+const hf = new HfInference(HF_TOKEN);
 
 // 1) Manually add a reminder
 router.post('/addReminder', async (req, res) => {
@@ -33,53 +33,80 @@ router.get('/user/:userId', async (req, res) => {
   }
 });
 
-// 3) Analyze incoming text and auto-save if the model's top label is 'personal fact'
+const SENSITIVE_KEYWORDS = [
+  'password',
+  'ssn',
+  'social security',
+  'bank account',
+  'credit card',
+  'debit card',
+  'cvv',
+  'cvc',
+  'pin',
+  'passport',
+  'driver license',
+  'social number'
+];
+
+function containsSensitive(text) {
+  const lower = text.toLowerCase();
+  if (/\d{5,}/.test(lower)) return true;
+  return SENSITIVE_KEYWORDS.some(k => lower.includes(k));
+}
+
+function cosineSimilarity(a, b) {
+  let dot = 0, normA = 0, normB = 0;
+  for (let i = 0; i < a.length && i < b.length; i++) {
+    dot += a[i] * b[i];
+    normA += a[i] * a[i];
+    normB += b[i] * b[i];
+  }
+  return dot / (Math.sqrt(normA) * Math.sqrt(normB));
+}
+
+// 3) Analyze incoming text and auto-save if classified as personal info
 router.post('/analyze', async (req, res) => {
   const { userId, text } = req.body;
   if (!userId || !text) {
     return res.status(400).json({ error: 'userId and text are required' });
   }
 
+  if (containsSensitive(text)) {
+    return res.json({ saved: false, reason: 'too sensitive' });
+  }
+
   try {
-    // Zero-shot classify with HF (includes 'question' but single-label softmax)
-    const hfResponse = await axios.post(
-      HF_API_URL,
-      {
-        inputs: text,
-        parameters: {
-          candidate_labels: ['personal fact', 'question', 'not personal fact']
-        }
-      },
-      {
-        headers: {
-          Authorization: `Bearer ${HF_TOKEN}`,
-          'Content-Type': 'application/json',
-          'Accept': 'application/json'
-        }
-      }
-    );
+    const cls = await hf.zeroShotClassification({
+      model: 'facebook/bart-large-mnli',
+      inputs: text,
+      parameters: { candidate_labels: ['personal info', 'question', 'other'] }
+    });
 
-    const data = hfResponse.data;
-    if (!data.labels || !data.scores) {
-      throw new Error('Invalid response from HF inference');
-    }
-
-    const labels = data.labels;
-    const scores = data.scores;
+    const labels = cls.labels;
+    const scores = cls.scores;
     const topLabel = labels[0];
     console.log(`→ topLabel: ${topLabel} (score ${scores[0].toFixed(3)})`);
 
-    // If the top label is 'personal fact', save it
-    if (topLabel === 'personal fact') {
-      const title = text.split(/,|\./)[0].trim();
-      const exists = await BellaReminder.findOne({ userId, title });
-      if (!exists) {
+    if (topLabel === 'personal info') {
+      const embeddingResp = await hf.featureExtraction({
+        model: 'sentence-transformers/all-MiniLM-L6-v2',
+        inputs: text
+      });
+      const embedding = Array.isArray(embeddingResp[0]) ? embeddingResp[0] : embeddingResp;
+
+      const existing = await BellaReminder.find({ userId });
+      const duplicate = existing.some(r =>
+        Array.isArray(r.embedding) && cosineSimilarity(r.embedding, embedding) > 0.85
+      );
+      if (!duplicate) {
+        const title = text.split(/,|\./)[0].trim();
         const reminder = await BellaReminder.create({
           userId,
           title,
           description: text,
           reminderTime: new Date(),
-          isImportant: true
+          isImportant: true,
+          embedding
         });
         return res.status(201).json({ saved: true, reminder });
       }

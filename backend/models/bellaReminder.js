@@ -22,6 +22,10 @@ const bellaReminderSchema = new mongoose.Schema({
     isImportant: {
         type: Boolean,
         required: true
+    },
+    embedding: {
+        type: [Number],
+        index: false
     }
 });
 
