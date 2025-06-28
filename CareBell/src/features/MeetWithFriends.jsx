@@ -8,6 +8,48 @@ import { WebRTCManager } from "../components/WebRTCManager";
 import { DenoP2PSignaling } from "../components/DenoP2PSignaling";
 import { useTranslation } from "react-i18next";
 import { FaExpand, FaCompress } from "react-icons/fa";
+import { FaUsers, FaTimes } from "react-icons/fa";
+
+// Simple Modal Component for Participants
+const ParticipantsModal = ({ isOpen, onClose, participants, roomName }) => {
+  if (!isOpen) return null;
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+      <div className="bg-white dark:bg-gray-800 rounded-xl p-6 max-w-md w-full mx-4 max-h-96 overflow-y-auto">
+        <div className="flex justify-between items-center mb-4">
+          <h3 className="text-xl font-bold text-gray-900 dark:text-white">
+            {`Participants in "${roomName}"`}
+          </h3>
+          <button onClick={onClose} className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200">
+            <FaTimes size={20} />
+          </button>
+        </div>
+        {participants.length > 0 ? (
+          participants.map((p, idx) => (
+            <div key={p.userId || idx} className="flex items-center space-x-3 p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
+              <div className="w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center text-white font-semibold text-sm">
+                {p.fullName?.charAt(0).toUpperCase() || 'U'}
+              </div>
+              <span className="text-gray-900 dark:text-white">
+                {p.fullName || `User ${p.userId?.slice(-4)}`}
+              </span>
+            </div>
+          ))
+        ) : (
+          <p className="text-gray-500 dark:text-gray-400 text-center py-4">
+            No participants in this room
+          </p>
+        )}
+        <div className="mt-4 text-center">
+          <button onClick={onClose} className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
+            Close
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 
 // P2P Mesh Configuration
 const MAX_P2P_PARTICIPANTS = P2P_CONFIG.MAX_PARTICIPANTS;
@@ -29,7 +71,7 @@ export default function MeetWithFriends() {
   const [p2pConnections, setP2pConnections] = useState(new Map()); // userId -> WebRTCManager
   const [connectionStates, setConnectionStates] = useState(new Map()); // userId -> connectionState
   const [remoteMediaStates, setRemoteMediaStates] = useState(new Map()); // userId -> {audioMuted, videoOff}
-  const [expandedRooms, setExpandedRooms] = useState(new Set());
+ 
   const [p2pStats, setP2pStats] = useState({
     totalConnections: 0,
     connectedPeers: 0,
@@ -43,6 +85,9 @@ export default function MeetWithFriends() {
   // P2P Signaling
   const [denoSignaling, setDenoSignaling] = useState(null);
   const [signalingConnected, setSignalingConnected] = useState(false);
+  const [showParticipantsModal, setShowParticipantsModal] = useState(false);
+  const [selectedRoomParticipants, setSelectedRoomParticipants] = useState([]);
+  const [selectedRoomName, setSelectedRoomName] = useState("");
 
   // Refs
   const localVideoRef = useRef(null);
@@ -177,6 +222,14 @@ export default function MeetWithFriends() {
       sendMediaStateToAll(isAudioMuted, newVideoOffState);
     }
   };
+
+  const showParticipants = room => {
+  setSelectedRoomParticipants(room.participantDetails || []);
+  setSelectedRoomName(room.name);
+  setShowParticipantsModal(true);
+  };
+  const closeParticipants = () => setShowParticipantsModal(false);
+
 
   // Initialize Deno P2P signaling (replaces Socket.IO)
   useEffect(() => {
@@ -648,14 +701,7 @@ export default function MeetWithFriends() {
     });
   }
 
-  const toggleParticipantsList = (roomName) => {
-    setExpandedRooms(prev => {
-      const newSet = new Set(prev);
-      if (newSet.has(roomName)) newSet.delete(roomName);
-      else newSet.add(roomName);
-      return newSet;
-    });
-  };
+  
 
   if (!user?.id) {
     return (
@@ -671,6 +717,14 @@ export default function MeetWithFriends() {
 
  return (
    <div className="w-full h-full bg-blue-300 dark:bg-gray-900 relative overflow-hidden">
+    {/* Participants Modal */}
+    <ParticipantsModal
+      isOpen={showParticipantsModal}
+      onClose={closeParticipants}
+      participants={selectedRoomParticipants}
+      roomName={selectedRoomName}
+    />
+
      {!joinedRoom ? (
        <div className="flex flex-col items-center justify-center h-full p-8">
          <h2 className="text-black dark:text-white text-3xl mb-4 font-bold">
@@ -739,6 +793,16 @@ export default function MeetWithFriends() {
                      </p>
                    </div>
 
+                  {room.participantDetails?.length > 0 && (
+                    <button
+                      onClick={() => showParticipants(room)}
+                      className="flex items-center gap-2 text-sm font-bold text-white rounded-lg bg-cyan-700 hover:bg-cyan-800 mb-3 transition-colors"
+                    >
+                      {t('MeetWithFriends.viewParticipants')}
+                    </button>
+                  )}
+
+
                   <button
                     onClick={() => joinRoom(room.name)}
                     disabled={isRoomFull}
@@ -751,23 +815,7 @@ export default function MeetWithFriends() {
                     {isRoomFull ? '🚫 Room Full' : '🔗 Join Call'}
                   </button>
 
-                  {participantCount > 0 && (
-                    <div className="mt-2">
-                      <button
-                        onClick={() => toggleParticipantsList(room.name)}
-                        className="text-sm text-blue-700 dark:text-blue-300 underline"
-                      >
-                        {expandedRooms.has(room.name) ? t('MeetWithFriends.hideParticipants') : t('MeetWithFriends.viewParticipants')}
-                      </button>
-                      {expandedRooms.has(room.name) && (
-                        <ul className="ml-4 mt-1 list-disc text-sm text-gray-700 dark:text-gray-300">
-                          {room.participantDetails?.map(p => (
-                            <li key={p.userId}>{p.fullName}</li>
-                          ))}
-                        </ul>
-                      )}
-                    </div>
-                  )}
+                  
                 </div>
               );
             })}
