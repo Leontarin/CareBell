@@ -77,6 +77,7 @@ export default function MeetWithFriends() {
   const [socket, setSocket] = useState(null);
 
   const [participantNames, setParticipantNames] = useState(new Map());
+  const [participantMuteStates, setParticipantMuteStates] = useState(new Map()); 
 
   // Modal state
   const [showParticipantsModal, setShowParticipantsModal] = useState(false);
@@ -284,8 +285,18 @@ export default function MeetWithFriends() {
       const newMutedState = !isAudioMuted;
       audioTracks[0].enabled = !newMutedState;
       setIsAudioMuted(newMutedState);
+      
+      // Broadcast mute state to all connected peers
+      const muteMessage = {
+        type: 'audio-mute-state',
+        userId: user.id,
+        isMuted: newMutedState,
+        timestamp: Date.now()
+      };
+      
+      sendP2PMessageToAll(muteMessage);
     }
-  };
+};
 
   const toggleVideo = () => {
     if (!localStream) return;
@@ -490,6 +501,14 @@ export default function MeetWithFriends() {
         user.id.localeCompare(participantId) > 0 // polite role
       );
 
+      manager.onMuteStateReceived = (userId, isMuted) => {
+        setParticipantMuteStates(prev => {
+          const newMap = new Map(prev);
+          newMap.set(userId, isMuted);
+          return newMap;
+        });
+      };
+
       // Set up connection failure handling
       manager.onConnectionFailed = () => {
         // Increment retry count
@@ -515,6 +534,21 @@ export default function MeetWithFriends() {
       manager.onConnectionEstablished = (targetUserId) => {
         updateConnectionState(targetUserId, 'connected');
         retryAttempts.current.delete(targetUserId); // Reset retry count
+        
+        // Send current mute state to newly connected peer
+        setTimeout(() => {
+          const muteMessage = {
+            type: 'audio-mute-state',
+            userId: user.id,
+            isMuted: isAudioMuted,
+            timestamp: Date.now()
+          };
+          
+          const manager = p2pConnections.get(targetUserId);
+          if (manager && manager.sendP2PMessage) {
+            manager.sendP2PMessage(muteMessage);
+          }
+        }, 500); // Small delay to ensure data channel is ready
       };
 
       // Handle remote stream
@@ -611,6 +645,13 @@ export default function MeetWithFriends() {
     }
     remoteVideoRefs.current.delete(participantId);
     
+    // Clean up mute state
+    setParticipantMuteStates(prev => {
+      const newMap = new Map(prev);
+      newMap.delete(participantId);
+      return newMap;
+    });
+
     // Cleanup connection state
     setConnectionStates(prev => {
       const newMap = new Map(prev);
@@ -1011,53 +1052,63 @@ export default function MeetWithFriends() {
 
              {/* P2P Remote Videos */}
              {participants.filter(pid => pid !== user.id).map((participantId) => {
-               if (!remoteVideoRefs.current.has(participantId)) {
-                 remoteVideoRefs.current.set(participantId, React.createRef());
-               }
-               
-               const videoRef = remoteVideoRefs.current.get(participantId);
-               const stream = remoteStreams.get(participantId);
-               const connectionState = connectionStates.get(participantId) || 'unknown';
-               const participantName = participantNames.get(participantId) || 'Loading...';
-               
-               return (
-                 <div key={participantId} className="relative bg-gray-800 rounded-xl overflow-hidden shadow-2xl border-2 border-blue-500">
-                   <video
-                     ref={videoRef}
-                     autoPlay
-                     playsInline
-                     controls={false}
-                     volume={1.0}
-                     muted={false}
-                     className="w-full h-full object-cover"
-                   />
-                   
-                   {/* Connection state overlay */}
-                   {!stream && (
-                     <div className="absolute inset-0 bg-gray-900 bg-opacity-80 flex items-center justify-center">
-                       <div className="text-center text-white">
-                         <div className="text-4xl mb-2">
-                           {connectionState === 'connecting' && '🔄'}
-                           {connectionState === 'connected' && '✅'}
-                           {connectionState === 'failed' && '❌'}
-                           {connectionState === 'unknown' && '⏳'}
-                         </div>
-                         <p className="text-sm font-semibold capitalize">
-                           {connectionState === 'connecting' && 'Connecting...'}
-                           {connectionState === 'connected' && 'Connected'}
-                           {connectionState === 'failed' && 'Connection Failed'}
-                           {connectionState === 'unknown' && 'Waiting...'}
-                         </p>
-                       </div>
-                     </div>
-                   )}
-                   
-                   <div className="absolute bottom-2 left-2 bg-black bg-opacity-50 text-white px-2 py-1 rounded text-xs font-semibold">
-                     {participantName}
-                   </div>
-                 </div>
-               );
-             })}
+              if (!remoteVideoRefs.current.has(participantId)) {
+                remoteVideoRefs.current.set(participantId, React.createRef());
+              }
+              
+              const videoRef = remoteVideoRefs.current.get(participantId);
+              const stream = remoteStreams.get(participantId);
+              const connectionState = connectionStates.get(participantId) || 'unknown';
+              const participantName = participantNames.get(participantId) || 'Loading...';
+              const isParticipantMuted = participantMuteStates.get(participantId) || false;
+              
+              return (
+                <div key={participantId} className="relative bg-gray-800 rounded-xl overflow-hidden shadow-2xl border-2 border-blue-500">
+                  <video
+                    ref={videoRef}
+                    autoPlay
+                    playsInline
+                    controls={false}
+                    volume={1.0}
+                    muted={false}
+                    className="w-full h-full object-cover"
+                  />
+                  
+                  {/* Mute status indicator for other participants */}
+                  {isParticipantMuted && (
+                    <div className="absolute top-2 left-2">
+                      <div className="bg-red-600 text-white px-2 py-1 rounded text-xs font-semibold">
+                        🔇 MUTED
+                      </div>
+                    </div>
+                  )}
+                  
+                  {/* Connection state overlay */}
+                  {!stream && (
+                    <div className="absolute inset-0 bg-gray-900 bg-opacity-80 flex items-center justify-center">
+                      <div className="text-center text-white">
+                        <div className="text-4xl mb-2">
+                          {connectionState === 'connecting' && '🔄'}
+                          {connectionState === 'connected' && '✅'}
+                          {connectionState === 'failed' && '❌'}
+                          {connectionState === 'unknown' && '⏳'}
+                        </div>
+                        <p className="text-sm font-semibold capitalize">
+                          {connectionState === 'connecting' && 'Connecting...'}
+                          {connectionState === 'connected' && 'Connected'}
+                          {connectionState === 'failed' && 'Connection Failed'}
+                          {connectionState === 'unknown' && 'Waiting...'}
+                        </p>
+                      </div>
+                    </div>
+                  )}
+                  
+                  <div className="absolute bottom-2 left-2 bg-black bg-opacity-50 text-white px-2 py-1 rounded text-xs font-semibold">
+                    {participantName}
+                  </div>
+                </div>
+              );
+            })}
            </div>
          </div>
        </div>

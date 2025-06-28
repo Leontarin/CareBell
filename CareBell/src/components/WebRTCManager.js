@@ -105,21 +105,29 @@ class WebRTCManager {
     }
   }
 
-  setupDataChannel(channel) {
-    channel.onopen = () => {
-      console.log(`📡 Data channel opened with ${this.targetUserId}`);
-    };
+ setupDataChannel(channel) {
+  channel.onopen = () => {
+    console.log(`📡 Data channel opened with ${this.targetUserId}`);
+  };
 
-    channel.onmessage = (event) => {
-      console.log(`💬 Received P2P message from ${this.targetUserId}:`, event.data);
-      // Handle P2P messages (chat, file transfer, etc.)
-    };
+  channel.onmessage = (event) => {
+    try {
+      const data = JSON.parse(event.data);
+      console.log(`💬 Received P2P message from ${this.targetUserId}:`, data);
+      
+      // Handle audio mute state messages
+      if (data.type === 'audio-mute-state' && this.onMuteStateReceived) {
+        this.onMuteStateReceived(data.userId, data.isMuted);
+      }
+    } catch (error) {
+      console.error('Error parsing P2P message:', error);
+    }
+  };
 
-    channel.onclose = () => {
-      console.log(`📡 Data channel closed with ${this.targetUserId}`);
-    };
-  }
-
+  channel.onclose = () => {
+    console.log(`📡 Data channel closed with ${this.targetUserId}`);
+  };
+}
   sendP2PMessage(message) {
     if (this.dataChannel && this.dataChannel.readyState === 'open') {
       this.dataChannel.send(JSON.stringify({
