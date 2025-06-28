@@ -731,7 +731,7 @@ export default function MeetWithFriends() {
       {!joinedRoom ? (
         <div className="flex flex-col items-center justify-center h-full p-8">
           <h2 className="text-black dark:text-white text-3xl mb-4 font-bold">
-            {t("MeetWithFriends.Title")}
+            {t("MeetWithFriends.Title")}1
           </h2>
           <div className="mb-8 flex items-center">
             <input
