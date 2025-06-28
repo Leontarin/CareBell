@@ -254,6 +254,17 @@ export default function Bella() {
         default:
           console.log('Unhandled intent', intent);
       }
+
+      // queue reminder analysis
+      try {
+        fetch(`${API}/bellaReminders/analyze`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ userId: user.id, text })
+        });
+      } catch (e) {
+        console.error(e);
+      }
     });
 
     vapi.on('error', err => console.error(err));
