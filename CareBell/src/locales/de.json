@@ -244,6 +244,8 @@
     "online":"online",
     "s":"",
     "participant":"Teilnehmer",
+    "viewParticipants":"Teilnehmer anzeigen",
+    "hideParticipants":"Teilnehmer verbergen",
     "availableRooms": "Verfügbare Zimmer:",
     "createRoom": "Raum schaffen",
     "Title":"Videoräume"
