@@ -76,15 +76,12 @@ export class DenoP2PSignaling {
       this.ws.onmessage = (event) => {
         try {
           const data = JSON.parse(event.data);
-          console.log('📥 Received from Deno signaling:', data.type, data);
 
           switch (data.type) {
             case 'connected':
-              console.log('🚀 Deno P2P server welcome:', data.message);
               break;
 
             case 'room-participants':
-              console.log('👥 Participants update:', data.participants);
               if (this.onParticipantsUpdate) {
                 this.onParticipantsUpdate(
                   data.participants, 
@@ -96,7 +93,6 @@ export class DenoP2PSignaling {
               break;
 
             case 'p2p-signal':
-              console.log('📡 P2P signal from', data.fromUserId, ':', data.signal.type);
               if (this.onP2PSignal) {
                 this.onP2PSignal(data.fromUserId, data.signal);
               }
@@ -104,7 +100,6 @@ export class DenoP2PSignaling {
 
             case 'pong':
               this.lastPong = Date.now();
-              console.log('🏓 Received pong from server');
               break;
 
             case 'error':
@@ -115,7 +110,7 @@ export class DenoP2PSignaling {
               break;
 
             default:
-              console.log('❓ Unknown message type from Deno signaling:', data.type);
+              break;
           }
         } catch (error) {
           console.error('❌ Error parsing Deno signaling message:', error);
@@ -126,7 +121,6 @@ export class DenoP2PSignaling {
         clearTimeout(connectionTimeout);
         this.stopHealthCheck();
         
-        console.log('🔌 Deno P2P signaling connection closed:', event.code, event.reason);
         this.isConnected = false;
 
         if (this.onDisconnected) {
@@ -137,7 +131,6 @@ export class DenoP2PSignaling {
         if (event.code !== 1000 && this.reconnectAttempts < this.maxReconnectAttempts) {
           this.reconnectAttempts++;
           const delay = this.reconnectDelay * Math.pow(2, this.reconnectAttempts - 1);
-          console.log(`🔄 Attempting to reconnect to Deno signaling (${this.reconnectAttempts}/${this.maxReconnectAttempts}) in ${delay}ms...`);
           
           setTimeout(() => {
             this.connect();
@@ -192,25 +185,20 @@ export class DenoP2PSignaling {
   }
 
   send(message) {
-  console.log('📡 DenoP2PSignaling.send called with message type:', message.type);
-  console.log('📡 Connection state:', this.isConnected, 'WebSocket readyState:', this.ws?.readyState);
-  
-  if (this.isConnected && this.ws?.readyState === WebSocket.OPEN) {
-    try {
-      this.ws.send(JSON.stringify(message));
-      console.log('✅ Message sent successfully:', message.type);
-      return true;
-    } catch (error) {
-      console.error('❌ Failed to send message to Deno signaling:', error);
+    if (this.isConnected && this.ws?.readyState === WebSocket.OPEN) {
+      try {
+        this.ws.send(JSON.stringify(message));
+        return true;
+      } catch (error) {
+        console.error('❌ Failed to send message to Deno signaling:', error);
+        return false;
+      }
+    } else {
+      // Queue message for when connection is ready
+      this.messageQueue.push(message);
       return false;
     }
-  } else {
-    // Queue message for when connection is ready
-    console.log('📦 Queueing message for Deno signaling (not connected yet):', message.type);
-    this.messageQueue.push(message);
-    return false;
   }
-}
 
   // Send WebRTC offer to specific peer
   sendOffer(targetUserId, offer) {
@@ -247,6 +235,7 @@ export class DenoP2PSignaling {
 
   // Send mute state to specific peer
   sendMuteState(targetUserId, isMuted) {
+    console.log(`🔇 Sending mute state to ${targetUserId}: ${isMuted ? 'muted' : 'unmuted'}`);
     return this.send({
       type: 'mute-state',
       roomId: this.roomId,
@@ -261,26 +250,19 @@ export class DenoP2PSignaling {
   }
 
   // Broadcast mute state to all participants in room
-broadcastMuteState(isMuted) {
-  console.log('📡 DenoP2PSignaling.broadcastMuteState called with:', isMuted);
-  console.log('📡 Connection state:', this.isConnected, 'WebSocket state:', this.ws?.readyState);
-  
-  const message = {
-    type: 'broadcast-mute-state',
-    roomId: this.roomId,
-    userId: this.userId,
-    signal: { 
-      type: 'mute-state', 
-      isMuted: isMuted,
-      timestamp: Date.now()
-    }
-  };
-  
-  console.log('📡 Sending message:', message);
-  const result = this.send(message);
-  console.log('📡 Send result:', result);
-  return result;
-}
+  broadcastMuteState(isMuted) {
+    console.log(`🔇 Broadcasting mute state to all participants: ${isMuted ? 'muted' : 'unmuted'}`);
+    return this.send({
+      type: 'broadcast-mute-state',
+      roomId: this.roomId,
+      userId: this.userId,
+      signal: { 
+        type: 'mute-state', 
+        isMuted: isMuted,
+        timestamp: Date.now()
+      }
+    });
+  }
 
   // Leave room and disconnect
   disconnect() {
@@ -301,7 +283,6 @@ broadcastMuteState(isMuted) {
 
     this.isConnected = false;
     this.reconnectAttempts = 0;
-    console.log('👋 Disconnected from Deno P2P signaling');
   }
 
   // Get connection status
