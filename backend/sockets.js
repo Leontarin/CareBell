@@ -191,56 +191,6 @@ module.exports = function (io) {
       }
     });
 
-    // Add mute state handling
-    socket.on('broadcast-mute-state', ({ roomId, userId, signal }) => {
-      try {
-        console.log(`🔇 MUTE BACKEND: Broadcasting mute state from ${userId} in room ${roomId}: ${signal.isMuted ? 'muted' : 'unmuted'}`);
-        
-        if (!roomParticipants.has(roomId) || !roomParticipants.get(roomId).has(userId)) {
-          console.warn(`⚠️ MUTE BACKEND: User ${userId} not in room ${roomId}, ignoring mute state`);
-          return;
-        }
-        
-        console.log(`📡 MUTE BACKEND: Broadcasting to room ${roomId}, participants:`, Array.from(roomParticipants.get(roomId)));
-        
-        socket.to(roomId).emit('p2p-signal', {
-          fromUserId: userId,
-          signal: signal
-        });
-        
-        console.log(`✅ MUTE BACKEND: Successfully broadcasted mute state from ${userId} to room ${roomId}`);
-      } catch (error) {
-        console.error('❌ MUTE BACKEND: Error handling mute state broadcast:', error);
-      }
-    });
-
-    socket.on('mute-state', ({ roomId, userId, targetUserId, signal }) => {
-      try {
-        console.log(`🔇 MUTE BACKEND: Routing mute state from ${userId} to ${targetUserId} in room ${roomId}`);
-        
-        if (!roomParticipants.has(roomId) || 
-            !roomParticipants.get(roomId).has(userId) || 
-            !roomParticipants.get(roomId).has(targetUserId)) {
-          console.warn(`⚠️ MUTE BACKEND: Mute state routing failed - users not in room ${roomId}`);
-          return;
-        }
-        
-        const targetSockets = Array.from(io.sockets.sockets.values())
-          .filter(s => s.userId === targetUserId && s.roomId === roomId);
-        
-        targetSockets.forEach(targetSocket => {
-          targetSocket.emit('p2p-signal', {
-            fromUserId: userId,
-            signal: signal
-          });
-        });
-        
-        console.log(`✅ MUTE BACKEND: Successfully routed mute state from ${userId} to ${targetUserId}`);
-      } catch (error) {
-        console.error('❌ MUTE BACKEND: Error handling mute state:', error);
-      }
-    });
-
     // Original WebRTC signaling (kept for fallback)
     socket.on('signal', ({ roomId, userId, signal }) => {
       try {

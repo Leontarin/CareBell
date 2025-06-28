@@ -77,7 +77,6 @@ export default function MeetWithFriends() {
   const [socket, setSocket] = useState(null);
 
   const [participantNames, setParticipantNames] = useState(new Map());
-  const [participantMuteStates, setParticipantMuteStates] = useState(new Map()); 
 
   // Modal state
   const [showParticipantsModal, setShowParticipantsModal] = useState(false);
@@ -168,7 +167,7 @@ export default function MeetWithFriends() {
   useEffect(() => {
     if (!user?.id) return;
 
-    const newSocket = io(P2P_SIGNALING_URL, {
+    const newSocket = io(API, {
       transports: ['websocket'],
       upgrade: false,
       timeout: 5000,
@@ -227,20 +226,6 @@ export default function MeetWithFriends() {
       });
     });
 
-    newSocket.on('p2p-signal', (data) => {
-  const { fromUserId, signal } = data;
-  
-  if (signal.type === 'mute-state') {
-    console.log(`🔇 MUTE: Received mute state via Socket.IO from ${fromUserId}: ${signal.isMuted ? 'muted' : 'unmuted'}`);
-    setParticipantMuteStates(prev => {
-      const newMap = new Map(prev);
-      newMap.set(fromUserId, signal.isMuted);
-      return newMap;
-    });
-    return;
-  }
-});
-
     setSocket(newSocket);
 
     return () => {
@@ -268,7 +253,6 @@ export default function MeetWithFriends() {
   // Media control functions
   const toggleAudio = () => {
     if (!localStream) {
-      console.error('❌ MUTE: No local stream available');
       return;
     }
 
@@ -276,58 +260,10 @@ export default function MeetWithFriends() {
     
     if (audioTracks.length > 0) {
       const newMutedState = !isAudioMuted;
-      console.log(`🎤 MUTE: Changing mute state from ${isAudioMuted} to ${newMutedState} for user ${user.id}`);
-      
       audioTracks[0].enabled = !newMutedState;
       setIsAudioMuted(newMutedState);
-      
-      console.log(`🎤 MUTE: ${newMutedState ? 'Muted' : 'Unmuted'} audio for user ${user.id}`);
-      console.log('🎤 MUTE: About to send mute state to all peers:', newMutedState);
-      
-      // Send mute state via both data channel AND signaling server
-      sendMuteStateToAllPeers(newMutedState);
-    } else {
-      console.error('❌ MUTE: No audio tracks found in local stream');
     }
   };
-
-  const sendMuteStateToAllPeers = (isMuted) => {
-  console.log('🎤 MUTE: sendMuteStateToAllPeers called with isMuted:', isMuted);
-  
-  let sentViaDataChannel = 0;
-  let sentViaSignaling = 0;
-  let sentViaSocketIO = 0;
-  
-  // Try sending via WebRTC data channels first
-  p2pConnections.forEach((manager, participantId) => {
-    if (manager.sendMuteState && manager.sendMuteState(isMuted)) {
-      sentViaDataChannel++;
-    }
-  });
-  
-  // Send via Deno signaling
-  if (denoSignaling && signalingConnected) {
-    denoSignaling.broadcastMuteState(isMuted);
-    sentViaSignaling++;
-  }
-  
-  // ALSO send via Socket.IO as fallback
-  if (socket && joinedRoom) {
-    socket.emit('broadcast-mute-state', {
-      roomId: joinedRoom,
-      userId: user.id,
-      signal: { 
-        type: 'mute-state', 
-        isMuted: isMuted,
-        timestamp: Date.now()
-      }
-    });
-    sentViaSocketIO++;
-    console.log('📡 MUTE: Also sent via Socket.IO fallback');
-  }
-  
-  console.log(`🎤 MUTE: Mute state sent: ${sentViaDataChannel} via data channel, ${sentViaSignaling} via Deno signaling, ${sentViaSocketIO} via Socket.IO`);
-};
 
   const toggleVideo = () => {
     if (!localStream) return;
@@ -389,20 +325,6 @@ export default function MeetWithFriends() {
 
     // Handle P2P WebRTC signals from Deno server
     signaling.onP2PSignal = (fromUserId, signal) => {
-      // Handle mute state signals from Deno server
-      if (signal.type === 'mute-state') {
-        console.log(`🔇 MUTE: Received mute state from ${fromUserId}: ${signal.isMuted ? 'muted' : 'unmuted'}`);
-        console.log(`🔍 MUTE: Before update - participantMuteStates:`, Array.from(participantMuteStates.entries()));
-        
-        setParticipantMuteStates(prev => {
-          const newMap = new Map(prev);
-          newMap.set(fromUserId, signal.isMuted);
-          console.log(`🔍 MUTE: After update - participantMuteStates:`, Array.from(newMap.entries()));
-          return newMap;
-        });
-        return;
-      }
-      
       // Handle other WebRTC signals
       setP2pConnections(currentConnections => {
         const manager = currentConnections.get(fromUserId);
@@ -528,15 +450,6 @@ export default function MeetWithFriends() {
         user.id.localeCompare(participantId) > 0
       );
 
-      manager.onMuteStateReceived = (userId, isMuted) => {
-        console.log(`🔇 MUTE: Received mute state via data channel from ${userId}: ${isMuted ? 'muted' : 'unmuted'}`);
-        setParticipantMuteStates(prev => {
-          const newMap = new Map(prev);
-          newMap.set(userId, isMuted);
-          return newMap;
-        });
-      };
-
       manager.onConnectionFailed = () => {
         const newAttempts = (retryAttempts.current.get(participantId) || 0) + 1;
         retryAttempts.current.set(participantId, newAttempts);
@@ -557,19 +470,6 @@ export default function MeetWithFriends() {
       manager.onConnectionEstablished = (targetUserId) => {
         updateConnectionState(targetUserId, 'connected');
         retryAttempts.current.delete(targetUserId);
-        
-        // Send current mute state to newly connected peer
-        setTimeout(() => {
-          if (manager.sendMuteState) {
-            manager.sendMuteState(isAudioMuted);
-            console.log(`🎤 MUTE: Sent initial mute state via data channel (${isAudioMuted ? 'muted' : 'unmuted'}) to newly connected peer ${targetUserId}`);
-          }
-          
-          if (denoSignaling) {
-            denoSignaling.sendMuteState(targetUserId, isAudioMuted);
-            console.log(`🎤 MUTE: Sent initial mute state via signaling (${isAudioMuted ? 'muted' : 'unmuted'}) to newly connected peer ${targetUserId}`);
-          }
-        }, 500);
       };
 
       manager.onRemoteStream = (stream) => {
@@ -653,13 +553,6 @@ export default function MeetWithFriends() {
       videoRef.current.pause();
     }
     remoteVideoRefs.current.delete(participantId);
-    
-    // Clean up mute state
-    setParticipantMuteStates(prev => {
-      const newMap = new Map(prev);
-      newMap.delete(participantId);
-      return newMap;
-    });
 
     setConnectionStates(prev => {
       const newMap = new Map(prev);
@@ -838,7 +731,7 @@ export default function MeetWithFriends() {
       {!joinedRoom ? (
         <div className="flex flex-col items-center justify-center h-full p-8">
           <h2 className="text-black dark:text-white text-3xl mb-4 font-bold">
-            {t("MeetWithFriends.Title")}9
+            {t("MeetWithFriends.Title")}
           </h2>
           <div className="mb-8 flex items-center">
             <input
@@ -925,179 +818,166 @@ export default function MeetWithFriends() {
                      }`}
                    >
                      {isRoomFull ? '🚫 Room Full' : '🔗 Join Call'}
-                   </button>
-                 </div>
-               );
-             })}
-           </div>
+                  </button>
+                </div>
+              );
+            })}
+          </div>
 
-           {rooms.length === 0 && (
-             <div className="text-center py-8">
-               <p className="text-gray-400 text-lg mb-2">
-                 {t("MeetWithFriends.noRooms")}
-               </p>
-               <p className="text-gray-500 text-sm">
-                 Create the first room to get started! 🚀
-               </p>
-             </div>
-           )}
-         </div>
-       </div>
-     ) : (
-       <div className="w-full h-full flex flex-col bg-gray-900">
-         {/* P2P Room Header */}
-         <div className="flex justify-between items-center w-full p-6 bg-gray-800 border-b border-gray-700">
-           <div>
-             <h2 className="text-white text-2xl font-bold">
-               {joinedRoom} Room
-             </h2>
-             <p className="text-gray-300 text-sm mt-1">
-               👥 {participants.length}/{MAX_P2P_PARTICIPANTS} participants 
-               {signalingConnected && <span className="text-green-400 ml-2">🟢 Connected</span>}
-               {!signalingConnected && <span className="text-red-400 ml-2">🔴 Connecting...</span>}
-             </p>
-           </div>
-           
-           <div className="flex gap-3">
-             {/* Fullscreen Toggle Button */}
-             <button
-               onClick={toggleFullscreen}
-               className="px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg font-semibold text-sm shadow-lg transition-colors flex items-center gap-2"
-               title={meetFullscreen ? 'Exit fullscreen' : 'Enter fullscreen'}
-             >
-               {meetFullscreen ? <FaCompress /> : <FaExpand />}
-               {meetFullscreen ? 'Exit Fullscreen' : 'Fullscreen'}
-             </button>
+          {rooms.length === 0 && (
+            <div className="text-center py-8">
+              <p className="text-gray-400 text-lg mb-2">
+                {t("MeetWithFriends.noRooms")}
+              </p>
+              <p className="text-gray-500 text-sm">
+                Create the first room to get started! 🚀
+              </p>
+            </div>
+          )}
+        </div>
+      </div>
+    ) : (
+      <div className="w-full h-full flex flex-col bg-gray-900">
+        {/* P2P Room Header */}
+        <div className="flex justify-between items-center w-full p-6 bg-gray-800 border-b border-gray-700">
+          <div>
+            <h2 className="text-white text-2xl font-bold">
+              {joinedRoom} Room
+            </h2>
+            <p className="text-gray-300 text-sm mt-1">
+              👥 {participants.length}/{MAX_P2P_PARTICIPANTS} participants 
+              {signalingConnected && <span className="text-green-400 ml-2">🟢 Connected</span>}
+              {!signalingConnected && <span className="text-red-400 ml-2">🔴 Connecting...</span>}
+            </p>
+          </div>
+          
+          <div className="flex gap-3">
+            {/* Fullscreen Toggle Button */}
+            <button
+              onClick={toggleFullscreen}
+              className="px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg font-semibold text-sm shadow-lg transition-colors flex items-center gap-2"
+              title={meetFullscreen ? 'Exit fullscreen' : 'Enter fullscreen'}
+            >
+              {meetFullscreen ? <FaCompress /> : <FaExpand />}
+              {meetFullscreen ? 'Exit Fullscreen' : 'Fullscreen'}
+            </button>
 
-             {/* Media Control Buttons */}
-             <button
-               onClick={toggleAudio}
-               className={`px-4 py-2 rounded-lg font-semibold text-sm shadow-lg transition-colors ${
-                 isAudioMuted 
-                   ? 'bg-red-600 hover:bg-red-700 text-white' 
-                   : 'bg-green-600 hover:bg-green-700 text-white'
-               }`}
-               title={isAudioMuted ? 'Unmute microphone' : 'Mute microphone'}>
-               {isAudioMuted ? '🔇 Unmute' : '🎤 Mute'}
-             </button>
+            {/* Media Control Buttons */}
+            <button
+              onClick={toggleAudio}
+              className={`px-4 py-2 rounded-lg font-semibold text-sm shadow-lg transition-colors ${
+                isAudioMuted 
+                  ? 'bg-red-600 hover:bg-red-700 text-white' 
+                  : 'bg-green-600 hover:bg-green-700 text-white'
+              }`}
+              title={isAudioMuted ? 'Unmute microphone' : 'Mute microphone'}>
+              {isAudioMuted ? '🔇 Unmute' : '🎤 Mute'}
+            </button>
 
-             <button
-               onClick={toggleVideo}
-               className={`px-4 py-2 rounded-lg font-semibold text-sm shadow-lg transition-colors ${
-                 isVideoOff 
-                   ? 'bg-red-600 hover:bg-red-700 text-white' 
-                   : 'bg-blue-600 hover:bg-blue-700 text-white'
-               }`}
-               title={isVideoOff ? 'Turn on camera' : 'Turn off camera'}
-             >
-               {isVideoOff ? '📹 Video On' : '📹 Video Off'}
-             </button>
+            <button
+              onClick={toggleVideo}
+              className={`px-4 py-2 rounded-lg font-semibold text-sm shadow-lg transition-colors ${
+                isVideoOff 
+                  ? 'bg-red-600 hover:bg-red-700 text-white' 
+                  : 'bg-blue-600 hover:bg-blue-700 text-white'
+              }`}
+              title={isVideoOff ? 'Turn on camera' : 'Turn off camera'}
+            >
+              {isVideoOff ? '📹 Video On' : '📹 Video Off'}
+            </button>
 
-             <button
-               onClick={leaveRoom}
-               className="px-6 py-3 bg-gray-600 text-white rounded-lg hover:bg-gray-700 font-semibold text-lg shadow-lg transition-colors"
-             >
-               🚪 Leave Room
-             </button>
-           </div>
-         </div>
+            <button
+              onClick={leaveRoom}
+              className="px-6 py-3 bg-gray-600 text-white rounded-lg hover:bg-gray-700 font-semibold text-lg shadow-lg transition-colors"
+            >
+              🚪 Leave Room
+            </button>
+          </div>
+        </div>
 
-         {/* P2P Video Grid */}
-         <div className="flex-1 bg-black p-6 overflow-hidden">
-           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 h-full min-h-0">
-             {/* Local Video */}
-             <div className="relative bg-gray-800 rounded-xl overflow-hidden shadow-2xl border-2 border-green-500">
-               <video
-                 ref={localVideoRef}
-                 autoPlay
-                 muted
-                 playsInline
-                 className="w-full h-full object-cover"
-               />
-               {/* Media status indicators */}
-               <div className="absolute top-2 left-2 flex gap-1">
-                 {isAudioMuted && (
-                   <div className="bg-red-600 text-white px-2 py-1 rounded text-xs font-semibold">
-                     🔇 MUTED
-                   </div>
-                 )}
-                 {isVideoOff && (
-                   <div className="bg-red-600 text-white px-2 py-1 rounded text-xs font-semibold">
-                     📹 OFF
-                   </div>
-                 )}
-               </div>
-               <div className="absolute bottom-2 left-2 bg-black bg-opacity-50 text-white px-2 py-1 rounded text-xs font-semibold">
-                 You
-               </div>
-             </div>
+        {/* P2P Video Grid */}
+        <div className="flex-1 bg-black p-6 overflow-hidden">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 h-full min-h-0">
+            {/* Local Video */}
+            <div className="relative bg-gray-800 rounded-xl overflow-hidden shadow-2xl border-2 border-green-500">
+              <video
+                ref={localVideoRef}
+                autoPlay
+                muted
+                playsInline
+                className="w-full h-full object-cover"
+              />
+              {/* Media status indicators */}
+              <div className="absolute top-2 left-2 flex gap-1">
+                {isAudioMuted && (
+                  <div className="bg-red-600 text-white px-2 py-1 rounded text-xs font-semibold">
+                    🔇 MUTED
+                  </div>
+                )}
+                {isVideoOff && (
+                  <div className="bg-red-600 text-white px-2 py-1 rounded text-xs font-semibold">
+                    📹 OFF
+                  </div>
+                )}
+              </div>
+              <div className="absolute bottom-2 left-2 bg-black bg-opacity-50 text-white px-2 py-1 rounded text-xs font-semibold">
+                You
+              </div>
+            </div>
 
-             {/* P2P Remote Videos */}
-             {participants.filter(pid => pid !== user.id).map((participantId) => {
-               if (!remoteVideoRefs.current.has(participantId)) {
-                 remoteVideoRefs.current.set(participantId, React.createRef());
-               }
-               
-               const videoRef = remoteVideoRefs.current.get(participantId);
-               const stream = remoteStreams.get(participantId);
-               const connectionState = connectionStates.get(participantId) || 'unknown';
-               const participantName = participantNames.get(participantId) || 'Loading...';
-               const isParticipantMuted = participantMuteStates.get(participantId);
-               
-               // Debug logging for mute state - ONLY MUTE RELATED LOG
-               console.log(`🔍 MUTE: Rendering participant ${participantId}: muted=${isParticipantMuted}, muteStates:`, Array.from(participantMuteStates.entries()));
-               
-               return (
-                 <div key={participantId} className="relative bg-gray-800 rounded-xl overflow-hidden shadow-2xl border-2 border-blue-500">
-                   <video
-                     ref={videoRef}
-                     autoPlay
-                     playsInline
-                     controls={false}
-                     volume={1.0}
-                     muted={false}
-                     className="w-full h-full object-cover"
-                   />
-                   
-                   {/* Mute status indicator for other participants */}
-                   {isParticipantMuted === true && (
-                     <div className="absolute top-2 left-2">
-                       <div className="bg-red-600 text-white px-2 py-1 rounded text-xs font-semibold">
-                         🔇 MUTED
-                       </div>
-                     </div>
-                   )}
-                   
-                   {/* Connection state overlay */}
-                   {!stream && (
-                     <div className="absolute inset-0 bg-gray-900 bg-opacity-80 flex items-center justify-center">
-                       <div className="text-center text-white">
-                         <div className="text-4xl mb-2">
-                           {connectionState === 'connecting' && '🔄'}
-                           {connectionState === 'connected' && '✅'}
-                           {connectionState === 'failed' && '❌'}
-                           {connectionState === 'unknown' && '⏳'}
-                         </div>
-                         <p className="text-sm font-semibold capitalize">
-                           {connectionState === 'connecting' && 'Connecting...'}
-                           {connectionState === 'connected' && 'Connected'}
-                           {connectionState === 'failed' && 'Connection Failed'}
-                           {connectionState === 'unknown' && 'Waiting...'}
-                         </p>
-                       </div>
-                     </div>
-                   )}
-                   
-                   <div className="absolute bottom-2 left-2 bg-black bg-opacity-50 text-white px-2 py-1 rounded text-xs font-semibold">
-                     {participantName}
-                   </div>
-                 </div>
-               );
-             })}
-           </div>
-         </div>
-       </div>
-     )}
-   </div>
-  );
+            {/* P2P Remote Videos */}
+            {participants.filter(pid => pid !== user.id).map((participantId) => {
+              if (!remoteVideoRefs.current.has(participantId)) {
+                remoteVideoRefs.current.set(participantId, React.createRef());
+              }
+              
+              const videoRef = remoteVideoRefs.current.get(participantId);
+              const stream = remoteStreams.get(participantId);
+              const connectionState = connectionStates.get(participantId) || 'unknown';
+              const participantName = participantNames.get(participantId) || 'Loading...';
+              
+              return (
+                <div key={participantId} className="relative bg-gray-800 rounded-xl overflow-hidden shadow-2xl border-2 border-blue-500">
+                  <video
+                    ref={videoRef}
+                    autoPlay
+                    playsInline
+                    controls={false}
+                    volume={1.0}
+                    muted={false}
+                    className="w-full h-full object-cover"
+                  />
+                  
+                  {/* Connection state overlay */}
+                  {!stream && (
+                    <div className="absolute inset-0 bg-gray-900 bg-opacity-80 flex items-center justify-center">
+                      <div className="text-center text-white">
+                        <div className="text-4xl mb-2">
+                          {connectionState === 'connecting' && '🔄'}
+                          {connectionState === 'connected' && '✅'}
+                          {connectionState === 'failed' && '❌'}
+                          {connectionState === 'unknown' && '⏳'}
+                        </div>
+                        <p className="text-sm font-semibold capitalize">
+                          {connectionState === 'connecting' && 'Connecting...'}
+                          {connectionState === 'connected' && 'Connected'}
+                          {connectionState === 'failed' && 'Connection Failed'}
+                          {connectionState === 'unknown' && 'Waiting...'}
+                        </p>
+                      </div>
+                    </div>
+                  )}
+                  
+                  <div className="absolute bottom-2 left-2 bg-black bg-opacity-50 text-white px-2 py-1 rounded text-xs font-semibold">
+                    {participantName}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      </div>
+    )}
+  </div>
+ );
 }
