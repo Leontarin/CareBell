@@ -34,43 +34,38 @@ app.use(express.json());
 
 // ─── MongoDB Connection with Retry & Initial Promise ──────────────────────────
 const MONGO_OPTIONS = {
-  serverSelectionTimeoutMS: 5_000,  // fail if we can’t connect in 5s
-  bufferCommands: true,            // don’t buffer commands while disconnected
+  serverSelectionTimeoutMS: 5_000, // fail if we can’t connect in 5s
+  bufferCommands: false           // immediately throw if not connected
 };
 
-// 1) Kick off the very first connection and keep its promise
-const initialConnection = mongoose
-  .connect(process.env.MONGODB_URI, MONGO_OPTIONS)
-  .then(() => console.log('✅ MongoDB initial connection'))
-  .catch(err => {
-    console.error('❌ MongoDB initial connection failed:', err);
-    // let retry loop handle further attempts
-  });
+mongoose.set('bufferCommands', false);
 
-// 2) Retry loop for ongoing connectivity
+let connectionPromise;
 async function connectWithRetry() {
   try {
-    await mongoose.connect(process.env.MONGODB_URI, MONGO_OPTIONS);
-    console.log('✅ MongoDB reconnected');
+    connectionPromise = mongoose.connect(process.env.MONGODB_URI, MONGO_OPTIONS);
+    await connectionPromise;
+    console.log('✅ MongoDB connected');
   } catch (err) {
-    console.error('⚠️ MongoDB connection error, retrying in 5s:', err);
+    console.error('❌ MongoDB connection error:', err);
     setTimeout(connectWithRetry, 5_000);
   }
 }
-connectWithRetry();
 
-// 3) Runtime logging
 mongoose.connection.on('error', err =>
   console.error('MongoDB runtime error:', err)
 );
-mongoose.connection.on('disconnected', () =>
-  console.warn('MongoDB disconnected — retrying…')
-);
+mongoose.connection.on('disconnected', () => {
+  console.warn('MongoDB disconnected — retrying…');
+  connectWithRetry();
+});
+
+connectWithRetry();
 
 // ─── Middleware to wait for the first connection ───────────────────────────────
 app.use(async (req, res, next) => {
   try {
-    await initialConnection;
+    await connectionPromise;
     next();
   } catch (err) {
     console.error('DB not ready, rejecting request:', err);
