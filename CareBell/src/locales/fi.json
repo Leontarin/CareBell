@@ -142,7 +142,8 @@
     "diabeticFriendlyYes": "Kyllä",
     "diabeticFriendlyNo": "Ei",
     "allergyWarning": "Olet allerginen aterian seuraaville aineksille:",
-  
+    "enterBarcodePlaceholder": "Syötä viivakoodi",
+    "enterButton": "Syötä",
     "LegendHeadings": {
       "Additives":  "Lisäaineet",
       "Allergens":  "Allergeenit",
@@ -254,8 +255,33 @@
     "Title":"Videohuoneet"
   },
   "News": {
-    "latestNews": "Viimeisimmät uutiset",
-    "readMore": "Lue lisää"
+    "latestNews":    "Viimeisimmät uutiset",
+    "selectRegions": "Valitse alueet",
+    "loading":       "Ladataan uutisia…",
+    "errorTitle":    "Virhe",
+    "retry":         "Yritä uudelleen",
+    "articlesFound": "artikkelia löydetty",
+    "stopReading":   "Lopeta lukeminen",
+    "source":        "Lähde",
+    "stop":          "Pysäytä",
+    "read":          "Lue",
+    "readMore":      "Lue lisää",
+    "badenWuerttemberg": "Baden-Württemberg",
+    "bavaria": "Baijeri",
+    "berlin": "Berliini",
+    "brandenburg": "Brandenburg",
+    "bremen": "Bremen",
+    "hamburg": "Hampuri",
+    "hesse": "Hessen",
+    "mecklenburgVorpommern": "Mecklenburg-Etu-Pommeri",
+    "lowerSaxony": "Ala-Saksi",
+    "northRhineWestphalia": "Nordrhein-Westfalen",
+    "rhinelandPalatinate": "Rheinland-Pfalz",
+    "saarland": "Saarland",
+    "saxony": "Saksi",
+    "saxonyAnhalt": "Saksi-Anhalt",
+    "schleswigHolstein": "Schleswig-Holstein",
+    "thuringia": "Thüringen"
   },
   "RightSide": {
     "callContacts":     "Soita yhteystiedoille",
