@@ -1,12 +1,22 @@
-// routes/bellaReminders.js
 require('dotenv').config();
 const express = require('express');
-const axios = require('axios');
+const OpenAI = require('openai').default;
 const router = express.Router();
 const BellaReminder = require('../models/bellaReminder');
 
-const HF_API_URL = process.env.HF_API_URL;
-const HF_TOKEN = process.env.HF_API_TOKEN;
+// initialize OpenAI SDK
+const openai = new OpenAI({ apiKey: process.env.OPENAI_KEY });
+
+// same sensitive-text guard as before
+const SENSITIVE_KEYWORDS = [
+  'password','ssn','social security','bank account','credit card',
+  'debit card','cvv','cvc','pin','passport','driver license','social number'
+];
+function containsSensitive(text) {
+  const lower = text.toLowerCase();
+  if (/\d{5,}/.test(lower)) return true;
+  return SENSITIVE_KEYWORDS.some(k => lower.includes(k));
+}
 
 // 1) Manually add a reminder
 router.post('/addReminder', async (req, res) => {
@@ -33,62 +43,80 @@ router.get('/user/:userId', async (req, res) => {
   }
 });
 
-// 3) Analyze incoming text and auto-save if the model's top label is 'personal fact'
+// 3) Analyze incoming text, classify via OpenAI, and auto-save personal info
 router.post('/analyze', async (req, res) => {
   const { userId, text } = req.body;
   if (!userId || !text) {
     return res.status(400).json({ error: 'userId and text are required' });
   }
 
-  try {
-    // Zero-shot classify with HF (includes 'question' but single-label softmax)
-    const hfResponse = await axios.post(
-      HF_API_URL,
-      {
-        inputs: text,
-        parameters: {
-          candidate_labels: ['personal fact', 'question', 'not personal fact']
-        }
-      },
-      {
-        headers: {
-          Authorization: `Bearer ${HF_TOKEN}`,
-          'Content-Type': 'application/json',
-          'Accept': 'application/json'
-        }
-      }
-    );
+  // quick-check for ultra-sensitive content
+  if (containsSensitive(text)) {
+    return res.json({ saved: false, reason: 'too sensitive' });
+  }
 
-    const data = hfResponse.data;
-    if (!data.labels || !data.scores) {
-      throw new Error('Invalid response from HF inference');
+  try {
+    console.log('Received /analyze payload', { userId, text });
+
+    // prompt to enforce strict JSON classification
+    const systemPrompt = `
+You are Bella, an AI companion for seniors. You read one user-supplied string and output valid JSON:
+• "category": one of personal_information, private_information, question, other  
+• If category == personal_information, extract only those details a caretaker must know 
+  (e.g. dementia status, eating_habits, family_names, medical_history, routines, etc.) 
+  into an "entities" object, mapping keys to brief descriptions.
+Example:
+{"category":"personal_information","entities":{"dementia":"mild","eating_habits":"one meal per day","family_names":"Alice, Bob"}}
+For any other category omit "entities". Always return JSON only.
+`.trim();
+
+    // call the Chat API
+    const completion = await openai.chat.completions.create({
+      model: 'gpt-3.5-turbo',
+      messages: [
+        { role: 'system', content: systemPrompt },
+        { role: 'user',   content: text }
+      ],
+      temperature: 0
+    });
+
+    // parse the JSON reply
+    const raw = completion.choices[0].message.content;
+    let result;
+    try {
+      result = JSON.parse(raw);
+    } catch (err) {
+      console.error('Invalid JSON from OpenAI:', raw);
+      return res.status(500).json({ error: 'Invalid JSON from classification model' });
     }
 
-    const labels = data.labels;
-    const scores = data.scores;
-    const topLabel = labels[0];
-    console.log(`→ topLabel: ${topLabel} (score ${scores[0].toFixed(3)})`);
+    const { category, entities } = result;
+    console.log('→ classification:', category, entities || '');
 
-    // If the top label is 'personal fact', save it
-    if (topLabel === 'personal fact') {
-      const title = text.split(/,|\./)[0].trim();
-      const exists = await BellaReminder.findOne({ userId, title });
-      if (!exists) {
+    // only auto-save personal_information
+    if (category === 'personal_information') {
+      // avoid duplicates by matching user + category + entities
+      const existing = await BellaReminder.findOne({ userId, category, entities });
+      if (!existing) {
+        // title = extracted name if available, otherwise the category label
+        const title = entities?.name || category;
         const reminder = await BellaReminder.create({
           userId,
           title,
-          description: text,
+          category,
+          entities,
           reminderTime: new Date(),
           isImportant: true
         });
         return res.status(201).json({ saved: true, reminder });
       }
+      return res.json({ saved: false, reason: 'duplicate' });
     }
 
-    // Otherwise, nothing to save
-    return res.json({ saved: false });
+    // for all other categories, do not save
+    return res.json({ saved: false, category });
   } catch (err) {
-    console.error('Analysis error:', err.response?.data || err.message);
+    console.error('Analysis error:', err);
     return res.status(500).json({ error: err.message });
   }
 });
