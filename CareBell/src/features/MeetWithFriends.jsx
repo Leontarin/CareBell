@@ -37,12 +37,12 @@ const ParticipantsModal = ({ isOpen, onClose, participants, roomName }) => {
           ))
         ) : (
           <p className="text-gray-500 dark:text-gray-400 text-center py-4">
-            No participants in this room
+            {t("MeetWithFriends.noParticipants")}
           </p>
         )}
         <div className="mt-4 text-center">
           <button onClick={onClose} className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
-            Close
+            {t("MeetWithFriends.Close")}
           </button>
         </div>
       </div>
@@ -776,7 +776,7 @@ export default function MeetWithFriends() {
                        {room.name}
                      </h4>
                      <p className="text-gray-700 dark:text-gray-400 text-sm">
-                       👥 {participantCount}/{MAX_P2P_PARTICIPANTS} participants
+                       👥 {participantCount}/{MAX_P2P_PARTICIPANTS} {t("MeetWithFriends.participants")}
                      </p>
                      {room.isActive && (
                        <p className="text-green-600 dark:text-green-400 text-xs mt-1">
@@ -812,7 +812,7 @@ export default function MeetWithFriends() {
                         : 'bg-[#4f46e5] hover:bg-[#4338ca] text-white'
                     }`}
                   >
-                    {isRoomFull ? '🚫 Room Full' : '🔗 Join Call'}
+                    {isRoomFull ? t("MeetWithFriends.roomFull") : t("MeetWithFriends.joinCall")}
                   </button>
 
                   
@@ -842,9 +842,9 @@ export default function MeetWithFriends() {
                {joinedRoom} Room
              </h2>
              <p className="text-gray-300 text-sm mt-1">
-               👥 {participants.length}/{MAX_P2P_PARTICIPANTS} participants 
-               {signalingConnected && <span className="text-green-400 ml-2">🟢 Connected</span>}
-               {!signalingConnected && <span className="text-red-400 ml-2">🔴 Connecting...</span>}
+               👥 {participants.length}/{MAX_P2P_PARTICIPANTS} {t("MeetWithFriends.participants")} 
+               {signalingConnected && <span className="text-green-400 ml-2">🟢 {t("MeetWithFriends.Connected")}</span>}
+               {!signalingConnected && <span className="text-red-400 ml-2">🔴 {t("MeetWithFriends.Connecting")}</span>}
              </p>
            </div>
            
@@ -853,10 +853,10 @@ export default function MeetWithFriends() {
              <button
                onClick={toggleFullscreen}
                className="px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg font-semibold text-sm shadow-lg transition-colors flex items-center gap-2"
-               title={meetFullscreen ? 'Exit fullscreen' : 'Enter fullscreen'}
+               title={meetFullscreen ? t("MeetWithFriends.ExitFullscreen") : t("MeetWithFriends.EnterFullscreen")}
              >
                {meetFullscreen ? <FaCompress /> : <FaExpand />}
-               {meetFullscreen ? 'Exit Fullscreen' : 'Fullscreen'}
+               {meetFullscreen ? t("MeetWithFriends.ExitFullscreen") : t("MeetWithFriends.Fullscreen")}
              </button>
 
              {/* Media Control Buttons */}
@@ -868,7 +868,7 @@ export default function MeetWithFriends() {
                    : 'bg-green-600 hover:bg-green-700 text-white'
                }`}
                title={isAudioMuted ? 'Unmute microphone' : 'Mute microphone'}>
-              {isAudioMuted ? '🔇 Unmute' : '🎤 Mute'}
+              {isAudioMuted ? t("MeetWithFriends.unmute") : t("MeetWithFriends.mute")}
             </button>
 
             <button
@@ -878,16 +878,16 @@ export default function MeetWithFriends() {
                   ? 'bg-red-600 hover:bg-red-700 text-white' 
                   : 'bg-blue-600 hover:bg-blue-700 text-white'
               }`}
-              title={isVideoOff ? 'Turn on camera' : 'Turn off camera'}
+              title={isVideoOff ? t("MeetWithFriends.CameraOn") : t("MeetWithFriends.CameraOff")}
             >
-              {isVideoOff ? '📹 Video On' : '📹 Video Off'}
+              {isVideoOff ? t("MeetWithFriends.VideoOn") : t("MeetWithFriends.VideoOff")}
             </button>
 
             <button
               onClick={leaveRoom}
               className="px-6 py-3 bg-gray-600 text-white rounded-lg hover:bg-gray-700 font-semibold text-lg shadow-lg transition-colors"
             >
-              🚪 Leave Room
+              {t("MeetWithFriends.LeaveRoom")}
             </button>
           </div>
         </div>
@@ -908,12 +908,12 @@ export default function MeetWithFriends() {
               <div className="absolute top-2 left-2 flex gap-1">
                 {isAudioMuted && (
                   <div className="bg-red-600 text-white px-2 py-1 rounded text-xs font-semibold">
-                    🔇 MUTED
+                    {t("MeetWithFriends.Muted")}
                   </div>
                 )}
                 {isVideoOff && (
                   <div className="bg-red-600 text-white px-2 py-1 rounded text-xs font-semibold">
-                    📹 OFF
+                    {t("MeetWithFriends.Off")}
                   </div>
                 )}
               </div>
@@ -955,12 +955,12 @@ export default function MeetWithFriends() {
                   <div className="absolute top-2 left-2 flex gap-1">
                     {remoteMediaStates.get(participantId)?.audioMuted && (
                       <div className="bg-red-600 text-white px-2 py-1 rounded text-xs font-semibold">
-                        🔇 MUTED
+                        {t("MeetWithFriends.Muted")}
                       </div>
                     )}
                     {remoteMediaStates.get(participantId)?.videoOff && (
                       <div className="bg-red-600 text-white px-2 py-1 rounded text-xs font-semibold">
-                        📹 OFF
+                        {t("MeetWithFriends.Off")}
                       </div>
                     )}
                   </div>
