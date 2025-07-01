@@ -1,6 +1,6 @@
 // src/components/News.jsx
 import React, { useState, useEffect } from "react";
-import { API, NEWS_REGION } from "../shared/config";
+import { API, NEWS_REGIONS } from "../shared/config";
 import { useTranslation } from "react-i18next";
 import { playTts } from "../shared/tts";
 
@@ -9,23 +9,24 @@ export default function News() {
   const [news, setNews] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
-  const [region, setRegion] = useState(NEWS_REGION);
+  const [regions, setRegions] = useState(NEWS_REGIONS.split(','));
   const [speaking, setSpeaking] = useState(false);
   const [currentArticleIndex, setCurrentArticleIndex] = useState(null);
   const [audioObj, setAudioObj] = useState(null);
 
   useEffect(() => {
-    fetchTodaysNews(region);
-  }, [region]);
+    fetchTodaysNews(regions);
+  }, [regions]);
 
   useEffect(() => () => {
     if (audioObj) audioObj.pause();
   }, [audioObj]);
 
-  const fetchTodaysNews = async (selectedRegion) => {
+  const fetchTodaysNews = async (selectedRegions) => {
     setLoading(true);
     setError("");
-    const url = `${API}/news/todays-news?region=${encodeURIComponent(selectedRegion)}`;
+    const regionParam = Array.isArray(selectedRegions) ? selectedRegions.join(',') : selectedRegions;
+    const url = `${API}/news/todays-news?regions=${encodeURIComponent(regionParam)}`;
     const maxRetries = 2;
     for (let attempt = 1; attempt <= maxRetries; attempt++) {
       try {
@@ -106,24 +107,53 @@ export default function News() {
     }
   };
 
-  const retryFetch = () => fetchTodaysNews(region);
+  const retryFetch = () => fetchTodaysNews(regions);
 
-  const REGIONS = ['germany', 'international'];
+  const STATE_OPTIONS = [
+    { code: '1', key: 'badenWuerttemberg' },
+    { code: '2', key: 'bavaria' },
+    { code: '3', key: 'berlin' },
+    { code: '4', key: 'brandenburg' },
+    { code: '5', key: 'bremen' },
+    { code: '6', key: 'hamburg' },
+    { code: '7', key: 'hesse' },
+    { code: '8', key: 'mecklenburgVorpommern' },
+    { code: '9', key: 'lowerSaxony' },
+    { code: '10', key: 'northRhineWestphalia' },
+    { code: '11', key: 'rhinelandPalatinate' },
+    { code: '12', key: 'saarland' },
+    { code: '13', key: 'saxony' },
+    { code: '14', key: 'saxonyAnhalt' },
+    { code: '15', key: 'schleswigHolstein' },
+    { code: '16', key: 'thuringia' }
+  ];
 
   return (
     <div className="p-4 max-w-4xl mx-auto bg-white dark:bg-gray-800 shadow-lg rounded-lg">
       <h1 className="text-4xl font-bold mb-4 text-center text-blue-800 dark:text-blue-200">{t('News.latestNews')}</h1>
-      <div className="mb-4 text-right">
-        <label className="mr-2">{t('News.selectRegion')}:</label>
-        <select
-          value={region}
-          onChange={e => setRegion(e.target.value)}
-          className="border px-2 py-1 rounded"
-        >
-          {REGIONS.map(r => (
-            <option key={r} value={r}>{t(`News.${r}`)}</option>
+      <div className="mb-4">
+        <label className="mr-2">{t('News.selectRegions')}:</label>
+        <div className="flex flex-wrap">
+          {STATE_OPTIONS.map(opt => (
+            <label key={opt.code} className="mr-4 mb-2">
+              <input
+                type="checkbox"
+                value={opt.code}
+                checked={regions.includes(opt.code)}
+                onChange={e => {
+                  const code = e.target.value;
+                  if (e.target.checked) {
+                    setRegions(prev => [...prev, code]);
+                  } else {
+                    setRegions(prev => prev.filter(r => r !== code));
+                  }
+                }}
+                className="mr-1"
+              />
+              {t(`News.${opt.key}`)}
+            </label>
           ))}
-        </select>
+        </div>
       </div>
       {loading ? (
         <div className="flex flex-col items-center justify-center py-12">

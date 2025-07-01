@@ -249,9 +249,23 @@
   "News": {
     "latestNews": "Neueste Nachrichten",
     "readMore": "Weiterlesen",
-    "selectRegion": "Region wählen",
-    "germany": "Deutschland",
-    "international": "International"
+    "selectRegions": "Regionen wählen",
+    "badenWuerttemberg": "Baden-Württemberg",
+    "bavaria": "Bayern",
+    "berlin": "Berlin",
+    "brandenburg": "Brandenburg",
+    "bremen": "Bremen",
+    "hamburg": "Hamburg",
+    "hesse": "Hessen",
+    "mecklenburgVorpommern": "Mecklenburg-Vorpommern",
+    "lowerSaxony": "Niedersachsen",
+    "northRhineWestphalia": "Nordrhein-Westfalen",
+    "rhinelandPalatinate": "Rheinland-Pfalz",
+    "saarland": "Saarland",
+    "saxony": "Sachsen",
+    "saxonyAnhalt": "Sachsen-Anhalt",
+    "schleswigHolstein": "Schleswig-Holstein",
+    "thuringia": "Thüringen"
   },
   "RightSide": {
     "callContacts": "Kontakte anrufen",

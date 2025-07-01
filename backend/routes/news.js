@@ -4,18 +4,23 @@ require('dotenv').config();
 
 const router = express.Router();
 
-// Default news region can be provided via env
-const DEFAULT_REGION = process.env.NEWS_REGION || 'germany';
+// Default region filter for Tagesschau API ("regions" parameter)
+const DEFAULT_REGIONS = '1';
 
 // Fetch today's news using the unofficial Tagesschau API
 // NOTE: This is a best-effort implementation. Field mappings may need
 // adjustment once the actual API responses are known.
 router.get('/todays-news', async (req, res) => {
-    const region = req.query.region || DEFAULT_REGION;
+    const regions = req.query.regions || DEFAULT_REGIONS;
     try {
         const today = new Date().toISOString().split('T')[0];
-        const url = `https://tagesschau-api.deno.dev/${region}/news`; // TODO: confirm endpoint
-        const { data } = await axios.get(url, { params: { date: today } });
+        const url = 'https://tagesschau-api.deno.dev/api/news';
+        const { data } = await axios.get(url, {
+            params: {
+                date: today,
+                regions
+            }
+        });
 
         const articles = Array.isArray(data)
             ? data

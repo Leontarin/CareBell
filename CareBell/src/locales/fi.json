@@ -239,9 +239,23 @@
   "News": {
     "latestNews": "Viimeisimmät uutiset",
     "readMore": "Lue lisää",
-    "selectRegion": "Valitse alue",
-    "germany": "Saksa",
-    "international": "Kansainvälinen"
+    "selectRegions": "Valitse alueet",
+    "badenWuerttemberg": "Baden-Württemberg",
+    "bavaria": "Baijeri",
+    "berlin": "Berliini",
+    "brandenburg": "Brandenburg",
+    "bremen": "Bremen",
+    "hamburg": "Hampuri",
+    "hesse": "Hessen",
+    "mecklenburgVorpommern": "Mecklenburg-Etu-Pommeri",
+    "lowerSaxony": "Ala-Saksi",
+    "northRhineWestphalia": "Nordrhein-Westfalen",
+    "rhinelandPalatinate": "Rheinland-Pfalz",
+    "saarland": "Saarland",
+    "saxony": "Saksi",
+    "saxonyAnhalt": "Saksi-Anhalt",
+    "schleswigHolstein": "Schleswig-Holstein",
+    "thuringia": "Thüringen"
   },
   "RightSide": {
     "callContacts":     "Soita yhteystiedoille",

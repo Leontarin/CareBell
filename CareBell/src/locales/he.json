@@ -254,9 +254,23 @@
   "News": {
     "latestNews": "החדשות האחרונות",
     "readMore": "קרא עוד",
-    "selectRegion": "בחר אזור",
-    "germany": "גרמניה",
-    "international": "בינלאומי"
+    "selectRegions": "בחר אזורים",
+    "badenWuerttemberg": "באדן-וירטמברג",
+    "bavaria": "בוואריה",
+    "berlin": "ברלין",
+    "brandenburg": "ברנדנבורג",
+    "bremen": "ברמן",
+    "hamburg": "המבורג",
+    "hesse": "הסן",
+    "mecklenburgVorpommern": "מקלנבורג-מערב פומרניה",
+    "lowerSaxony": "סקסוניה תחתית",
+    "northRhineWestphalia": "נורדריין-וסטפאליה",
+    "rhinelandPalatinate": "ריינלנד-פפאלץ",
+    "saarland": "זארלנד",
+    "saxony": "סקסוניה",
+    "saxonyAnhalt": "סקסוניה-אנהלט",
+    "schleswigHolstein": "שלזוויג-הולשטיין",
+    "thuringia": "תורינגיה"
   },
   "RightSide": {
     "callContacts":     "אנשי קשר",

@@ -256,9 +256,23 @@
   "News": {
     "latestNews": "Latest News",
     "readMore": "Read more",
-    "selectRegion": "Select region",
-    "germany": "Germany",
-    "international": "International"
+    "selectRegions": "Select regions",
+    "badenWuerttemberg": "Baden-Württemberg",
+    "bavaria": "Bavaria",
+    "berlin": "Berlin",
+    "brandenburg": "Brandenburg",
+    "bremen": "Bremen",
+    "hamburg": "Hamburg",
+    "hesse": "Hesse",
+    "mecklenburgVorpommern": "Mecklenburg-Vorpommern",
+    "lowerSaxony": "Lower Saxony",
+    "northRhineWestphalia": "North Rhine-Westphalia",
+    "rhinelandPalatinate": "Rhineland-Palatinate",
+    "saarland": "Saarland",
+    "saxony": "Saxony",
+    "saxonyAnhalt": "Saxony-Anhalt",
+    "schleswigHolstein": "Schleswig-Holstein",
+    "thuringia": "Thuringia"
   },
   "RightSide": {
     "callContacts":     "Call Contacts",
