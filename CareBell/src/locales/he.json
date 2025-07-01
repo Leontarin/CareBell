@@ -157,7 +157,8 @@
     "diabeticFriendlyYes": "כן",
     "diabeticFriendlyNo": "לא",
     "allergyWarning": "את/ה אלרגי/ת לפריטים הבאים במנה:",
-  
+    "enterBarcodePlaceholder": "הזן ברקוד",
+    "enterButton": "הזן",
     "LegendHeadings": {
       "Additives":  "תוספים",
       "Allergens":  "אלרגנים",

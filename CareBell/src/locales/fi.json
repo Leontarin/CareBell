@@ -142,7 +142,8 @@
     "diabeticFriendlyYes": "Kyllä",
     "diabeticFriendlyNo": "Ei",
     "allergyWarning": "Olet allerginen aterian seuraaville aineksille:",
-  
+    "enterBarcodePlaceholder": "Syötä viivakoodi",
+    "enterButton": "Syötä",
     "LegendHeadings": {
       "Additives":  "Lisäaineet",
       "Allergens":  "Allergeenit",

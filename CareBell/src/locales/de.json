@@ -152,6 +152,8 @@
     "diabeticFriendlyLabel": "Diabetikergeeignet:",
     "diabeticFriendlyYes": "Ja",
     "diabeticFriendlyNo": "Nein",
+    "enterBarcodePlaceholder": "Barcode eingeben",
+    "enterButton": "Eingeben",
     "allergyWarning": "Du bist allergisch gegen Folgendes im Gericht:",
     "LegendHeadings": {
       "Additives": "Zusatzstoffe",

@@ -140,7 +140,6 @@
     "scanBarcode": "Scan QR",
     "FoodList": "Food List",
     "FoodInfo": "Food Information",
-
     "addMeal": "Add Meal",
     "mealTime": "Meal Time",
     "searchPlaceholder": "Search for food by name...",
@@ -157,7 +156,8 @@
     "diabeticFriendlyYes": "Yes",
     "diabeticFriendlyNo": "No",
     "allergyWarning": "You are allergic to the following in the meal:",
-  
+    "enterBarcodePlaceholder": "Enter barcode",
+    "enterButton": "Enter",
     "LegendHeadings": {
       "Additives":  "Additives",
       "Allergens":  "Allergens",
