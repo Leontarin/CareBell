@@ -257,10 +257,13 @@ export default function Bella() {
 
       // queue reminder analysis
       try {
+        //DEBUG LOG
+        const analyzePayload = { userId: user.id, text };
+        console.log('Sending /analyze request', analyzePayload);
         fetch(`${API}/bellaReminders/analyze`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ userId: user.id, text })
+          body: JSON.stringify(analyzePayload)
         });
       } catch (e) {
         console.error(e);
