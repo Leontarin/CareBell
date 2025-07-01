@@ -107,14 +107,21 @@ export default function Bella() {
       if (!user?.id) return;
       try {
         const res = await fetch(`${API}/bellaReminders/user/${user.id}`);
-        if (!res.ok) throw new Error(res.statusText);
-        const rems = await res.json();
-        for (let r of rems) {
-          await vapi.send({ //send bella a message as system
-            type: 'add-message',
-            message: { role: 'system', content: `Remember: ${r.description}` }
-          });
-        }
+const rems = await res.json();
+if (rems.length > 0) {
+  // turn each entities object into "key: value" strings
+  const parts = rems.map(r => {
+    const ents = r.entities || {};
+    return Object.entries(ents)
+      .map(([k,v]) => `${k.replace(/_/g,' ')}: ${v}`)
+      .join(', ');
+  });
+      const message = `Remember the following about the user: ${parts.join('; ')}`;
+      await vapi.send({
+        type: 'add-message',
+        message: { role: 'system', content: message }
+      });
+    }
       } catch (e) { console.error(e); }
       try {
         const res = await fetch(`${API}/medications/${user.id}`);
