@@ -238,7 +238,10 @@
   },
   "News": {
     "latestNews": "Viimeisimmät uutiset",
-    "readMore": "Lue lisää"
+    "readMore": "Lue lisää",
+    "selectRegion": "Valitse alue",
+    "germany": "Saksa",
+    "international": "Kansainvälinen"
   },
   "RightSide": {
     "callContacts":     "Soita yhteystiedoille",

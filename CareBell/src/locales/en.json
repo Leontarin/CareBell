@@ -255,7 +255,10 @@
   },
   "News": {
     "latestNews": "Latest News",
-    "readMore": "Read more"
+    "readMore": "Read more",
+    "selectRegion": "Select region",
+    "germany": "Germany",
+    "international": "International"
   },
   "RightSide": {
     "callContacts":     "Call Contacts",

@@ -4,21 +4,33 @@ require('dotenv').config();
 
 const router = express.Router();
 
-const API_KEY = process.env.NEWS_API_KEY;
+// Default news region can be provided via env
+const DEFAULT_REGION = process.env.NEWS_REGION || 'germany';
 
+// Fetch today's news using the unofficial Tagesschau API
+// NOTE: This is a best-effort implementation. Field mappings may need
+// adjustment once the actual API responses are known.
 router.get('/todays-news', async (req, res) => {
+    const region = req.query.region || DEFAULT_REGION;
     try {
         const today = new Date().toISOString().split('T')[0];
-        const response = await axios.get('http://api.mediastack.com/v1/news', {
-            params: {
-                access_key: API_KEY,
-                date: today,
-                languages: 'de',
-                countries: 'de',
-            },
-        });
+        const url = `https://tagesschau-api.deno.dev/${region}/news`; // TODO: confirm endpoint
+        const { data } = await axios.get(url, { params: { date: today } });
 
-        res.json(response.data.data);
+        const articles = Array.isArray(data)
+            ? data
+            : data.articles || [];
+
+        const mapped = articles.map(a => ({
+            title:        a.title || a.headline,
+            description:  a.description || a.teaser,
+            source:       a.source      || 'tagesschau',
+            url:          a.url,
+            image:        a.image,
+            published_at: a.published_at || a.date
+        }));
+
+        res.json(mapped);
     } catch (error) {
         console.error('Error fetching news:', error.message);
         res.status(500).json({ error: 'Failed to fetch news' });

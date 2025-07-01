@@ -248,7 +248,10 @@
   },
   "News": {
     "latestNews": "Neueste Nachrichten",
-    "readMore": "Weiterlesen"
+    "readMore": "Weiterlesen",
+    "selectRegion": "Region wählen",
+    "germany": "Deutschland",
+    "international": "International"
   },
   "RightSide": {
     "callContacts": "Kontakte anrufen",

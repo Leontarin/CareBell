@@ -1,30 +1,31 @@
 // src/components/News.jsx
 import React, { useState, useEffect } from "react";
-import { API } from "../shared/config";
+import { API, NEWS_REGION } from "../shared/config";
 import { useTranslation } from "react-i18next";
 import { playTts } from "../shared/tts";
 
 export default function News() {
-  const { i18n } = useTranslation();
+  const { t, i18n } = useTranslation();
   const [news, setNews] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [region, setRegion] = useState(NEWS_REGION);
   const [speaking, setSpeaking] = useState(false);
   const [currentArticleIndex, setCurrentArticleIndex] = useState(null);
   const [audioObj, setAudioObj] = useState(null);
 
   useEffect(() => {
-    fetchTodaysNews();
-  }, []);
+    fetchTodaysNews(region);
+  }, [region]);
 
   useEffect(() => () => {
     if (audioObj) audioObj.pause();
   }, [audioObj]);
 
-  const fetchTodaysNews = async () => {
+  const fetchTodaysNews = async (selectedRegion) => {
     setLoading(true);
     setError("");
-    const url = `${API}/news/todays-news`;
+    const url = `${API}/news/todays-news?region=${encodeURIComponent(selectedRegion)}`;
     const maxRetries = 2;
     for (let attempt = 1; attempt <= maxRetries; attempt++) {
       try {
@@ -105,11 +106,25 @@ export default function News() {
     }
   };
 
-  const retryFetch = () => fetchTodaysNews();
+  const retryFetch = () => fetchTodaysNews(region);
+
+  const REGIONS = ['germany', 'international'];
 
   return (
     <div className="p-4 max-w-4xl mx-auto bg-white dark:bg-gray-800 shadow-lg rounded-lg">
-      <h1 className="text-4xl font-bold mb-8 text-center text-blue-800 dark:text-blue-200">Heute Nachrichten</h1>
+      <h1 className="text-4xl font-bold mb-4 text-center text-blue-800 dark:text-blue-200">{t('News.latestNews')}</h1>
+      <div className="mb-4 text-right">
+        <label className="mr-2">{t('News.selectRegion')}:</label>
+        <select
+          value={region}
+          onChange={e => setRegion(e.target.value)}
+          className="border px-2 py-1 rounded"
+        >
+          {REGIONS.map(r => (
+            <option key={r} value={r}>{t(`News.${r}`)}</option>
+          ))}
+        </select>
+      </div>
       {loading ? (
         <div className="flex flex-col items-center justify-center py-12">
           <div className="animate-spin rounded-full h-16 w-16 border-b-4 border-blue-500 mb-4"></div>

@@ -2,6 +2,9 @@ export const API = "https://carebelldb.vercel.app";
 export const P2P_SIGNALING_URL = 'wss://carebellp2p.deno.dev';
 //export const API = "http://localhost:4443";
 
+// Default region used for news articles
+export const NEWS_REGION = 'germany';
+
 
 
 export const P2P_CONFIG = {

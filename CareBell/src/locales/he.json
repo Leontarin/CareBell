@@ -253,7 +253,10 @@
   },
   "News": {
     "latestNews": "החדשות האחרונות",
-    "readMore": "קרא עוד"
+    "readMore": "קרא עוד",
+    "selectRegion": "בחר אזור",
+    "germany": "גרמניה",
+    "international": "בינלאומי"
   },
   "RightSide": {
     "callContacts":     "אנשי קשר",
