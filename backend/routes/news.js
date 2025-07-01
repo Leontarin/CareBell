@@ -1,28 +1,43 @@
+// src/routes/news.js
 const express = require('express');
 const axios = require('axios');
 require('dotenv').config();
 
 const router = express.Router();
 
-const API_KEY = process.env.NEWS_API_KEY;
+// Default region filter for Tagesschau API ("regions" parameter)
+const DEFAULT_REGIONS = '1';
 
 router.get('/todays-news', async (req, res) => {
-    try {
-        const today = new Date().toISOString().split('T')[0];
-        const response = await axios.get('http://api.mediastack.com/v1/news', {
-            params: {
-                access_key: API_KEY,
-                date: today,
-                languages: 'de',
-                countries: 'de',
-            },
-        });
+  const regions = req.query.regions || DEFAULT_REGIONS;
+  try {
+    // Note the trailing slash here:
+    const url = 'https://www.tagesschau.de/api2u/news/';
+    const { data } = await axios.get(url, {
+      params: { regions }
+    });
 
-        res.json(response.data.data);
-    } catch (error) {
-        console.error('Error fetching news:', error.message);
-        res.status(500).json({ error: 'Failed to fetch news' });
-    }
+    // Extract the array from `news`, not `articles`
+    const articles = Array.isArray(data)
+      ? data
+      : data.news || [];
+
+    const mapped = articles.map(a => ({
+      title:        a.title,                                   // e.g. "Merkel kritisiert …"
+      description:  a.teaserText || a.teaser || null,          // teaser / short summary
+      source:       a.source || 'tagesschau',                  // sometimes NDR/WDR/etc.
+      url:          a.detailsweb,      // note: prepend host
+      image:        a.teaserImage
+                      && a.teaserImage.imageVariants
+                      && a.teaserImage.imageVariants['16x9-384'],
+      published_at: a.date                                    // ISO timestamp
+    }));
+
+    res.json(mapped);
+  } catch (error) {
+    console.error('Error fetching news:', error.message);
+    res.status(500).json({ error: 'Failed to fetch news' });
+  }
 });
 
 module.exports = router;

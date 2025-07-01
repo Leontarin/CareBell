@@ -1,6 +1,10 @@
-export const API = "https://carebelldb.vercel.app";
+//export const API = "https://carebelldb.vercel.app";
 export const P2P_SIGNALING_URL = 'wss://carebellp2p.deno.dev';
-//export const API = "http://localhost:4443";
+export const API = "http://localhost:4443";
+
+// Default regions used for news articles (Tagesschau region codes)
+// Can be a comma-separated list as string, e.g. '1,2' for Baden-Württemberg and Bavaria
+export const NEWS_REGIONS = '1';
 
 
 
