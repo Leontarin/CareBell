@@ -76,14 +76,16 @@ router.post('/analyze', async (req, res) => {
   }
 
   try {
-    const cls = await hf.zeroShotClassification({
+    const cls = await hf.request({
       model: 'facebook/bart-large-mnli',
       inputs: text,
-      parameters: { candidate_labels: ['personal info', 'question', 'other'] }
+      parameters: { candidate_labels: ['personal info', 'question', 'other'] },
+      task: 'zero-shot-classification',
+      options: { wait_for_model: true }
     });
 
-    const labels = cls.labels;
-    const scores = cls.scores;
+    const labels = cls.labels || (Array.isArray(cls) ? cls[0].labels : []);
+    const scores = cls.scores || (Array.isArray(cls) ? cls[0].scores : []);
     const topLabel = labels[0];
     const isPersonal = topLabel === 'personal info';
     console.log(
@@ -92,9 +94,11 @@ router.post('/analyze', async (req, res) => {
       `→ result: ${isPersonal ? 'PERSONAL' : 'NOT PERSONAL'}`);
 
     if (topLabel === 'personal info') {
-      const embeddingResp = await hf.featureExtraction({
+      const embeddingResp = await hf.request({
         model: 'sentence-transformers/all-MiniLM-L6-v2',
-        inputs: text
+        inputs: text,
+        task: 'feature-extraction',
+        options: { wait_for_model: true }
       });
       const embedding = Array.isArray(embeddingResp[0]) ? embeddingResp[0] : embeddingResp;
 
