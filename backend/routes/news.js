@@ -13,13 +13,9 @@ const DEFAULT_REGIONS = '1';
 router.get('/todays-news', async (req, res) => {
     const regions = req.query.regions || DEFAULT_REGIONS;
     try {
-        const today = new Date().toISOString().split('T')[0];
         const url = 'https://tagesschau-api.deno.dev/api/news';
         const { data } = await axios.get(url, {
-            params: {
-                date: today,
-                regions
-            }
+            params: { regions }
         });
 
         const articles = Array.isArray(data)

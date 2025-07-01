@@ -10,6 +10,7 @@ export default function News() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [regions, setRegions] = useState(NEWS_REGIONS.split(','));
+  const [showRegionList, setShowRegionList] = useState(false);
   const [speaking, setSpeaking] = useState(false);
   const [currentArticleIndex, setCurrentArticleIndex] = useState(null);
   const [audioObj, setAudioObj] = useState(null);
@@ -132,28 +133,40 @@ export default function News() {
     <div className="p-4 max-w-4xl mx-auto bg-white dark:bg-gray-800 shadow-lg rounded-lg">
       <h1 className="text-4xl font-bold mb-4 text-center text-blue-800 dark:text-blue-200">{t('News.latestNews')}</h1>
       <div className="mb-4">
-        <label className="mr-2">{t('News.selectRegions')}:</label>
-        <div className="flex flex-wrap">
-          {STATE_OPTIONS.map(opt => (
-            <label key={opt.code} className="mr-4 mb-2">
-              <input
-                type="checkbox"
-                value={opt.code}
-                checked={regions.includes(opt.code)}
-                onChange={e => {
-                  const code = e.target.value;
-                  if (e.target.checked) {
-                    setRegions(prev => [...prev, code]);
-                  } else {
-                    setRegions(prev => prev.filter(r => r !== code));
-                  }
-                }}
-                className="mr-1"
-              />
-              {t(`News.${opt.key}`)}
-            </label>
-          ))}
-        </div>
+        <label className="flex items-center space-x-2">
+          <input
+            type="checkbox"
+            checked={showRegionList}
+            onChange={e => setShowRegionList(e.target.checked)}
+            className="mr-1"
+          />
+          <span>{t('News.selectRegions')}</span>
+        </label>
+        {showRegionList && (
+          <ul className="mt-2 grid grid-cols-2 md:grid-cols-4 gap-x-4 gap-y-2">
+            {STATE_OPTIONS.map(opt => (
+              <li key={opt.code}>
+                <label className="flex items-center">
+                  <input
+                    type="checkbox"
+                    value={opt.code}
+                    checked={regions.includes(opt.code)}
+                    onChange={e => {
+                      const code = e.target.value;
+                      if (e.target.checked) {
+                        setRegions(prev => [...prev, code]);
+                      } else {
+                        setRegions(prev => prev.filter(r => r !== code));
+                      }
+                    }}
+                    className="mr-1"
+                  />
+                  {t(`News.${opt.key}`)}
+                </label>
+              </li>
+            ))}
+          </ul>
+        )}
       </div>
       {loading ? (
         <div className="flex flex-col items-center justify-center py-12">
