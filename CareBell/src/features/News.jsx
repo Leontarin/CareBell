@@ -10,7 +10,7 @@ export default function News() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [regions, setRegions] = useState(NEWS_REGIONS.split(','));
-  const [showRegionList, setShowRegionList] = useState(false);
+  const [regionDropdownOpen, setRegionDropdownOpen] = useState(false);
   const [speaking, setSpeaking] = useState(false);
   const [currentArticleIndex, setCurrentArticleIndex] = useState(null);
   const [audioObj, setAudioObj] = useState(null);
@@ -132,40 +132,34 @@ export default function News() {
   return (
     <div className="p-4 max-w-4xl mx-auto bg-white dark:bg-gray-800 shadow-lg rounded-lg">
       <h1 className="text-4xl font-bold mb-4 text-center text-blue-800 dark:text-blue-200">{t('News.latestNews')}</h1>
-      <div className="mb-4">
-        <label className="flex items-center space-x-2">
-          <input
-            type="checkbox"
-            checked={showRegionList}
-            onChange={e => setShowRegionList(e.target.checked)}
-            className="mr-1"
-          />
-          <span>{t('News.selectRegions')}</span>
-        </label>
-        {showRegionList && (
-          <ul className="mt-2 grid grid-cols-2 md:grid-cols-4 gap-x-4 gap-y-2">
+      <div className="relative mb-4">
+        <button
+          onClick={() => setRegionDropdownOpen(o => !o)}
+          className="border rounded px-2 py-1 w-full text-left"
+        >
+          {t('News.selectRegions')}
+        </button>
+        {regionDropdownOpen && (
+          <div className="absolute left-0 right-0 mt-1 border rounded p-2 bg-white dark:bg-gray-700 max-h-40 overflow-y-auto z-10">
             {STATE_OPTIONS.map(opt => (
-              <li key={opt.code}>
-                <label className="flex items-center">
-                  <input
-                    type="checkbox"
-                    value={opt.code}
-                    checked={regions.includes(opt.code)}
-                    onChange={e => {
-                      const code = e.target.value;
-                      if (e.target.checked) {
-                        setRegions(prev => [...prev, code]);
-                      } else {
-                        setRegions(prev => prev.filter(r => r !== code));
-                      }
-                    }}
-                    className="mr-1"
-                  />
-                  {t(`News.${opt.key}`)}
-                </label>
-              </li>
+              <label key={opt.code} className="flex items-center gap-2">
+                <input
+                  type="checkbox"
+                  value={opt.code}
+                  checked={regions.includes(opt.code)}
+                  onChange={e => {
+                    const code = e.target.value;
+                    if (e.target.checked) {
+                      setRegions(prev => [...prev, code]);
+                    } else {
+                      setRegions(prev => prev.filter(r => r !== code));
+                    }
+                  }}
+                />
+                {t(`News.${opt.key}`)}
+              </label>
             ))}
-          </ul>
+          </div>
         )}
       </div>
       {loading ? (
