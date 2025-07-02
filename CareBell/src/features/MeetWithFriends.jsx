@@ -12,6 +12,7 @@ import { FaUsers, FaTimes } from "react-icons/fa";
 
 // Simple Modal Component for Participants
 const ParticipantsModal = ({ isOpen, onClose, participants, roomName }) => {
+  const { t } = useTranslation();
   if (!isOpen) return null;
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
