@@ -95,7 +95,7 @@ export default function RightSide() {
 
         {/* Sub-pages */}
         <Route element={
-          <div className="flex flex-col h-full min-h-0 bg-slate-400 dark:bg-gray-700 p-4">
+          <div className="flex flex-col h-full min-h-0 bg-slate-400 rounded-md dark:bg-gray-700 p-4">
             {/* Toolbar */}
             <div className="flex items-center mb-4">
               <button

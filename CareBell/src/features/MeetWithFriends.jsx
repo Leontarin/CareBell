@@ -717,7 +717,7 @@ export default function MeetWithFriends() {
  }
 
  return (
-   <div className="w-full h-full bg-blue-300 dark:bg-gray-900 relative overflow-hidden">
+   <div className="min-w-0 w-full h-full dark:bg-gray-900 relative overflow-hidden">
     {/* Participants Modal */}
     <ParticipantsModal
       isOpen={showParticipantsModal}
@@ -755,7 +755,7 @@ export default function MeetWithFriends() {
            <h3 className="text-black dark:text-white text-xl mb-4">
              {t("MeetWithFriends.availableRooms")} ({rooms.length})
            </h3>
-           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+           <div className="min-w-0 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
              {rooms.map((room) => {
                const participantCount = room.participants?.length || 0;
                const isRoomFull = participantCount >= MAX_P2P_PARTICIPANTS;
@@ -763,7 +763,7 @@ export default function MeetWithFriends() {
                return (
                  <div
                    key={room._id}
-                   className={`flex flex-col justify-between border rounded-xl p-6 shadow-md hover:shadow-xl transition duration-300 ${
+                   className={`min-w-0 flex flex-col justify-between border rounded-xl p-6 shadow-md hover:shadow-xl transition duration-300 ${
                      isRoomFull 
                        ? 'bg-red-100 dark:bg-red-900 border-red-500' 
                        : 'bg-blue-100 dark:bg-[#2b2b2f] border-blue-700 dark:border-yellow-400'
