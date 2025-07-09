@@ -96,12 +96,6 @@ export default function SettingsModal({ onClose }) {
       <div
         className="w-[90%] max-w-4xl max-h-[90vh] overflow-y-auto bg-white dark:bg-gray-800 rounded-3xl shadow-xl p-6 relative flex flex-col md:flex-row"
       >
-        <button
-          onClick={onClose}
-          className="absolute top-4 left-4 text-2xl text-gray-600 hover:text-gray-800 dark:text-gray-300"
-        >
-          ×
-        </button>
         <div
           className="w-full md:w-32 md:pr-4 border-b md:border-b-0 md:border-r border-gray-300 dark:border-gray-600 shrink-0"
         >
@@ -235,22 +229,54 @@ export default function SettingsModal({ onClose }) {
           <h3 className="text-xl font-semibold mb-3">
             {t("SettingsModal.darkMode")}
           </h3>
-          <label className="inline-flex items-center cursor-pointer">
-            <span className="mr-3 text-lg">{darkMode ? "On" : "Off"}</span>
+          <label className="relative inline-block w-14 h-8 cursor-pointer">
+            {/* actual checkbox */}
             <input
               type="checkbox"
+              className="peer sr-only"
               checked={darkMode}
-              onChange={(e) => setDarkMode(e.target.checked)}
-              className="sr-only peer"
+              onChange={e => setDarkMode(e.target.checked)}
             />
-            <div
-              className="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer dark:bg-gray-700 peer-checked:bg-blue-600"
-            ></div>
+
+            {/* track */}
+            <div className="
+              absolute inset-0
+              bg-gray-200 peer-checked:bg-blue-600
+              rounded-full
+              transition-colors duration-300
+            "></div>
+
+            {/* knob */}
+            <div className="
+              absolute top-1 left-1
+              w-6 h-6 bg-white rounded-full shadow
+              transform transition-transform duration-300
+              peer-checked:translate-x-[26px]
+            "></div>
+
+            {/* 🌞 icon */}
+            <div className="
+              absolute top-1 left-1 text-xl
+              transition-opacity duration-300
+              peer-checked:opacity-0
+            ">
+              🌞
+            </div>
+
+            {/* 🌙 icon */}
+            <div className="
+              absolute top-1 left-[26px] text-xl
+              transition-opacity duration-300 opacity-0
+              peer-checked:opacity-100
+            ">
+              🌙
+            </div>
           </label>
         </section>
+
         <button
           onClick={onClose}
-          className="bg-gray-400 hover:bg-gray-300 dark:bg-teal-700 dark:hover:bg-teal-600 px-4 py-2 rounded"
+          className=" text-white bg-teal-700 hover:bg-teal-600 px-4 py-2 rounded"
         >
           {t("SettingsModal.close")}
         </button>
