@@ -66,7 +66,7 @@ export default function Header() {
     navigator.geolocation.getCurrentPosition(
       pos => setCoords(pos.coords),
       err => setGeoErr(err.message),
-      { timeout: 5000 }
+      { timeout: 10000 }
     );
   }, []);
 
