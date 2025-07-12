@@ -6,6 +6,7 @@ CareBell is a voice‑enabled companion app built with a React/Vite frontend, an
 
 - **Node.js** (current LTS recommended)
 - **MongoDB** instance and connection string
+  !`It’s important that MongoDB will have at least one user already defined`
 - **Deno** runtime (required for Meet-With-Friends)
 - Environment variables:
   - `MONGODB_URI` – MongoDB connection string
