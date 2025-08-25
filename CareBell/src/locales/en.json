@@ -216,6 +216,7 @@
     }
   },
   "Medication": {
+    "noMedications": "No medications found. Please add a new one.",
     "frequencyHours": "Frequecy (hours)",
     "MedicationName": "Medication Name",
     "taken": "Taken",

@@ -5,77 +5,115 @@ import { AppContext } from "../shared/AppContext";
 import { useTranslation } from "react-i18next";
 
 export default function Medication() {
-  /* ---- Translation ---- */
   const { t } = useTranslation();
-  /* ===== CONFIG ===== */
+
   const { user } = useContext(AppContext);
   const userId = user?.id;
-  /* ===== STATE ===== */
-  const [meds, setMeds]     = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error,   setError]   = useState(null);
 
-  /* add-form */
+  const [meds, setMeds] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
   const [isAdding, setIsAdding] = useState(false);
-  const [saving,   setSaving]   = useState(false);
-  const [form,     setForm]     = useState({
-    name: "", dosage: "", frequency: "", lastTaken: "", nextDue: "",
+  const [saving, setSaving] = useState(false);
+  const [form, setForm] = useState({
+    name: "",
+    dosage: "",
+    frequency: "",
+    lastTaken: "",
+    nextDue: "",
   });
 
-  /* confirmations */
   const [confirmDeleteId, setConfirmDeleteId] = useState(null);
-  const [confirmTakeId,   setConfirmTakeId]   = useState(null);
+  const [confirmTakeId, setConfirmTakeId] = useState(null);
 
-  /* Timer – to enable the button an hour before taking the medicine*/
+  // Timer tick for enabling take window
   const [nowTick, setNowTick] = useState(Date.now());
   useEffect(() => {
-    const id = setInterval(() => setNowTick(Date.now()), 60_000); // A minute
+    const id = setInterval(() => setNowTick(Date.now()), 60_000);
     return () => clearInterval(id);
   }, []);
 
-  /* ===== FETCH ===== */
+  // Fetch meds
   useEffect(() => {
+    if (!userId) {
+      setMeds([]);
+      setError(null);
+      setLoading(false);
+      return;
+    }
+
+    let cancelled = false;
+    setLoading(true);
+    setError(null);
+
     axios
-      .get(`${API}/medications/getAll/${userId}`)
-      .then((r) => setMeds(r.data))
-      .catch((e) => setError(e.message))
-      .finally(() => setLoading(false));
+      .get(`${API}/medications/getAll/${encodeURIComponent(userId)}`)
+      .then((r) => {
+        if (cancelled) return;
+        setMeds(Array.isArray(r.data) ? r.data : []);
+      })
+      .catch((e) => {
+        if (cancelled) return;
+        if (e.response?.status === 404) {
+          // No meds yet
+          setMeds([]);
+          setError(null);
+          return;
+        }
+        setError(e.response?.data?.message || e.message);
+      })
+      .finally(() => !cancelled && setLoading(false));
+
+    return () => {
+      cancelled = true;
+    };
   }, [userId]);
 
-  /* ===== HELPERS ===== */
+  // Helpers
   const calcNextISO = (hrs) =>
     !isNaN(hrs) ? new Date(Date.now() + hrs * 3_600_000).toISOString() : null;
 
   const isWithinWindow = (nextIso) => {
     if (!nextIso) return true;
-    const diff = new Date(nextIso).getTime() - nowTick;        
-    return diff <= 3_600_000 || diff < 0;                   //A hour before and after the nextDue   
+    const diff = new Date(nextIso).getTime() - nowTick;
+    // ±1 hour window (enable early by 1h, keep enabled if overdue)
+    return diff <= 3_600_000 || diff < 0;
   };
 
-  /* ===== MARK AS TAKEN ===== */
+  // Mark as taken
   const markTakenNow = (index, id) => {
-    const nowISO  = new Date().toISOString();
-    const hrs     = parseInt(meds[index].frequency);
+    const nowISO = new Date().toISOString();
+    const hrs = parseInt(meds[index].frequency);
     const nextISO = calcNextISO(hrs);
 
-    /* UI */
+    // UI optimistic update
     setMeds((prev) => {
       const upd = [...prev];
-      upd[index] = { ...upd[index], taken: true, lastTaken: nowISO, nextDue: nextISO ?? upd[index].nextDue };
+      upd[index] = {
+        ...upd[index],
+        taken: true,
+        lastTaken: nowISO,
+        nextDue: nextISO ?? upd[index].nextDue,
+      };
       return upd;
     });
 
-    /* PATCH to DB */
+    // Persist
     axios.patch(`${API}/medications/${id}/updateLastTaken`, { lastTaken: nowISO }).catch(console.error);
     if (nextISO)
       axios.patch(`${API}/medications/${id}/updateNextDue`, { nextDue: nextISO }).catch(console.error);
   };
 
-  /* ===== ADD ===== */
+  // Add
   const handleChange = (e) => setForm({ ...form, [e.target.name]: e.target.value });
 
   const saveMedication = () => {
     if (!form.name || !form.dosage) return alert("Name & dosage required");
+    if (!userId) {
+      alert("No user is logged in.");
+      return;
+    }
     setSaving(true);
     axios
       .post(`${API}/medications/addMedication`, { userId, ...form })
@@ -88,9 +126,9 @@ export default function Medication() {
       });
   };
 
-  /* ===== DELETE ===== */
-  const askDelete     = (id) => setConfirmDeleteId(id);
-  const cancelDelete  = ()  => setConfirmDeleteId(null);
+  // Delete
+  const askDelete = (id) => setConfirmDeleteId(id);
+  const cancelDelete = () => setConfirmDeleteId(null);
   const confirmDelete = (id) => {
     axios
       .delete(`${API}/medications/${id}`)
@@ -99,15 +137,13 @@ export default function Medication() {
       .finally(() => setConfirmDeleteId(null));
   };
 
-  /* ===== RENDER ===== */
   if (loading) return <p className="text-center">{t("Meals.loadingLabel")}</p>;
-  if (error)   return <p className="text-center text-red-600">{error}</p>;
+  if (error) return <p className="text-center text-red-600">{error}</p>;
 
   return (
     <div className="min-h-screen bg-slate-400 dark:bg-gray-700 p-6">
       {/* HEADER */}
       <div className="flex items-center justify-between mb-8">
-        
         {!isAdding && (
           <button
             onClick={() => setIsAdding(true)}
@@ -122,9 +158,9 @@ export default function Medication() {
       {isAdding && (
         <div className="max-w-md mx-auto bg-white dark:bg-gray-800 rounded-2xl shadow-md p-6 mb-6 space-y-6">
           {[
-            { lbl: t("Medication.MedicationName"), name: "name",        placeholder: "Aspirin" },
-            { lbl: t("Medication.dosage"),          name: "dosage",      placeholder: "100 mg" },
-            { lbl: t("Medication.frequencyHours"), name: "frequency",   placeholder: "8" },
+            { lbl: t("Medication.MedicationName"), name: "name", placeholder: "Aspirin" },
+            { lbl: t("Medication.dosage"), name: "dosage", placeholder: "100 mg" },
+            { lbl: t("Medication.frequencyHours"), name: "frequency", placeholder: "8" },
           ].map((f) => (
             <div key={f.name}>
               <label className="block text-lg font-semibold text-gray-700 dark:text-gray-200">{f.lbl}</label>
@@ -162,10 +198,17 @@ export default function Medication() {
           return (
             <div key={m._id} className="bg-white dark:bg-gray-800 rounded-2xl shadow-md p-6 flex flex-col gap-3">
               <div className="text-xl font-semibold text-gray-900 dark:text-gray-100">{m.name}</div>
-              <div className="text-gray-700 dark:text-gray-300 text-sm">{t("Medication.dosage")} {m.dosage}</div>
-              {m.frequency && <div className="text-gray-700 dark:text-gray-300 text-sm">{t("Medication.frequency")} {m.frequency} {t("Medication.hours")}</div>}
+              <div className="text-gray-700 dark:text-gray-300 text-sm">
+                {t("Medication.dosage")} {(m.dosage || "")}
+              </div>
+              {m.frequency && (
+                <div className="text-gray-700 dark:text-gray-300 text-sm">
+                  {t("Medication.frequency")} {m.frequency} {t("Medication.hours")}
+                </div>
+              )}
               <div className="text-gray-900 dark:text-gray-100 text-sm font-semibold">
-                {t("Medication.lastTaken")}&nbsp;{m.lastTaken ? new Date(m.lastTaken).toLocaleString() : "Never"}
+                {t("Medication.lastTaken")}&nbsp;
+                {m.lastTaken ? new Date(m.lastTaken).toLocaleString() : "Never"}
               </div>
               {m.nextDue && (
                 <div className="text-gray-900 dark:text-gray-100 text-sm font-semibold">
@@ -175,9 +218,10 @@ export default function Medication() {
 
               {/* BUTTON BLOCK */}
               {confirmDeleteId === m._id ? (
-                /* delete confirm */
                 <div className="flex flex-col gap-3">
-                  <span className="text-gray-800 dark:text-gray-200">{t("Medication.deleteLabel")} <b>{m.name}</b>?</span>
+                  <span className="text-gray-8 00 dark:text-gray-200">
+                    {t("Medication.deleteLabel")} <b>{m.name}</b>?
+                  </span>
                   <div className="flex gap-4">
                     <button onClick={() => confirmDelete(m._id)} className="flex-1 bg-gray-600 hover:bg-red-500 text-white py-2 rounded-lg text-lg">
                       {t("Medication.yesDelete")}
@@ -188,9 +232,10 @@ export default function Medication() {
                   </div>
                 </div>
               ) : confirmTakeId === m._id ? (
-                /* take confirm */
                 <div className="flex flex-col gap-3">
-                  <span className="text-gray-800 dark:text-gray-200">{t("Medication.Confirmation")} <b>{m.name}</b>?</span>
+                  <span className="text-gray-800 dark:text-gray-200">
+                    {t("Medication.Confirmation")} <b>{m.name}</b>?
+                  </span>
                   <div className="flex gap-4">
                     <button
                       onClick={() => {
@@ -210,9 +255,7 @@ export default function Medication() {
                   </div>
                 </div>
               ) : (
-                /* normal buttons */
                 <div className="flex gap-4">
-                  {/* Mark as Taken – main big button*/}
                   <button
                     onClick={() => setConfirmTakeId(m._id)}
                     disabled={!canTake}
@@ -225,7 +268,6 @@ export default function Medication() {
                     {m.taken ? t("Medication.taken") : t("Medication.MarkAsTaken")}
                   </button>
 
-                  {/* Delete button style*/}
                   <button
                     onClick={() => askDelete(m._id)}
                     className="bg-gray-300 px-4 py-2 text-sm font-semibold text-gray-900
@@ -239,6 +281,12 @@ export default function Medication() {
             </div>
           );
         })}
+
+        {meds.length === 0 && (
+          <p className="text-center text-gray-800 dark:text-gray-200">
+            {t("Medication.noMedications") || "No medications yet."}
+          </p>
+        )}
       </div>
     </div>
   );

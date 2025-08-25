@@ -213,6 +213,7 @@
     }
   },
   "Medication": {
+    "noMedications": "Keine Medikamente gefunden. Bitte füge ein neues hinzu.",
     "frequencyHours": "Frequenz (Stunden)",
     "MedicationName": "Medikamentenname",
     "taken": "Genommen",

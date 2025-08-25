@@ -217,6 +217,7 @@
     }
   },
   "Medication": {
+    "noMedications": "לא נמצאו תרופות. אנא הוסף תרופה חדשה.",
     "frequencyHours": "תדירות (בשעות)",
     "MedicationName": "שם התרופה",
     "taken": "נלקח",

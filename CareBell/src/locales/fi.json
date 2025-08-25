@@ -202,6 +202,7 @@
     }
   },
   "Medication": {
+    "noMedications": "Lääkkeitä ei löytynyt. Lisää uusi lääke.",
     "frequencyHours": "Tiheys (tuntia)",
     "MedicationName": "Lääkkeen nimi",
     "taken": "Otettu",
