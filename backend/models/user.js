@@ -23,7 +23,7 @@ const userSchema = new mongoose.Schema({
   //user auth fields
   username: { type: String, trim: true, lowercase: true, index: true, unique: false }, // optional
   email: { type: String, trim: true, lowercase: true, index: true, unique: true, sparse: true },
-  passwordHash: { type: String },                  // only for local login
+  passwordHash: { type: String, select: false },                  // only for local login
   googleId: { type: String, index: true },         // only for Google
   picture: { type: String },
 

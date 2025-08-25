@@ -1,10 +1,11 @@
+// App.jsx
 import React, { useEffect, useState } from "react";
-import { BrowserRouter } from "react-router-dom";
-
+import { BrowserRouter, Routes, Route } from "react-router-dom";
 import Header from "./components/Header";
 import LeftSide from "./components/LeftSide";
 import RightSide from "./components/RightSide";
 import Login from "./components/Login";
+import Register from "./components/Register";
 import { AppContext } from "./shared/AppContext";
 import { API, fetchJsonAuth } from "./shared/config";
 
@@ -21,7 +22,6 @@ export default function App() {
     localStorage.setItem("darkMode", darkMode);
   }, [darkMode]);
 
-  // NEW: Check session once on load
   useEffect(() => {
     (async () => {
       try {
@@ -35,7 +35,6 @@ export default function App() {
     })();
   }, []);
 
-  // Called after successful login (email/pass or Google)
   const handleLoggedIn = async () => {
     try {
       const me = await fetchJsonAuth(`${API}/auth/me`);
@@ -53,40 +52,41 @@ export default function App() {
     );
   }
 
-  if (!user) {
-    return <Login onLoggedIn={handleLoggedIn} />;
-  }
-
   return (
-    <AppContext.Provider
-      value={{ user, setUser, bellaFullscreen, setBellaFullscreen, meetFullscreen, setMeetFullscreen, darkMode, setDarkMode }}
-    >
-      <BrowserRouter>
-        <div
-          className="
-            w-full max-w-screen-lg mx-auto
-            p-4
-            min-h-screen
-            flex flex-col
-            bg-white dark:bg-gray-900 dark:text-gray-100
-          "
-          style={{ fontSize: "var(--font-size-base,22px)" }}
+    <BrowserRouter>
+      {!user ? (
+        <Routes>
+          <Route path="/" element={<Login onLoggedIn={handleLoggedIn} />} />
+          <Route path="/Register" element={<Register />} />
+        </Routes>
+      ) : (
+        <AppContext.Provider
+          value={{
+            user,
+            setUser,
+            bellaFullscreen,
+            setBellaFullscreen,
+            meetFullscreen,
+            setMeetFullscreen,
+            darkMode,
+            setDarkMode,
+          }}
         >
-          <Header />
           <div
-            id="mainContent"
-            className="
-              flex-1
-              flex flex-col md:flex-row gap-2
-              md:overflow-hidden
-              overflow-y-auto
-            "
+            className="w-full max-w-screen-lg mx-auto p-4 min-h-screen flex flex-col bg-white dark:bg-gray-900 dark:text-gray-100"
+            style={{ fontSize: "var(--font-size-base,22px)" }}
           >
-            <LeftSide />
-            <RightSide />
+            <Header />
+            <div
+              id="mainContent"
+              className="flex-1 flex flex-col md:flex-row gap-2 md:overflow-hidden overflow-y-auto"
+            >
+              <LeftSide />
+              <RightSide />
+            </div>
           </div>
-        </div>
-      </BrowserRouter>
-    </AppContext.Provider>
+        </AppContext.Provider>
+      )}
+    </BrowserRouter>
   );
 }
