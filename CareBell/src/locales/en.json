@@ -325,5 +325,53 @@
     "language": "Language",
     "User": "Change User",
     "loading": "Loading users..."
+  },
+  "Auth": {
+    "Login": {
+      "welcome": "Welcome to CareBells",
+      "title": "Login",
+      "identifier": "Email or username",
+      "identifierPh": "you@example.com or youruser",
+      "password": "Password",
+      "passwordPh": "password",
+      "cta": "Login",
+      "noAccount": "Don’t have an account?",
+      "register": "Register",
+      "missingIdentifier": "Please enter your email or username.",
+      "failed": "Login failed",
+      "invalid": "Invalid credentials",
+      "googleFailed": "Google sign-in failed",
+      "show": "Show password",
+      "hide": "Hide password"
+    },
+    "Register": {
+      "header": "Create your account",
+      "title": "Register",
+      "username": "Username",
+      "usernamePh": "yourusername",
+      "fullName": "Full name",
+      "fullNamePh": "Jane Doe",
+      "email": "Email",
+      "emailPh": "you@example.com",
+      "dob": "Date of birth",
+      "password": "Password",
+      "passwordPh": "Enter a secure password",
+      "verifyPassword": "Verify password",
+      "verifyPasswordPh": "Re-enter your password",
+      "gender": "Gender",
+      "genderOther": "Other",
+      "genderMale": "Male",
+      "genderFemale": "Female",
+      "phone": "Phone number",
+      "phonePh": "555-123-4567",
+      "oneOf": "one of Email or Username is required",
+      "create": "Create account",
+      "creating": "Creating...",
+      "haveAccount": "Already have an account?",
+      "login": "Login",
+      "failed": "Registration failed",
+      "noMatch": "Passwords do not match.",
+      "missing": "Required field(s) missing:"
+    }
   }
 }

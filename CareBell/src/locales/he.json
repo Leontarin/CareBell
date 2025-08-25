@@ -324,5 +324,53 @@
     "language": "בחירת שפה",
     "User": "החלף משתמש",
     "loading": "טוען משתמשים..."
+  },
+  "Auth": {
+    "Login": {
+      "welcome": "ברוכים הבאים ל-CareBells",
+      "title": "התחברות",
+      "identifier": "אימייל או שם משתמש",
+      "identifierPh": "you@example.com או שם משתמש",
+      "password": "סיסמה",
+      "passwordPh": "סיסמה",
+      "cta": "התחבר",
+      "noAccount": "אין לך חשבון?",
+      "register": "הרשם",
+      "missingIdentifier": "אנא הזן אימייל או שם משתמש.",
+      "failed": "ההתחברות נכשלה",
+      "invalid": "פרטי ההתחברות שגויים",
+      "googleFailed": "התחברות דרך גוגל נכשלה",
+      "show": "הצג סיסמה",
+      "hide": "הסתר סיסמה"
+    },
+    "Register": {
+      "header": "צור חשבון חדש",
+      "title": "הרשמה",
+      "username": "שם משתמש",
+      "usernamePh": "שם המשתמש שלך",
+      "fullName": "שם מלא",
+      "fullNamePh": "ישראל ישראלי",
+      "email": "אימייל",
+      "emailPh": "you@example.com",
+      "dob": "תאריך לידה",
+      "password": "סיסמה",
+      "passwordPh": "הזן סיסמה מאובטחת",
+      "verifyPassword": "אימות סיסמה",
+      "verifyPasswordPh": "הזן שוב את הסיסמה",
+      "gender": "מין",
+      "genderOther": "אחר",
+      "genderMale": "זכר",
+      "genderFemale": "נקבה",
+      "phone": "טלפון",
+      "phonePh": "555-123-4567",
+      "oneOf": "נדרש להזין או אימייל או שם משתמש",
+      "create": "צור חשבון",
+      "creating": "יוצר...",
+      "haveAccount": "כבר יש לך חשבון?",
+      "login": "התחבר",
+      "failed": "ההרשמה נכשלה",
+      "noMatch": "הסיסמאות אינן תואמות.",
+      "missing": "חסרים שדות נדרשים:"
+    }
   }
 }

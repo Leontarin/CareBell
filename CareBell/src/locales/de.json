@@ -321,5 +321,53 @@
     "language": "Sprache",
     "User": "Benutzer wechseln",
     "loading": "Benutzer werden geladen…"
+  },
+  "Auth": {
+    "Login": {
+      "welcome": "Willkommen bei CareBells",
+      "title": "Anmelden",
+      "identifier": "E-Mail oder Benutzername",
+      "identifierPh": "du@example.com oder deinBenutzer",
+      "password": "Passwort",
+      "passwordPh": "Passwort",
+      "cta": "Anmelden",
+      "noAccount": "Noch kein Konto?",
+      "register": "Registrieren",
+      "missingIdentifier": "Bitte gib deine E-Mail oder deinen Benutzernamen ein.",
+      "failed": "Anmeldung fehlgeschlagen",
+      "invalid": "Ungültige Zugangsdaten",
+      "googleFailed": "Google-Anmeldung fehlgeschlagen",
+      "show": "Passwort anzeigen",
+      "hide": "Passwort verbergen"
+    },
+    "Register": {
+      "header": "Erstelle dein Konto",
+      "title": "Registrieren",
+      "username": "Benutzername",
+      "usernamePh": "deinbenutzername",
+      "fullName": "Vollständiger Name",
+      "fullNamePh": "Max Mustermann",
+      "email": "E-Mail",
+      "emailPh": "du@example.com",
+      "dob": "Geburtsdatum",
+      "password": "Passwort",
+      "passwordPh": "Sicheres Passwort eingeben",
+      "verifyPassword": "Passwort bestätigen",
+      "verifyPasswordPh": "Passwort erneut eingeben",
+      "gender": "Geschlecht",
+      "genderOther": "Andere",
+      "genderMale": "Männlich",
+      "genderFemale": "Weiblich",
+      "phone": "Telefonnummer",
+      "phonePh": "555-123-4567",
+      "oneOf": "entweder E-Mail oder Benutzername ist erforderlich",
+      "create": "Konto erstellen",
+      "creating": "Erstellen...",
+      "haveAccount": "Hast du schon ein Konto?",
+      "login": "Anmelden",
+      "failed": "Registrierung fehlgeschlagen",
+      "noMatch": "Passwörter stimmen nicht überein.",
+      "missing": "Pflichtfelder fehlen:"
+    }
   }
 }

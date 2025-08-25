@@ -310,5 +310,53 @@
     "language": "kieli",
     "User": "Vaihda käyttäjää",
     "loading": "Ladataan käyttäjiä..."
+  },
+  "Auth": {
+    "Login": {
+      "welcome": "Tervetuloa CareBells-sovellukseen",
+      "title": "Kirjaudu sisään",
+      "identifier": "Sähköposti tai käyttäjänimi",
+      "identifierPh": "sinä@example.com tai käyttäjänimi",
+      "password": "Salasana",
+      "passwordPh": "salasana",
+      "cta": "Kirjaudu",
+      "noAccount": "Eikö sinulla ole tiliä?",
+      "register": "Rekisteröidy",
+      "missingIdentifier": "Syötä sähköpostisi tai käyttäjänimesi.",
+      "failed": "Kirjautuminen epäonnistui",
+      "invalid": "Virheelliset tunnistetiedot",
+      "googleFailed": "Google-kirjautuminen epäonnistui",
+      "show": "Näytä salasana",
+      "hide": "Piilota salasana"
+    },
+    "Register": {
+      "header": "Luo uusi tili",
+      "title": "Rekisteröidy",
+      "username": "Käyttäjänimi",
+      "usernamePh": "käyttäjänimesi",
+      "fullName": "Koko nimi",
+      "fullNamePh": "Matti Meikäläinen",
+      "email": "Sähköposti",
+      "emailPh": "sinä@example.com",
+      "dob": "Syntymäaika",
+      "password": "Salasana",
+      "passwordPh": "Anna turvallinen salasana",
+      "verifyPassword": "Vahvista salasana",
+      "verifyPasswordPh": "Kirjoita salasana uudelleen",
+      "gender": "Sukupuoli",
+      "genderOther": "Muu",
+      "genderMale": "Mies",
+      "genderFemale": "Nainen",
+      "phone": "Puhelinnumero",
+      "phonePh": "555-123-4567",
+      "oneOf": "joko sähköposti tai käyttäjänimi on pakollinen",
+      "create": "Luo tili",
+      "creating": "Luodaan...",
+      "haveAccount": "Onko sinulla jo tili?",
+      "login": "Kirjaudu sisään",
+      "failed": "Rekisteröinti epäonnistui",
+      "noMatch": "Salasanat eivät täsmää.",
+      "missing": "Pakolliset kentät puuttuvat:"
+    }
   }
 }
