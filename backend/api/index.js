@@ -1,5 +1,8 @@
 // root/api/index.js
-require('dotenv').config();
+require('dotenv').config();                 // loads .env
+if (process.env.NODE_ENV !== 'production') {
+  require('dotenv').config({ path: '.env.local' }); // overrides for local
+}
 const express    = require('express');
 const mongoose   = require('mongoose');
 const cors       = require('cors');
@@ -18,19 +21,25 @@ const exercisesRoute     = require('../routes/exercises');
 const reminderRoute      = require('../routes/reminders');
 const roomsRoute         = require('../routes/rooms');
 const ttsRoute           = require('../routes/tts');
+const authRoute = require('../routes/auth');
+const cookieParser = require('cookie-parser');
 
 // ─── App & Server setup ────────────────────────────────────────────────────────
 const app    = express();
 const server = createServer(app);
-const io     = new Server(server, {
-  cors: { origin: "*", methods: ["GET","POST"], credentials: false },
+const io = new Server(server, {
+  cors: { origin: process.env.FRONTEND_ORIGIN, methods: ["GET","POST"], credentials: true },
   transports: ['websocket','polling']
 });
 app.set('io', io);
 
 
-app.use(cors({ origin: '*', credentials: false }));
+app.use(cors({
+  origin: process.env.FRONTEND_ORIGIN, // "https://carebell.vercel.app"
+  credentials: true,                   // allow cookies
+}));
 app.use(express.json());
+app.use(cookieParser());
 
 // ─── MongoDB Connection with Retry & Initial Promise ──────────────────────────
 const MONGO_OPTIONS = {
@@ -84,6 +93,7 @@ app.use(
 );
 
 // ─── Routes ───────────────────────────────────────────────────────────────────
+app.use('/auth', authRoute);
 app.use('/users',         userRoute);
 app.use('/contacts',      contactRoute);
 app.use('/foods',         foodRoute);
