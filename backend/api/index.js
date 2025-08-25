@@ -1,12 +1,20 @@
 // root/api/index.js
-require('dotenv').config();                 // loads .env
-if (process.env.NODE_ENV !== 'production') {
-  require('dotenv').config({ path: '.env.local' }); // overrides for local
+const path = require('path');
+const fs = require('fs');
+const dotenv = require('dotenv');
+
+// 1) Load base .env
+dotenv.config({ path: path.join(__dirname, '..', '.env') });
+
+// 2) If .env.local exists, ALWAYS override (handy for local dev)
+const localEnvPath = path.join(__dirname, '..', '.env.local');
+if (fs.existsSync(localEnvPath)) {
+  dotenv.config({ path: localEnvPath, override: true });
 }
+
 const express    = require('express');
 const mongoose   = require('mongoose');
 const cors       = require('cors');
-const path       = require('path');
 const { createServer } = require('http');
 const { Server } = require('socket.io');
 

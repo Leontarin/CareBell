@@ -1,3 +1,4 @@
+// CareBell/src/features/SettingsModal.jsx
 import React, { useEffect, useState, useContext } from "react";
 import {
   FaVolumeMute,
@@ -13,51 +14,28 @@ export default function SettingsModal({ onClose }) {
   const { t, i18n } = useTranslation();
   const { user, setUser, darkMode, setDarkMode } = useContext(AppContext);
 
-  const [scale, setScale] = useState(
-    parseFloat(localStorage.getItem("fontScale")) || 1
-  );
+  const [scale, setScale] = useState(parseFloat(localStorage.getItem("fontScale")) || 1);
   const [activeTab, setActiveTab] = useState("general");
   const [selectedAllergens, setSelectedAllergens] = useState(user?.Allergens || []);
   const [diabetic, setDiabetic] = useState(user?.Diabetic || false);
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [saveStatus, setSaveStatus] = useState(null); // 'success' | 'error'
-  const [users, setUsers] = useState([]);
-  const [loadingUsers, setLoadingUsers] = useState(true);
 
   useEffect(() => {
     setSelectedAllergens(user?.Allergens || []);
     setDiabetic(user?.Diabetic || false);
   }, [user]);
 
-  // 1. Load and persist font scale
+  // 1) Load & persist font scale
   useEffect(() => {
     document.documentElement.style.fontSize = `${16 * scale}px`;
     localStorage.setItem("fontScale", scale);
   }, [scale]);
 
-  // 2. Load all users for the combobox
-  useEffect(() => {
-    fetch(`${API}/users/`)
-      .then(res => {
-        if (!res.ok) throw new Error(`Status ${res.status}`);
-        return res.json();
-      })
-      .then(data => setUsers(data))
-      .catch(err => console.error("Error loading users:", err))
-      .finally(() => setLoadingUsers(false));
-  }, []);
-
-  // 3. Change language
+  // 2) Change language
   const changeLanguage = (lng) => {
     i18n.changeLanguage(lng);
     localStorage.setItem("i18nextLng", lng);
-  };
-
-  // 4. Change current user
-  const changeUser = (e) => {
-    const selectedId = e.target.value;
-    const selected = users.find(u => String(u.id) === selectedId);
-    if (selected) setUser(selected);
   };
 
   const allergens = t("Meals.Legend.Allergens", { returnObjects: true });
@@ -75,6 +53,7 @@ export default function SettingsModal({ onClose }) {
       const res = await fetch(`${API}/users/${user.id}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
+        credentials: "include", // <-- important (session cookie)
         body: JSON.stringify({ Allergens: selectedAllergens, Diabetic: diabetic })
       });
       if (res.ok) {
@@ -91,14 +70,18 @@ export default function SettingsModal({ onClose }) {
     }
   };
 
+  const logout = async () => {
+    try {
+      await fetch(`${API}/auth/logout`, { method: "POST", credentials: "include" });
+    } catch {}
+    setUser(null);  // App gate will show Login screen
+    onClose?.();
+  };
+
   return (
     <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
-      <div
-        className="w-[90%] max-w-4xl max-h-[90vh] overflow-y-auto bg-white dark:bg-gray-800 rounded-3xl shadow-xl p-6 relative flex flex-col md:flex-row"
-      >
-        <div
-          className="w-full md:w-32 md:pr-4 border-b md:border-b-0 md:border-r border-gray-300 dark:border-gray-600 shrink-0"
-        >
+      <div className="w-[90%] max-w-4xl max-h-[90vh] overflow-y-auto bg-white dark:bg-gray-800 rounded-3xl shadow-xl p-6 relative flex flex-col md:flex-row">
+        <div className="w-full md:w-32 md:pr-4 border-b md:border-b-0 md:border-r border-gray-300 dark:border-gray-600 shrink-0">
           <h2 className="text-3xl font-bold text-blue-800 dark:text-blue-200 mb-6">
             {t("SettingsModal.title")}
           </h2>
@@ -117,6 +100,7 @@ export default function SettingsModal({ onClose }) {
             </button>
           </nav>
         </div>
+
         <div className="flex-1 md:pl-6 overflow-y-auto">
           {activeTab === "general" && (
             <>
@@ -140,7 +124,7 @@ export default function SettingsModal({ onClose }) {
                 </div>
               </section>
 
-              {/* VOLUME */}
+              {/* VOLUME (placeholder / disabled) */}
               <section className="mb-8">
                 <h3 className="text-xl font-semibold mb-3">
                   {t("SettingsModal.volume")}
@@ -159,7 +143,7 @@ export default function SettingsModal({ onClose }) {
                 </div>
               </section>
 
-              {/* SPEAKING SPEED */}
+              {/* SPEAKING SPEED (placeholder / disabled) */}
               <section className="mb-8">
                 <h3 className="text-xl font-semibold mb-3">
                   {t("SettingsModal.speakingSpeed")}
@@ -179,10 +163,9 @@ export default function SettingsModal({ onClose }) {
                 </div>
               </section>
 
-              {/* LANGUAGE & USER SELECTORS */}
+              {/* LANGUAGE */}
               <section className="mb-8">
                 <div className="flex items-start gap-12">
-                  {/* Language Switcher */}
                   <div>
                     <h3 className="text-xl font-semibold mb-2">
                       {t("SettingsModal.language")}
@@ -198,93 +181,47 @@ export default function SettingsModal({ onClose }) {
                       <option value="fi">Suomi</option>
                     </select>
                   </div>
-
-                  {/* User Combobox */}
-                  <div>
-                    <h3 className="text-xl font-semibold mb-2">
-                      {t("SettingsModal.User")}
-                    </h3>
-
-                    {loadingUsers ? (
-                      <p className="text-gray-600 dark:text-gray-300 ">{t("SettingsModal.loading")}</p>
-                    ) : (
-                      <select
-                        value={user?.id || ""}
-                        onChange={changeUser}
-                        className="border rounded px-2 py-1 border-teal-400 dark:bg-blue-900 dark:hover:bg-blue-800"
-                      >
-                        {users.map(u => (
-                          <option key={u.id} value={u.id}>
-                            {u.name || u.fullName || u.id}
-                          </option>
-                        ))}
-                      </select>
-                    )}
-                  </div>
                 </div>
               </section>
 
-        {/* DARK MODE */}
-        <section className="mb-8">
-          <h3 className="text-xl font-semibold mb-3">
-            {t("SettingsModal.darkMode")}
-          </h3>
-          <label className="relative inline-block w-14 h-8 cursor-pointer">
-            {/* actual checkbox */}
-            <input
-              type="checkbox"
-              className="peer sr-only"
-              checked={darkMode}
-              onChange={e => setDarkMode(e.target.checked)}
-            />
+              {/* DARK MODE */}
+              <section className="mb-8">
+                <h3 className="text-xl font-semibold mb-3">
+                  {t("SettingsModal.darkMode")}
+                </h3>
+                <label className="relative inline-block w-14 h-8 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    className="peer sr-only"
+                    checked={darkMode}
+                    onChange={e => setDarkMode(e.target.checked)}
+                  />
+                  <div className="absolute inset-0 bg-gray-200 peer-checked:bg-blue-600 rounded-full transition-colors duration-300"></div>
+                  <div className="absolute top-1 left-1 w-6 h-6 bg-white rounded-full shadow transform transition-transform duration-300 peer-checked:translate-x-[26px]"></div>
+                  <div className="absolute top-1 left-1 text-xl transition-opacity duration-300 peer-checked:opacity-0">🌞</div>
+                  <div className="absolute top-1 left-[26px] text-xl transition-opacity duration-300 opacity-0 peer-checked:opacity-100">🌙</div>
+                </label>
+              </section>
 
-            {/* track */}
-            <div className="
-              absolute inset-0
-              bg-gray-200 peer-checked:bg-blue-600
-              rounded-full
-              transition-colors duration-300
-            "></div>
+              <div className="flex flex-col md:flex-row justify-between mt-4 gap-2">
+                <button
+                  onClick={onClose}
+                  className="bg-gray-400 hover:bg-gray-300 dark:bg-teal-700 dark:hover:bg-teal-600 px-4 py-2 rounded text-white"
+                >
+                  {t("SettingsModal.close")}
+                </button>
 
-            {/* knob */}
-            <div className="
-              absolute top-1 left-1
-              w-6 h-6 bg-white rounded-full shadow
-              transform transition-transform duration-300
-              peer-checked:translate-x-[26px]
-            "></div>
+                {/* 🔴 Logout button (bottom-right) */}
+                <button
+                  onClick={logout}
+                  className="bg-red-600 hover:bg-red-500 text-white px-4 py-2 rounded"
+                >
+                  Logout
+                </button>
+              </div>
+            </>
+          )}
 
-            {/* 🌞 icon */}
-            <div className="
-              absolute top-1 left-1 text-xl
-              transition-opacity duration-300
-              peer-checked:opacity-0
-            ">
-              🌞
-            </div>
-
-            {/* 🌙 icon */}
-            <div className="
-              absolute top-1 left-[26px] text-xl
-              transition-opacity duration-300 opacity-0
-              peer-checked:opacity-100
-            ">
-              🌙
-            </div>
-          </label>
-        </section>
-
-        <button
-          onClick={onClose}
-          className=" text-white bg-teal-700 hover:bg-teal-600 px-4 py-2 rounded"
-        >
-          {t("SettingsModal.close")}
-        </button>
-          </>
-        )}
-          
-          
-                  
           {activeTab === "health" && (
             <>
               <section className="mb-6">
@@ -332,7 +269,7 @@ export default function SettingsModal({ onClose }) {
                 <div className="flex flex-col md:flex-row justify-between mt-4 gap-2">
                   <button
                     onClick={onClose}
-                    className="bg-gray-400 hover:bg-gray-300 dark:bg-teal-700 dark:hover:bg-teal-600 px-4 py-2 rounded"
+                    className="bg-gray-400 hover:bg-gray-300 dark:bg-teal-700 dark:hover:bg-teal-600 px-4 py-2 rounded text-white"
                   >
                     {t("SettingsModal.close")}
                   </button>
@@ -343,10 +280,19 @@ export default function SettingsModal({ onClose }) {
                     {t("SettingsModal.save")}
                   </button>
                 </div>
+
+                {/* Logout also accessible here if you want */}
+                <div className="mt-4 flex justify-end">
+                  <button
+                    onClick={logout}
+                    className="bg-red-600 hover:bg-red-500 text-white px-4 py-2 rounded"
+                  >
+                    Logout
+                  </button>
+                </div>
               </section>
             </>
           )}
-
         </div>
       </div>
     </div>

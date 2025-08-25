@@ -19,11 +19,8 @@
     "google-auth-library": "^10.2.1",
     "i18next": "^25.2.0",
     "i18next-browser-languagedetector": "^8.1.0",
-<<<<<<< HEAD
     "jsonwebtoken": "^9.0.2",
-=======
     "lucide-react": "^0.541.0",
->>>>>>> loginui
     "postcss": "^8.5.0",
     "react": "^19.1.0",
     "react-dom": "^19.1.0",
