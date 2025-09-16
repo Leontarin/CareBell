@@ -1,7 +1,7 @@
 // P2P Video Signaling Server for Deno Deploy
 import { serve } from "https://deno.land/std@0.208.0/http/server.ts";
 
-const PORT = 8787;
+const PORT = 5175;
 // Store active rooms and connections
 const rooms = new Map();
 const userToSocket = new Map();

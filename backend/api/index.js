@@ -119,7 +119,7 @@ app.get('/', (_req, res) => {
 
 // ─── Start server locally ─────────────────────────────────────────────────────
 if (require.main === module) {
-  const PORT = process.env.PORT || 4443;
+  const PORT = process.env.PORT || 5174;
 
   function startServer() {
     server.listen(PORT);

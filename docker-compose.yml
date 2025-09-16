@@ -1,32 +1,125 @@
-version: "3.9"
+name: carebell
 
 services:
-  backend:
-    build:
-      context: ./backend
-      dockerfile: ../backend.Dockerfile
-    container_name: carebell-backend
+  # ─────────────── MONGO (always first) ───────────────
+  mongo:
+    profiles: ["prod", "dev"]
+    image: mongo:7
     restart: unless-stopped
-    network_mode: "host"
-    env_file:
-      - ./backend/.env
-
-  frontend:
-    build:
-      context: ./CareBell
-      dockerfile: ../frontend.Dockerfile
-    container_name: carebell-frontend
-    restart: unless-stopped
+    environment:
+      # root user (created on first boot of an empty volume)
+      MONGO_INITDB_ROOT_USERNAME: ${MONGO_ROOT_USER}
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_ROOT_PASS}
+      # pass app creds & db so mongo-init.js can create the app user
+      MONGO_APP_USER: ${MONGO_APP_USER}
+      MONGO_APP_PASS: ${MONGO_APP_PASS}
+      MONGO_DB: ${MONGO_DB}
+    volumes:
+      - carebell_mongo_data:/data/db
+      - ./infra/mongo-init.js:/docker-entrypoint-initdb.d/mongo-init.js:ro
+    command: ["mongod", "--auth"]
     ports:
-      - "8080:80"
+      - "127.0.0.1:${MONGO_HOSTNAME_PORT}:27017"
+    healthcheck:
+      test: ["CMD", "mongosh", "--quiet", "--eval", "db.runCommand({ping:1}).ok"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+      start_period: 5s
 
-  signaling:
-    image: denoland/deno:alpine
-    container_name: carebell-signaling
-    restart: unless-stopped
-    network_mode: "host"
-    working_dir: /app
-    command: sh -c "deno run --allow-net server.js"
+  # ─────────────── DENO SIGNALING ───────────────
+  deno:
+    profiles: ["prod"]
+    build:
+      context: ./deno-signaling
+      dockerfile: deno.Dockerfile
+    ports:
+      - "${DENO_PORT}:5175"
+    depends_on:
+      mongo:
+        condition: service_healthy
+
+  deno-dev:
+    profiles: ["dev"]
+    build:
+      context: ./deno-signaling
+      dockerfile: deno.Dockerfile.dev
     volumes:
       - ./deno-signaling:/app
+    ports:
+      - "${DENO_PORT}:5175"
+    depends_on:
+      mongo:
+        condition: service_healthy
+
+  # ─────────────── BACKEND ───────────────
+  backend:
+    profiles: ["prod"]
+    build:
+      context: ./backend
+      dockerfile: backend.Dockerfile
+    environment:
+      PORT: ${BACKEND_PORT}
+      # compose injects this from the root .env
+      MONGODB_URI: ${MONGODB_URI}
+      FRONTEND_ORIGIN: http://localhost:${FRONTEND_PORT}
+    ports:
+      - "${BACKEND_PORT}:${BACKEND_PORT}"
+    depends_on:
+      deno:
+        condition: service_started
+      mongo:
+        condition: service_healthy
+
+  backend-dev:
+    profiles: ["dev"]
+    build:
+      context: ./backend
+      dockerfile: backend.Dockerfile.dev
+    volumes:
+      - ./backend:/app
+      - /app/node_modules
+    environment:
+      PORT: ${BACKEND_PORT}
+      # dev also authenticates against the CareBell DB (not admin)
+      MONGODB_URI: mongodb://${MONGO_APP_USER}:${MONGO_APP_PASS}@${MONGO_HOST}:${MONGO_PORT}/${MONGO_DB}?authSource=${MONGO_DB}
+      FRONTEND_ORIGIN: http://localhost:${FRONTEND_PORT}
+    ports:
+      - "${BACKEND_PORT}:${BACKEND_PORT}"
+    depends_on:
+      deno-dev:
+        condition: service_started
+      mongo:
+        condition: service_healthy
+
+  # ─────────────── FRONTEND ───────────────
+  frontend:
+    profiles: ["prod"]
+    build:
+      context: ./frontend
+      dockerfile: frontend.Dockerfile
+    ports:
+      - "${FRONTEND_PORT}:80"
+    depends_on:
+      backend:
+        condition: service_started
+
+  frontend-dev:
+    profiles: ["dev"]
+    build:
+      context: ./frontend
+      dockerfile: frontend.Dockerfile.dev
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+    ports:
+      - "${FRONTEND_PORT}:5173"
+    environment:
+      NODE_ENV: development
+    depends_on:
+      backend-dev:
+        condition: service_started
+
+volumes:
+  carebell_mongo_data:
 

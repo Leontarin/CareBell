@@ -1,0 +1,23 @@
+# ─── Backend Dev Dockerfile ─────────────────────────────────────
+FROM node:20-alpine
+
+WORKDIR /app
+
+# Copy package files and install dependencies
+COPY package*.json ./
+RUN npm install    # dev image uses npm install (not ci) to allow quick edits
+
+# Install nodemon globally (needed for hot reload inside container)
+RUN npm install -g nodemon
+
+# Copy the rest of the backend source
+COPY . .
+
+ENV PORT=5174
+
+# Expose backend port
+EXPOSE 5174
+
+# Use nodemon to watch for file changes
+CMD ["nodemon", "--legacy-watch", "api/index.js"]
+
