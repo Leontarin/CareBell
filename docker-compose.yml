@@ -1,0 +1,32 @@
+version: "3.9"
+
+services:
+  backend:
+    build:
+      context: ./backend
+      dockerfile: ../backend.Dockerfile
+    container_name: carebell-backend
+    restart: unless-stopped
+    network_mode: "host"       # lets backend connect to native MongoDB
+    env_file:
+      - ./backend/.env
+
+  frontend:
+    build:
+      context: ./CareBell
+      dockerfile: ../frontend.Dockerfile
+    container_name: carebell-frontend
+    restart: unless-stopped
+    ports:
+      - "8080:80"
+
+  signaling:
+    image: denoland/deno:alpine
+    container_name: carebell-signaling
+    restart: unless-stopped
+    network_mode: "host"
+    working_dir: /app
+    command: sh -c "deno run --allow-net server.js"
+    volumes:
+      - ./deno-signaling:/a
+

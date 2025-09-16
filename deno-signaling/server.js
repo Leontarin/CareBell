@@ -1,6 +1,7 @@
 // P2P Video Signaling Server for Deno Deploy
 import { serve } from "https://deno.land/std@0.208.0/http/server.ts";
 
+const PORT = 8787;
 // Store active rooms and connections
 const rooms = new Map();
 const userToSocket = new Map();
@@ -290,7 +291,8 @@ For P2P video calls only.
     status: 404,
     headers: corsHeaders
   });
-});
+},{port: PORT});
+
 
 console.log("🚀 P2P Signaling Server starting...");
 console.log("📡 WebSocket endpoint ready for P2P video calls");
