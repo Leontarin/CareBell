@@ -1,8 +1,8 @@
 FROM node:20-alpine AS build
 WORKDIR /app
-COPY CareBell/package*.json ./
+COPY package*.json ./
 RUN npm ci
-COPY CareBell/ .
+COPY . .
 RUN npm run build
 
 FROM nginx:alpine

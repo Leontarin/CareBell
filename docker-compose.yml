@@ -7,7 +7,7 @@ services:
       dockerfile: ../backend.Dockerfile
     container_name: carebell-backend
     restart: unless-stopped
-    network_mode: "host"       # lets backend connect to native MongoDB
+    network_mode: "host"
     env_file:
       - ./backend/.env
 
@@ -28,5 +28,5 @@ services:
     working_dir: /app
     command: sh -c "deno run --allow-net server.js"
     volumes:
-      - ./deno-signaling:/a
+      - ./deno-signaling:/app
 
