@@ -1,11 +1,27 @@
 // CareBell/src/shared/config.js
 
-// --- API base (normalize: no trailing slash) ---
-const RAW_API = import.meta.env.VITE_BACKEND_URL || "http://localhost:4443";
-export const API = RAW_API.replace(/\/+$/, "");
+// --- build an API base that works on any server ---
+// 1) If VITE_BACKEND_URL is provided and NOT localhost -> use it
+// 2) Otherwise, fall back to same host where the SPA was loaded, port 5174
+function pickApiBase() {
+  const envUrl = (import.meta.env.VITE_BACKEND_URL || "").trim();
+  const isLocalhost =
+    /^https?:\/\/(?:localhost|127\.0\.0\.1)(?::\d+)?\/?$/i.test(envUrl);
+  if (envUrl && !isLocalhost) return envUrl.replace(/\/+$/, "");
 
-// Keep your existing exports
-export const P2P_SIGNALING_URL = "wss://carebellp2p.deno.dev";
+  const host = window.location.hostname;            // e.g. IP or domain
+  const proto = window.location.protocol;           // http: or https:
+  const port = 5174;                                // backend port exposed by compose
+  return `${proto}//${host}:${port}`;
+}
+
+export const API = pickApiBase();
+
+// Keep your existing exports (edit signaling if you want same-host too)
+export const P2P_SIGNALING_URL = (import.meta.env.VITE_SIGNALING_URL || "").trim() ||
+  // same-host fallback for signaling, change to ws:// if your server is ws-only
+  `${window.location.protocol}//${window.location.hostname}:5175`;
+
 export const NEWS_REGIONS = "1";
 
 export const P2P_CONFIG = {
@@ -40,7 +56,7 @@ export const P2P_CONFIG = {
   },
 };
 
-// --- Small helpers ---
+// --- helpers ---
 const join = (base, path) => `${base}${path.startsWith("/") ? "" : "/"}${path}`;
 
 /**
@@ -56,16 +72,13 @@ export async function fetchJsonAuth(urlOrPath, init = {}) {
   const finalInit = { credentials: "include", ...init };
   const headers = new Headers(finalInit.headers || {});
 
-  // If body is a plain object, JSON-encode it and set content-type
   if (
     finalInit.body &&
     typeof finalInit.body === "object" &&
     !(finalInit.body instanceof FormData) &&
     !(finalInit.body instanceof Blob)
   ) {
-    if (!headers.has("Content-Type")) {
-      headers.set("Content-Type", "application/json");
-    }
+    if (!headers.has("Content-Type")) headers.set("Content-Type", "application/json");
     finalInit.body = JSON.stringify(finalInit.body);
   }
   finalInit.headers = headers;
@@ -73,12 +86,10 @@ export async function fetchJsonAuth(urlOrPath, init = {}) {
   const res = await fetch(url, finalInit);
 
   if (!res.ok) {
-    // Try to surface any error text to help debugging
     const txt = await res.text().catch(() => "");
     throw new Error(`HTTP ${res.status} ${res.statusText}${txt ? ` — ${txt}` : ""}`);
   }
 
-  // 204/empty bodies or non-JSON: return null or raw text
   const ct = res.headers.get("content-type") || "";
   if (!ct.includes("application/json")) {
     const txt = await res.text().catch(() => "");
@@ -87,10 +98,10 @@ export async function fetchJsonAuth(urlOrPath, init = {}) {
   return res.json();
 }
 
-// Optional convenience wrappers
 export const api = {
   get: (path, init) => fetchJsonAuth(path, { method: "GET", ...init }),
   post: (path, body, init) => fetchJsonAuth(path, { method: "POST", body, ...init }),
   put: (path, body, init) => fetchJsonAuth(path, { method: "PUT", body, ...init }),
   del: (path, init) => fetchJsonAuth(path, { method: "DELETE", ...init }),
 };
+

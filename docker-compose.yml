@@ -62,7 +62,7 @@ services:
       PORT: ${BACKEND_PORT}
       # compose injects this from the root .env
       MONGODB_URI: ${MONGODB_URI}
-      FRONTEND_ORIGIN: http://localhost:${FRONTEND_PORT}
+      FRONTEND_ORIGIN: http://87.106.133.129:${FRONTEND_PORT}
     ports:
       - "${BACKEND_PORT}:${BACKEND_PORT}"
     depends_on:
@@ -83,7 +83,7 @@ services:
       PORT: ${BACKEND_PORT}
       # dev also authenticates against the CareBell DB (not admin)
       MONGODB_URI: mongodb://${MONGO_APP_USER}:${MONGO_APP_PASS}@${MONGO_HOST}:${MONGO_PORT}/${MONGO_DB}?authSource=${MONGO_DB}
-      FRONTEND_ORIGIN: http://localhost:${FRONTEND_PORT}
+      FRONTEND_ORIGIN: http://87.106.133.129:${FRONTEND_PORT}
     ports:
       - "${BACKEND_PORT}:${BACKEND_PORT}"
     depends_on:
