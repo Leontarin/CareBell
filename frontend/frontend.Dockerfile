@@ -1,5 +1,4 @@
 # ─── Frontend Dockerfile ───────────────────────────────────────
-# 1) Build stage
 FROM node:20-alpine AS build
 WORKDIR /app
 
@@ -10,17 +9,18 @@ RUN npm ci
 # Copy source code
 COPY . .
 
-# Build the Vite project
+# Accept backend URL as build arg and bake into Vite build
+ARG VITE_BACKEND_URL
+ENV VITE_BACKEND_URL=$VITE_BACKEND_URL
+
 RUN npm run build
 
-# 2) Production stage (tiny Nginx image)
+# ─── Production Stage ─────────────────────────────────────────
 FROM nginx:alpine
-
-# Copy the build output to Nginx's HTML folder
 COPY --from=build /app/dist /usr/share/nginx/html
 
-# Expose port 80 inside the container (compose maps this to 5173)
+# Optional: add SPA fallback so React/Vite routing works on refresh
+# COPY nginx.conf /etc/nginx/conf.d/default.conf
+
 EXPOSE 80
-
 CMD ["nginx", "-g", "daemon off;"]
-

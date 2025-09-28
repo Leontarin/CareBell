@@ -1,5 +1,9 @@
 name: carebell
 
+networks:
+  carebell_net:
+    external: true
+
 services:
   # ─────────────── MONGO (always first) ───────────────
   mongo:
@@ -7,10 +11,8 @@ services:
     image: mongo:7
     restart: unless-stopped
     environment:
-      # root user (created on first boot of an empty volume)
       MONGO_INITDB_ROOT_USERNAME: ${MONGO_ROOT_USER}
       MONGO_INITDB_ROOT_PASSWORD: ${MONGO_ROOT_PASS}
-      # pass app creds & db so mongo-init.js can create the app user
       MONGO_APP_USER: ${MONGO_APP_USER}
       MONGO_APP_PASS: ${MONGO_APP_PASS}
       MONGO_DB: ${MONGO_DB}
@@ -18,14 +20,16 @@ services:
       - carebell_mongo_data:/data/db
       - ./infra/mongo-init.js:/docker-entrypoint-initdb.d/mongo-init.js:ro
     command: ["mongod", "--auth"]
-    ports:
-      - "127.0.0.1:${MONGO_HOSTNAME_PORT}:27017"
+    expose:
+      - "27017"
     healthcheck:
       test: ["CMD", "mongosh", "--quiet", "--eval", "db.runCommand({ping:1}).ok"]
       interval: 5s
       timeout: 3s
       retries: 5
       start_period: 5s
+    networks:
+      - carebell_net
 
   # ─────────────── DENO SIGNALING ───────────────
   deno:
@@ -33,11 +37,13 @@ services:
     build:
       context: ./deno-signaling
       dockerfile: deno.Dockerfile
-    ports:
-      - "${DENO_PORT}:5175"
+    expose:
+      - "5175"
     depends_on:
       mongo:
         condition: service_healthy
+    networks:
+      - carebell_net
 
   deno-dev:
     profiles: ["dev"]
@@ -46,11 +52,13 @@ services:
       dockerfile: deno.Dockerfile.dev
     volumes:
       - ./deno-signaling:/app
-    ports:
-      - "${DENO_PORT}:5175"
+    expose:
+      - "5175"
     depends_on:
       mongo:
         condition: service_healthy
+    networks:
+      - carebell_net
 
   # ─────────────── BACKEND ───────────────
   backend:
@@ -60,16 +68,18 @@ services:
       dockerfile: backend.Dockerfile
     environment:
       PORT: ${BACKEND_PORT}
-      # compose injects this from the root .env
       MONGODB_URI: ${MONGODB_URI}
-      FRONTEND_ORIGIN: http://87.106.133.129:${FRONTEND_PORT}
-    ports:
-      - "${BACKEND_PORT}:${BACKEND_PORT}"
+      # updated: point to public domain (for CORS)
+      FRONTEND_ORIGIN: https://demo.carebells.org
+    expose:
+      - "${BACKEND_PORT}"
     depends_on:
       deno:
         condition: service_started
       mongo:
         condition: service_healthy
+    networks:
+      - carebell_net
 
   backend-dev:
     profiles: ["dev"]
@@ -81,16 +91,17 @@ services:
       - /app/node_modules
     environment:
       PORT: ${BACKEND_PORT}
-      # dev also authenticates against the CareBell DB (not admin)
-      MONGODB_URI: mongodb://${MONGO_APP_USER}:${MONGO_APP_PASS}@${MONGO_HOST}:${MONGO_PORT}/${MONGO_DB}?authSource=${MONGO_DB}
-      FRONTEND_ORIGIN: http://87.106.133.129:${FRONTEND_PORT}
-    ports:
-      - "${BACKEND_PORT}:${BACKEND_PORT}"
+      MONGODB_URI: mongodb://${MONGO_APP_USER}:${MONGO_APP_PASS}@mongo:27017/${MONGO_DB}?authSource=${MONGO_DB}
+      FRONTEND_ORIGIN: http://localhost:${FRONTEND_PORT}
+    expose:
+      - "${BACKEND_PORT}"
     depends_on:
       deno-dev:
         condition: service_started
       mongo:
         condition: service_healthy
+    networks:
+      - carebell_net
 
   # ─────────────── FRONTEND ───────────────
   frontend:
@@ -98,11 +109,15 @@ services:
     build:
       context: ./frontend
       dockerfile: frontend.Dockerfile
+      args:
+        VITE_BACKEND_URL: http://carebell-backend:5174
     ports:
-      - "${FRONTEND_PORT}:80"
+      - "${FRONTEND_PORT}:80" # only public port!
     depends_on:
       backend:
         condition: service_started
+    networks:
+      - carebell_net
 
   frontend-dev:
     profiles: ["dev"]
@@ -119,7 +134,8 @@ services:
     depends_on:
       backend-dev:
         condition: service_started
+    networks:
+      - carebell_net
 
 volumes:
   carebell_mongo_data:
-
