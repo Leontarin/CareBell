@@ -34,6 +34,7 @@ services:
   # ─────────────── DENO SIGNALING ───────────────
   deno:
     profiles: ["prod"]
+    restart: unless-stopped
     build:
       context: ./deno-signaling
       dockerfile: deno.Dockerfile
@@ -47,6 +48,7 @@ services:
 
   deno-dev:
     profiles: ["dev"]
+    restart: unless-stopped
     build:
       context: ./deno-signaling
       dockerfile: deno.Dockerfile.dev
@@ -63,6 +65,7 @@ services:
   # ─────────────── BACKEND ───────────────
   backend:
     profiles: ["prod"]
+    restart: unless-stopped
     build:
       context: ./backend
       dockerfile: backend.Dockerfile
@@ -83,6 +86,7 @@ services:
 
   backend-dev:
     profiles: ["dev"]
+    restart: unless-stopped
     build:
       context: ./backend
       dockerfile: backend.Dockerfile.dev
@@ -106,6 +110,7 @@ services:
   # ─────────────── FRONTEND ───────────────
   frontend:
     profiles: ["prod"]
+    restart: unless-stopped
     build:
       context: ./frontend
       dockerfile: frontend.Dockerfile
@@ -121,6 +126,7 @@ services:
 
   frontend-dev:
     profiles: ["dev"]
+    restart: unless-stopped
     build:
       context: ./frontend
       dockerfile: frontend.Dockerfile.dev
