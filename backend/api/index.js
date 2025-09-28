@@ -37,47 +37,27 @@ const authRoute          = require('../routes/auth');
 const app    = express();
 const server = createServer(app);
 
-// ---- Dynamic CORS (no hard-coded IP) ----------------------------------------
-// Goal: allow the SPA served from the *same machine* (any IP/domain) on port 5173,
-// and also allow local dev (localhost:5173 / 127.0.0.1:5173). Works with credentials.
-const FRONTEND_PORT = String(process.env.FRONTEND_PORT || 5173);
+app.set('trust proxy', 1); // if behind a proxy (nginx)
 
-// Build per-request CORS options using the request's Host and Origin
-function corsDelegate(req, cb) {
-  const origin = req.header('Origin'); // e.g. "http://87.106.133.129:5173"
-  const allowCommon = {
-    credentials: true,
-    methods: ['GET','HEAD','PUT','PATCH','POST','DELETE','OPTIONS'],
-    allowedHeaders: ['Content-Type','Authorization'],
-  };
+// ─── CORS ────────────────────────────────────────────────────────────────────
+const FRONTEND_PORT = process.env.FRONTEND_PORT || "5173";
+const allowedOrigins = [
+  `https://demo.carebells.org`,        // production frontend
+  `http://localhost:${FRONTEND_PORT}`, // local dev
+  `http://127.0.0.1:${FRONTEND_PORT}`
+];
 
-  // No Origin header → same-origin or non-browser (allow)
-  if (!origin) return cb(null, { origin: true, ...allowCommon });
-
-  let allowed = false;
-  try {
-    const u = new URL(origin);
-    const hostHeader = req.headers.host || '';   // e.g. "87.106.133.129:5174"
-    const serverHost = hostHeader.split(':')[0]; // -> "87.106.133.129"
-
-    const isSameHost =
-      u.hostname === serverHost &&
-      (u.port === FRONTEND_PORT || u.port === '' /* default port */);
-
-    const isLocalDev =
-      (u.hostname === 'localhost' || u.hostname === '127.0.0.1') &&
-      (u.port === FRONTEND_PORT || u.port === '');
-
-    allowed = isSameHost || isLocalDev;
-  } catch {
-    allowed = false;
-  }
-
-  cb(null, { origin: allowed, ...allowCommon });
-}
-
-// Register CORS early
-app.use(cors(corsDelegate));
+app.use(cors({
+  origin: (origin, cb) => {
+    // Allow no origin (same-origin / curl / non-browser requests)
+    if (!origin) return cb(null, true);
+    if (allowedOrigins.includes(origin)) return cb(null, true);
+    return cb(new Error(`CORS blocked: ${origin}`), false);
+  },
+  credentials: true,
+  methods: ['GET','HEAD','PUT','PATCH','POST','DELETE','OPTIONS'],
+  allowedHeaders: ['Content-Type','Authorization'],
+}));
 
 // Body/cookies
 app.use(express.json());
