@@ -115,7 +115,7 @@ services:
       context: ./frontend
       dockerfile: frontend.Dockerfile
       args:
-        VITE_BACKEND_URL: http://carebell-backend:5174
+        VITE_BACKEND_URL: https://api.carebells.org
     ports:
       - "${FRONTEND_PORT}:80" # only public port!
     depends_on:
