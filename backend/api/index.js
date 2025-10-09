@@ -1,15 +1,21 @@
-// root/api/index.js
 const path = require('path');
 const fs = require('fs');
 const dotenv = require('dotenv');
 
-// 1) Load base .env
-dotenv.config({ path: path.join(__dirname, '..', '.env') });
+// ─── Load .env only when NOT running inside Docker ─────────────────────────────
+if (!process.env.DOCKER_ENV) {
+  // Load base .env (used for local dev on Windows)
+  dotenv.config({ path: path.join(__dirname, '..', '.env') });
 
-// 2) If .env.local exists, ALWAYS override (handy for local dev)
-const localEnvPath = path.join(__dirname, '..', '.env.local');
-if (fs.existsSync(localEnvPath)) {
-  dotenv.config({ path: localEnvPath, override: true });
+  // Load .env.local if it exists (for overrides)
+  const localEnvPath = path.join(__dirname, '..', '.env.local');
+  if (fs.existsSync(localEnvPath)) {
+    dotenv.config({ path: localEnvPath, override: true });
+  }
+
+  console.log('🧩 Loaded local environment (.env / .env.local)');
+} else {
+  console.log('🐳 Running inside Docker – skipping .env load');
 }
 
 const express      = require('express');
