@@ -23,9 +23,9 @@ services:
     command: ["mongod", "--auth"]
     expose:
       - "27017"
-    # Uncomment the next two lines to access MongoDB locally (e.g. Compass)
-    # ports:
-    #   - "5176:27017"
+    # 🔹 Optional: expose Mongo to host for Compass (harmless in prod too)
+    ports:
+      - "5176:27017"
     healthcheck:
       test: ["CMD", "mongosh", "--quiet", "--eval", "db.runCommand({ping:1}).ok"]
       interval: 5s
@@ -74,8 +74,9 @@ services:
       context: ./backend
       dockerfile: backend.Dockerfile
     environment:
+      DOCKER_ENV: "true"
       PORT: ${BACKEND_PORT}
-      MONGODB_URI: ${MONGODB_URI}
+      MONGODB_URI: mongodb://${MONGO_APP_USER}:${MONGO_APP_PASS}@mongo:27017/${MONGO_DB}?authSource=${MONGO_DB}
       FRONTEND_ORIGIN: https://demo.carebells.org
     expose:
       - "${BACKEND_PORT}"
@@ -97,6 +98,7 @@ services:
       - ./backend:/app
       - /app/node_modules
     environment:
+      DOCKER_ENV: "true"
       PORT: ${BACKEND_PORT}
       MONGODB_URI: mongodb://${MONGO_APP_USER}:${MONGO_APP_PASS}@mongo:27017/${MONGO_DB}?authSource=${MONGO_DB}
       FRONTEND_ORIGIN: http://localhost:${FRONTEND_PORT}
