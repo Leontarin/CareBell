@@ -10,6 +10,7 @@ services:
     profiles: ["prod", "dev"]
     image: mongo:7
     restart: unless-stopped
+    platform: ${DOCKER_DEFAULT_PLATFORM:-linux/amd64}
     environment:
       MONGO_INITDB_ROOT_USERNAME: ${MONGO_ROOT_USER}
       MONGO_INITDB_ROOT_PASSWORD: ${MONGO_ROOT_PASS}
