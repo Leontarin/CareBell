@@ -49,4 +49,4 @@ docker compose --profile dev up -d
 
 echo
 echo "✅ Deployment complete (dev)."
-echo "⚠ If any .env files were newly created, please fill missing values before next run."
+echo "⚠ If any .env files were newly create

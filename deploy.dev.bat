@@ -3,11 +3,11 @@ setlocal enabledelayedexpansion
 chcp 65001 >nul
 
 echo =====================================================
-echo 🔒 Using branch: master
+echo 🔒 Using branch: dev
 echo =====================================================
 git fetch --prune origin
-git checkout master
-git reset --hard origin/master
+git checkout dev
+git reset --hard origin/dev
 
 REM ─── Ensure .env files exist ───────────────────────────────
 echo.
@@ -31,7 +31,7 @@ for %%F in (%envFiles%) do (
 echo.
 echo 📦 Installing backend deps…
 cd backend
-call npm ci
+call npm install
 cd ..
 
 echo.
@@ -49,12 +49,12 @@ echo 🧹 Removing dangling images (cleanup)…
 docker image prune -f >nul
 
 echo.
-echo 🐳 Rebuilding & restarting CareBell (prod)…
-docker compose --profile prod down --remove-orphans
-docker compose --profile prod build --no-cache
-docker compose --profile prod up -d
+echo 🐳 Rebuilding & restarting CareBell (dev)…
+docker compose --profile dev down --remove-orphans
+docker compose --profile dev build
+docker compose --profile dev up -d
 
 echo.
-echo ✅ Deployment complete (prod).
+echo ✅ Deployment complete (dev).
 echo ⚠ If any .env files were newly created, please fill missing values before next run.
 pause
