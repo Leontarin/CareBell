@@ -23,6 +23,9 @@ services:
     command: ["mongod", "--auth"]
     expose:
       - "27017"
+    # Uncomment the next two lines to access MongoDB locally (e.g. Compass)
+    # ports:
+    #   - "5176:27017"
     healthcheck:
       test: ["CMD", "mongosh", "--quiet", "--eval", "db.runCommand({ping:1}).ok"]
       interval: 5s
@@ -55,8 +58,8 @@ services:
       dockerfile: deno.Dockerfile.dev
     volumes:
       - ./deno-signaling:/app
-    expose:
-      - "5175"
+    ports:
+      - "5175:5175"
     depends_on:
       mongo:
         condition: service_healthy
@@ -73,7 +76,6 @@ services:
     environment:
       PORT: ${BACKEND_PORT}
       MONGODB_URI: ${MONGODB_URI}
-      # updated: point to public domain (for CORS)
       FRONTEND_ORIGIN: https://demo.carebells.org
     expose:
       - "${BACKEND_PORT}"
@@ -98,8 +100,8 @@ services:
       PORT: ${BACKEND_PORT}
       MONGODB_URI: mongodb://${MONGO_APP_USER}:${MONGO_APP_PASS}@mongo:27017/${MONGO_DB}?authSource=${MONGO_DB}
       FRONTEND_ORIGIN: http://localhost:${FRONTEND_PORT}
-    expose:
-      - "${BACKEND_PORT}"
+    ports:
+      - "${BACKEND_PORT}:${BACKEND_PORT}"
     depends_on:
       deno-dev:
         condition: service_started
