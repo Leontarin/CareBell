@@ -18,9 +18,21 @@ function pickApiBase() {
 export const API = pickApiBase();
 
 // Keep your existing exports (edit signaling if you want same-host too)
-export const P2P_SIGNALING_URL = (import.meta.env.VITE_SIGNALING_URL || "").trim() ||
-  // same-host fallback for signaling, change to ws:// if your server is ws-only
-  `${window.location.protocol}//${window.location.hostname}:5175`;
+const envSignalingUrl = (import.meta.env.VITE_SIGNALING_URL || "").trim();
+
+const pickDefaultSignalingUrl = () => {
+  const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
+  const host = window.location.hostname;
+  const port = 5175;
+  return `${protocol}//${host}:${port}`;
+};
+
+const normalizeToHttp = (url) =>
+  url.replace(/^ws(s)?:/i, (_, secure) => (secure ? "https:" : "http:"));
+
+export const P2P_SIGNALING_URL = envSignalingUrl || pickDefaultSignalingUrl();
+
+export const P2P_SIGNALING_HTTP_URL = normalizeToHttp(P2P_SIGNALING_URL);
 
 export const NEWS_REGIONS = "1";
 

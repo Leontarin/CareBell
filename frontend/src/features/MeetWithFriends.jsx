@@ -2,7 +2,7 @@
 import React, { useState, useEffect, useContext, useRef } from "react";
 import axios from "axios";
 import { io } from "socket.io-client";
-import { API, P2P_CONFIG, P2P_SIGNALING_URL } from "../shared/config";
+import { API, P2P_CONFIG, P2P_SIGNALING_HTTP_URL, P2P_SIGNALING_URL } from "../shared/config";
 import { AppContext } from "../shared/AppContext";
 import { WebRTCManager } from "../components/WebRTCManager";
 import { DenoP2PSignaling } from "../components/DenoP2PSignaling";
@@ -136,7 +136,7 @@ export default function MeetWithFriends() {
   useEffect(() => {
     if (!user?.id) return;
 
-    const newSocket = io(P2P_SIGNALING_URL, {
+    const newSocket = io(P2P_SIGNALING_HTTP_URL, {
       transports: ['websocket', 'polling']
     });
 
