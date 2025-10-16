@@ -134,14 +134,16 @@ router.put("/:id", async (req, res) => {
       }
     }
 
-    const user = await User.findOneAndUpdate(
-      { id: req.params.id },
-      updates,
-      { new: true, runValidators: true }
-    ).select("-passwordHash");
-
+    const user = await User.findOne({ id: req.params.id });
     if (!user) return res.status(404).json({ message: "User not found" });
-    res.json(user);
+
+    Object.assign(user, updates);
+
+    const saved = await user.save();
+    const safe = saved.toObject();
+    delete safe.passwordHash;
+
+    res.json(safe);
   } catch (e) {
     res.status(400).json({ message: e.message });
   }

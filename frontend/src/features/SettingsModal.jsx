@@ -1,5 +1,5 @@
 // CareBell/src/features/SettingsModal.jsx
-import React, { useEffect, useState, useContext } from "react";
+import React, { useEffect, useState, useContext, useMemo } from "react";
 import {
   FaVolumeMute,
   FaVolumeUp,
@@ -20,6 +20,33 @@ export default function SettingsModal({ onClose }) {
   const [diabetic, setDiabetic] = useState(user?.Diabetic || false);
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [saveStatus, setSaveStatus] = useState(null); // 'success' | 'error'
+  const [languageSaving, setLanguageSaving] = useState(false);
+  const [languageError, setLanguageError] = useState(null);
+
+  const LANGUAGE_LABELS = useMemo(
+    () => ({
+      en: "English",
+      he: "עברית",
+      de: "Deutsch",
+      fi: "Suomi",
+    }),
+    []
+  );
+
+  const availableLanguages = useMemo(() => {
+    if (user?.languages?.length) {
+      const seen = new Set();
+      return user.languages.filter((code) => {
+        if (!code) return false;
+        if (seen.has(code)) return false;
+        seen.add(code);
+        return true;
+      });
+    }
+    return Object.keys(LANGUAGE_LABELS);
+  }, [LANGUAGE_LABELS, user]);
+
+  const languageLabel = (code) => LANGUAGE_LABELS[code] || code;
 
   useEffect(() => {
     setSelectedAllergens(user?.Allergens || []);
@@ -33,9 +60,45 @@ export default function SettingsModal({ onClose }) {
   }, [scale]);
 
   // 2) Change language
-  const changeLanguage = (lng) => {
-    i18n.changeLanguage(lng);
-    localStorage.setItem("i18nextLng", lng);
+  const changeLanguage = async (lng) => {
+    if (!lng || lng === i18n.language) return;
+
+    setLanguageError(null);
+    const previous = i18n.language;
+    let shouldResetSpinner = false;
+
+    try {
+      await i18n.changeLanguage(lng);
+      localStorage.setItem("i18nextLng", lng);
+
+      if (!user?.id) return;
+
+      setLanguageSaving(true);
+      shouldResetSpinner = true;
+      const res = await fetch(`${API}/users/${user.id}`, {
+        method: "PUT",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ language: lng }),
+      });
+
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data?.message || "Failed to update language");
+      }
+
+      const updated = await res.json();
+      setUser(updated);
+    } catch (err) {
+      console.error("Failed to change language", err);
+      setLanguageError(err?.message || "Failed to update language");
+      await i18n.changeLanguage(previous).catch(() => {});
+      localStorage.setItem("i18nextLng", previous);
+    } finally {
+      if (shouldResetSpinner) {
+        setLanguageSaving(false);
+      }
+    }
   };
 
   const allergens = t("Meals.Legend.Allergens", { returnObjects: true });
@@ -174,12 +237,17 @@ export default function SettingsModal({ onClose }) {
                       value={i18n.language}
                       onChange={(e) => changeLanguage(e.target.value)}
                       className="border rounded px-2 py-1 border-teal-400 dark:bg-blue-900 dark:hover:bg-blue-800"
+                      disabled={languageSaving}
                     >
-                      <option value="en">English</option>
-                      <option value="he">עברית</option>
-                      <option value="de">Deutsch</option>
-                      <option value="fi">Suomi</option>
+                      {availableLanguages.map((code) => (
+                        <option key={code} value={code}>
+                          {languageLabel(code)}
+                        </option>
+                      ))}
                     </select>
+                    {languageError && (
+                      <p className="mt-2 text-sm text-red-600">{languageError}</p>
+                    )}
                   </div>
                 </div>
               </section>
