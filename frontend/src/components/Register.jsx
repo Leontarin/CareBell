@@ -1,5 +1,5 @@
 // src/components/Register.jsx
-import { useState } from "react";
+import { useEffect, useMemo, useState, useRef } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import logo from "../resources/Logo_Gold_Blau_Rubik.png";
@@ -7,8 +7,119 @@ import { API } from "../shared/config";
 import NotificationModal from "./NotificationModal";
 import TopRightControls from "./TopRightControls";
 
+/** ─────────────────────────── Config ─────────────────────────── **/
+const LANG_LABELS = { en: "English", de: "German", he: "Hebrew", fi: "Finnish" };
+
+const COUNTRIES = [
+  { code: "DE", name: "Germany", languages: ["de", "en"], flag: "🇩🇪" },
+  { code: "FI", name: "Finland", languages: ["fi", "en"], flag: "🇫🇮" },
+  { code: "IL", name: "Israel", languages: ["he", "en"], flag: "🇮🇱" },
+];
+
+/** Wheel-style picker with search */
+function CountryWheelPicker({ open, onClose, onSelect }) {
+  const [query, setQuery] = useState("");
+  const containerRef = useRef(null);
+
+  const list = useMemo(() => {
+    if (!query.trim()) return COUNTRIES;
+    const q = query.trim().toLowerCase();
+    return COUNTRIES.filter(
+      (c) => c.name.toLowerCase().includes(q) || c.code.toLowerCase().includes(q)
+    );
+  }, [query]);
+
+  useEffect(() => {
+    if (open) setQuery("");
+  }, [open]);
+
+  if (!open) return null;
+
+  return (
+    <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4">
+      <div className="w-full max-w-md rounded-3xl bg-white dark:bg-gray-900 shadow-2xl p-4 md:p-6">
+        <div className="flex items-center gap-2 mb-3">
+          <ion-icon name="earth" className="text-2xl text-yellow-600" />
+          <h3 className="text-xl font-bold">Select country</h3>
+        </div>
+
+        {/* Search */}
+        <div className="relative mb-4">
+          <ion-icon
+            name="search"
+            className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 text-xl"
+          />
+          <input
+            autoFocus
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder="Search country…"
+            className="w-full rounded-2xl border-2 border-yellow-400 bg-white dark:bg-gray-800 pl-10 pr-3 py-2.5 focus:ring-4 focus:ring-yellow-500/30"
+          />
+        </div>
+
+        {/* Wheel list */}
+        <div
+          ref={containerRef}
+          className="
+            relative h-48 overflow-y-auto px-2
+            snap-y snap-mandatory
+            mask-[linear-gradient(to_bottom,transparent,black_20%,black_80%,transparent)]
+          "
+          style={{
+            scrollBehavior: "smooth",
+          }}
+        >
+
+          <ul className="space-y-2 py-6">
+            {list.length === 0 && (
+              <li className="text-center text-gray-500 py-8">No matches</li>
+            )}
+            {list.map((c) => (
+              <li
+                key={c.code}
+                className="
+                  snap-center
+                  cursor-pointer select-none
+                  rounded-xl border border-transparent hover:border-yellow-400
+                  bg-gray-50 dark:bg-gray-800/60
+                  px-4 py-2.5
+                  flex items-center gap-3
+                  justify-between
+                "
+                onClick={() => {
+                  onSelect(c);
+                  onClose();
+                }}
+              >
+                <div className="flex items-center gap-3">
+                  <span className="text-2xl">{c.flag}</span>
+                  <div>
+                    <div className="font-semibold">{c.name}</div>
+                    <div className="text-xs text-gray-500">{c.code}</div>
+                  </div>
+                </div>
+                <ion-icon name="chevron-forward" className="text-xl text-gray-500" />
+              </li>
+            ))}
+          </ul>
+        </div>
+
+        <div className="mt-4 flex justify-end">
+          <button
+            onClick={onClose}
+            className="rounded-xl px-4 py-2 bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600"
+          >
+            Close
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function Register() {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const navigate = useNavigate();
 
   const [fullName, setFullName] = useState("");
@@ -23,15 +134,41 @@ export default function Register() {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
 
+  // New: country & language
+  const [country, setCountry] = useState(null); // {code, name, languages}
+  const [language, setLanguage] = useState(""); // "en" | "de" | "he" | "fi"
+  const [countryOpen, setCountryOpen] = useState(false);
+  const [showLanguageRow, setShowLanguageRow] = useState(false);
+
   // Notification modal
   const [modalOpen, setModalOpen] = useState(false);
   const [modalMsg, setModalMsg] = useState("");
   const [modalTitle, setModalTitle] = useState(t("Header.settings", { defaultValue: "Notice" }));
-  const showError = (msg, title = t("Header.settings", { defaultValue: "Please fix the following" })) => {
+  const showError = (
+    msg,
+    title = t("Header.settings", { defaultValue: "Please fix the following" })
+  ) => {
     setModalTitle(title);
     setModalMsg(msg);
     setModalOpen(true);
   };
+
+  // When a country is selected, prompt language (and reset previous choice)
+  useEffect(() => {
+    if (country) {
+      setLanguage("");
+      setShowLanguageRow(true);
+    } else {
+      setShowLanguageRow(false);
+    }
+  }, [country]);
+
+  // Switch UI language on selection
+  useEffect(() => {
+    if (language && i18n.language !== language) {
+      i18n.changeLanguage(language).catch(() => {});
+    }
+  }, [language, i18n]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -42,10 +179,16 @@ export default function Register() {
     if (!email.trim() && !username.trim())
       missing.push(t("Auth.Register.emailOrUsername", { defaultValue: "Email or Username" }));
     if (!password.trim()) missing.push(t("Auth.Register.password", { defaultValue: "Password" }));
-    if (!confirmPassword.trim()) missing.push(t("Auth.Register.verifyPassword", { defaultValue: "Verify password" }));
+    if (!confirmPassword.trim())
+      missing.push(t("Auth.Register.verifyPassword", { defaultValue: "Verify password" }));
+    
 
     if (missing.length) {
-      showError(`${t("Auth.Register.missing", { defaultValue: "Required field(s) missing:" })}\n• ${missing.join("\n• ")}`);
+      showError(
+        `${t("Auth.Register.missing", {
+          defaultValue: "Required field(s) missing:",
+        })}\n• ${missing.join("\n• ")}`
+      );
       return;
     }
     if (password !== confirmPassword) {
@@ -63,6 +206,9 @@ export default function Register() {
         dateOfBirth: dateOfBirth || undefined,
         gender,
         phoneNumber: phoneNumber.trim() || undefined,
+        // New fields:
+        country: country?.code, // "DE" | "FI" | "IL"
+        language: language || undefined, // "en" | "de" | "he" | "fi"
       };
 
       const res = await fetch(`${API}/auth/register`, {
@@ -74,12 +220,18 @@ export default function Register() {
 
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
-        throw new Error(data?.message || t("Auth.Register.failed", { defaultValue: "Registration failed" }));
+        throw new Error(
+          data?.message || t("Auth.Register.failed", { defaultValue: "Registration failed" })
+        );
       }
 
       navigate("/");
     } catch (e) {
-      showError(String(e?.message || e) || t("Auth.Register.failed", { defaultValue: "Registration failed" }), t("Auth.Register.failed", { defaultValue: "Registration failed" }));
+      showError(
+        String(e?.message || e) ||
+          t("Auth.Register.failed", { defaultValue: "Registration failed" }),
+        t("Auth.Register.failed", { defaultValue: "Registration failed" })
+      );
     } finally {
       setSubmitting(false);
     }
@@ -98,6 +250,13 @@ export default function Register() {
         onClose={() => setModalOpen(false)}
       />
 
+      {/* Country picker modal */}
+      <CountryWheelPicker
+        open={countryOpen}
+        onClose={() => setCountryOpen(false)}
+        onSelect={(c) => setCountry(c)}
+      />
+
       <div className="w-full max-w-4xl">
         <div className="flex flex-col items-center gap-3 mb-4 md:mb-5">
           <img src={logo} alt="CareBells Logo" className="h-14 w-auto md:h-16 lg:h-20" draggable={false} />
@@ -111,7 +270,7 @@ export default function Register() {
             {t("Auth.Register.title", { defaultValue: "Register" })}
           </h2>
 
-          {/* FORM: grid items align rows */}
+          {/* FORM */}
           <form
             onSubmit={handleSubmit}
             className="grid grid-cols-1 md:grid-cols-2 gap-x-8 lg:gap-x-12 gap-y-8 mt-6 items-start"
@@ -119,7 +278,8 @@ export default function Register() {
             {/* Row 1: Username | Full name */}
             <div>
               <label htmlFor="username" className="block text-lg font-bold mb-2">
-                {t("Auth.Register.username", { defaultValue: "Username" })} <span className="text-red-600">*</span>
+                {t("Auth.Register.username", { defaultValue: "Username" })}{" "}
+                <span className="text-red-600">*</span>
                 <span className="ml-2 text-sm text-gray-500">
                   ({t("Auth.Register.oneOf", { defaultValue: "one of Email or Username is required" })})
                 </span>
@@ -142,7 +302,8 @@ export default function Register() {
 
             <div>
               <label htmlFor="fullName" className="block text-lg font-bold mb-2">
-                {t("Auth.Register.fullName", { defaultValue: "Full name" })} <span className="text-red-600">*</span>
+                {t("Auth.Register.fullName", { defaultValue: "Full name" })}{" "}
+                <span className="text-red-600">*</span>
               </label>
               <input
                 id="fullName"
@@ -158,7 +319,8 @@ export default function Register() {
             {/* Row 2: Email | Date of birth */}
             <div>
               <label htmlFor="email" className="block text-lg font-bold mb-2">
-                {t("Auth.Register.email", { defaultValue: "Email" })} <span className="text-red-600">*</span>
+                {t("Auth.Register.email", { defaultValue: "Email" })}{" "}
+                <span className="text-red-600">*</span>
                 <span className="ml-2 text-sm text-gray-500">
                   ({t("Auth.Register.oneOf", { defaultValue: "one of Email or Username is required" })})
                 </span>
@@ -196,7 +358,8 @@ export default function Register() {
             {/* Row 3: Password | Gender */}
             <div>
               <label htmlFor="password" className="block text-lg font-bold mb-2">
-                {t("Auth.Register.password", { defaultValue: "Password" })} <span className="text-red-600">*</span>
+                {t("Auth.Register.password", { defaultValue: "Password" })}{" "}
+                <span className="text-red-600">*</span>
               </label>
               <div className="relative">
                 <span className="absolute inset-y-0 left-0 flex items-center pl-4 pointer-events-none text-gray-400 dark:text-gray-500">
@@ -216,7 +379,11 @@ export default function Register() {
                   type="button"
                   onClick={() => setShowPassword((s) => !s)}
                   className="absolute inset-y-0 right-0 px-4 flex items-center text-gray-600 dark:text-gray-300 hover:text-gray-800 dark:hover:text-white"
-                  aria-label={showPassword ? t("Auth.Register.hide", { defaultValue: "Hide password" }) : t("Auth.Register.show", { defaultValue: "Show password" })}
+                  aria-label={
+                    showPassword
+                      ? t("Auth.Register.hide", { defaultValue: "Hide password" })
+                      : t("Auth.Register.show", { defaultValue: "Show password" })
+                  }
                 >
                   <ion-icon name={showPassword ? "eye-off" : "eye"} className="text-xl lg:text-2xl"></ion-icon>
                 </button>
@@ -242,7 +409,8 @@ export default function Register() {
             {/* Row 4: Verify Password | Phone */}
             <div>
               <label htmlFor="confirmPassword" className="block text-lg font-bold mb-2">
-                {t("Auth.Register.verifyPassword", { defaultValue: "Verify password" })} <span className="text-red-600">*</span>
+                {t("Auth.Register.verifyPassword", { defaultValue: "Verify password" })}{" "}
+                <span className="text-red-600">*</span>
               </label>
               <div className="relative">
                 <span className="absolute inset-y-0 left-0 flex items-center pl-4 pointer-events-none text-gray-400 dark:text-gray-500">
@@ -262,7 +430,11 @@ export default function Register() {
                   type="button"
                   onClick={() => setShowConfirm((s) => !s)}
                   className="absolute inset-y-0 right-0 px-4 flex items-center text-gray-600 dark:text-gray-300 hover:text-gray-800 dark:hover:text-white"
-                  aria-label={showConfirm ? t("Auth.Register.hide", { defaultValue: "Hide" }) : t("Auth.Register.show", { defaultValue: "Show" })}
+                  aria-label={
+                    showConfirm
+                      ? t("Auth.Register.hide", { defaultValue: "Hide" })
+                      : t("Auth.Register.show", { defaultValue: "Show" })
+                  }
                 >
                   <ion-icon name={showConfirm ? "eye-off" : "eye"} className="text-xl lg:text-2xl"></ion-icon>
                 </button>
@@ -284,14 +456,72 @@ export default function Register() {
               />
             </div>
 
-            {/* Actions row: centered and full width */}
+            {/* New Row: Country (wheel picker trigger) */}
+            <div className="md:col-span-2">
+              <label className="block text-lg font-bold mb-2">
+                Country
+              </label>
+              <button
+                type="button"
+                onClick={() => setCountryOpen(true)}
+                className="w-full text-left text-lg rounded-2xl border-2 border-yellow-400 bg-white dark:bg-gray-900 px-4 py-3.5 focus:ring-4 focus:ring-yellow-500/30 flex items-center justify-between"
+              >
+                <span className="flex items-center gap-3">
+                  <ion-icon name="earth" className="text-2xl text-gray-600 dark:text-gray-300"></ion-icon>
+                  {country ? (
+                    <span className="flex items-center gap-2">
+                      <span className="text-2xl">{country.flag}</span>
+                      <span className="font-semibold">{country.name}</span>
+                      <span className="text-sm text-gray-500">({country.code})</span>
+                    </span>
+                  ) : (
+                    <span className="text-gray-500">Select country</span>
+                  )}
+                </span>
+                <ion-icon name="chevron-down" className="text-xl"></ion-icon>
+              </button>
+            </div>
+
+            {/* New Row: Language (appears only after country) */}
+            {showLanguageRow && (
+              <div className="md:col-span-2">
+                <label className="block text-lg font-bold mb-2">
+                  Preferred language (based on country)
+                </label>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                  {country?.languages.map((code) => (
+                    <button
+                      type="button"
+                      key={code}
+                      onClick={() => setLanguage(code)}
+                      className={[
+                        "rounded-2xl border-2 px-4 py-3 font-semibold",
+                        language === code
+                          ? "border-yellow-500 bg-yellow-50 dark:bg-yellow-900/20"
+                          : "border-yellow-400 bg-white dark:bg-gray-900",
+                      ].join(" ")}
+                      aria-pressed={language === code}
+                    >
+                      {LANG_LABELS[code]}
+                    </button>
+                  ))}
+                </div>
+                {!language && (
+                  <p className="text-sm text-red-600 mt-2">Please choose a language.</p>
+                )}
+              </div>
+            )}
+
+            {/* Actions */}
             <div className="md:col-span-2 flex flex-col items-center gap-4 mt-2">
               <button
                 type="submit"
                 disabled={submitting}
                 className="w-full md:w-2/3 lg:w-1/2 rounded-2xl bg-yellow-600 hover:bg-yellow-500 disabled:opacity-60 text-white py-3.5 text-xl font-extrabold"
               >
-                {submitting ? t("Auth.Register.creating", { defaultValue: "Creating..." }) : t("Auth.Register.create", { defaultValue: "Create account" })}
+                {submitting
+                  ? t("Auth.Register.creating", { defaultValue: "Creating..." })
+                  : t("Auth.Register.create", { defaultValue: "Create account" })}
               </button>
               <p className="text-center text-gray-700 dark:text-gray-300">
                 {t("Auth.Register.haveAccount", { defaultValue: "Already have an account?" })}{" "}
