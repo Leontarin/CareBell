@@ -1,5 +1,10 @@
 // ./models/user.js
 const mongoose = require('mongoose');
+const {
+  LANGUAGE_CODES,
+  DEFAULT_LANGUAGE,
+  computeLanguageSettings,
+} = require('../lib/language');
 
 const userSchema = new mongoose.Schema({
   //user fields
@@ -27,9 +32,37 @@ const userSchema = new mongoose.Schema({
   googleId: { type: String, index: true },         // only for Google
   picture: { type: String },
 
+  country: { type: String, uppercase: true, trim: true },
+  language: { type: String, enum: LANGUAGE_CODES, default: DEFAULT_LANGUAGE },
+  languages: {
+    type: [String],
+    default: [DEFAULT_LANGUAGE],
+    validate: {
+      validator: (arr) => Array.isArray(arr) && arr.every((code) => LANGUAGE_CODES.includes(code)),
+      message: 'One or more provided languages are not supported.',
+    },
+  },
+
   roles: { type: [String], default: ['user'] },
   isActive: { type: Boolean, default: true },
   lastLoginAt: { type: Date },
 }, { timestamps: true });
+
+userSchema.pre('validate', function ensureLanguageDefaults(next) {
+  try {
+    const settings = computeLanguageSettings({
+      country: this.country,
+      preferredLanguage: this.language,
+    });
+
+    this.country = settings.country;
+    this.language = settings.language;
+    this.languages = settings.languages;
+
+    next();
+  } catch (err) {
+    next(err);
+  }
+});
 
 module.exports = mongoose.model('User', userSchema);
