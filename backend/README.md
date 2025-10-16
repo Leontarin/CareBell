@@ -2,6 +2,17 @@
 
 This folder contains the ExpressJS backend used by CareBell. Run with `npm start` from this directory during development.
 
+## Language preference migration
+
+Existing installations can backfill the new per-user language defaults and available language lists by running:
+
+```bash
+npm run migrate:languages
+```
+
+The script connects to the MongoDB instance referenced by `MONGODB_URI`, normalises each user's country/language pairing, and
+ensures English plus the country's default language remain available choices.
+
 ## Text-to-Speech API
 
 A `/tts` endpoint is provided for generating speech using local [piper](https://github.com/rhasspy/piper) models. It expects the `piper` binary to be available on the server. Example request:
