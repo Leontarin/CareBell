@@ -37,12 +37,24 @@ export default function App() {
   }, []);
 
   useEffect(() => {
-    const preferred = user?.language;
-    if (!preferred || i18n.language === preferred) return;
+    const preferred = (() => {
+      if (user?.language) return user.language;
+      if (Array.isArray(user?.languages)) {
+        for (const code of user.languages) {
+          if (code) return code;
+        }
+      }
+      return null;
+    })();
 
-    i18n.changeLanguage(preferred).catch(() => {});
-    localStorage.setItem("i18nextLng", preferred);
-  }, [user?.language]);
+    if (!preferred) return;
+
+    const normalized = String(preferred).trim().toLowerCase();
+    if (!normalized || i18n.language === normalized) return;
+
+    i18n.changeLanguage(normalized).catch(() => {});
+    localStorage.setItem("i18nextLng", normalized);
+  }, [user?.language, user?.languages]);
 
   const handleLoggedIn = async () => {
     try {

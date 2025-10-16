@@ -85,10 +85,78 @@ function computeLanguageSettings({ country, preferredLanguage } = {}) {
   return result;
 }
 
+function derivePreferredLanguage(source) {
+  if (!source) return undefined;
+
+  const preferCandidates = [];
+  if (source.language) preferCandidates.push(source.language);
+  if (Array.isArray(source.languages)) {
+    for (const code of source.languages) {
+      if (code) preferCandidates.push(code);
+    }
+  }
+
+  for (const value of preferCandidates) {
+    const normalized = String(value).trim().toLowerCase();
+    if (normalized) return normalized;
+  }
+
+  return undefined;
+}
+
+function languagesMatch(a = [], b = []) {
+  if (!Array.isArray(a) || !Array.isArray(b)) return false;
+  if (a.length !== b.length) return false;
+  return a.every((code, index) => b[index] === code);
+}
+
+function normalizeUserLanguage(doc = {}) {
+  const rawCountry = doc.country ? String(doc.country).trim().toUpperCase() : undefined;
+  const config = getCountryConfig(rawCountry);
+
+  let preferred = derivePreferredLanguage(doc);
+
+  if (config) {
+    if (!preferred || !config.languages.includes(preferred)) {
+      const fallback = config.default || config.languages[0] || DEFAULT_LANGUAGE;
+      preferred = String(fallback).trim().toLowerCase();
+    }
+  } else {
+    // If we do not support this country, drop it and compute based on preferred language only
+    if (rawCountry) {
+      doc.country = undefined;
+    }
+  }
+
+  let settings;
+  try {
+    settings = computeLanguageSettings({
+      country: config ? rawCountry : undefined,
+      preferredLanguage: preferred,
+    });
+  } catch (err) {
+    // As a final fallback, ignore country constraints and default to preferred / English
+    settings = computeLanguageSettings({ preferredLanguage: preferred });
+  }
+
+  const changed =
+    doc.country !== settings.country ||
+    doc.language !== settings.language ||
+    !languagesMatch(doc.languages, settings.languages);
+
+  doc.country = settings.country;
+  doc.language = settings.language;
+  doc.languages = settings.languages;
+
+  return { changed, settings };
+}
+
 module.exports = {
   LANGUAGE_CODES,
   DEFAULT_LANGUAGE,
   COUNTRY_LANGUAGE_MAP,
   getCountryConfig,
   computeLanguageSettings,
+  derivePreferredLanguage,
+  normalizeUserLanguage,
 };

@@ -2,7 +2,7 @@ const express = require("express");
 const bcrypt = require("bcrypt");
 const { OAuth2Client } = require("google-auth-library");
 const User = require("../models/user");
-const { computeLanguageSettings } = require("../lib/language");
+const { computeLanguageSettings, normalizeUserLanguage } = require("../lib/language");
 const { setSessionCookie, readSession, clearSessionCookie } = require("../lib/session");
 
 const router = express.Router();
@@ -194,6 +194,15 @@ router.get("/me", async (req, res) => {
 
   const user = await User.findById(sess.uid).select("-passwordHash");
   if (!user) return res.status(404).json({ message: "User not found" });
+
+  const { changed } = normalizeUserLanguage(user);
+  if (changed) {
+    try {
+      await user.save();
+    } catch (err) {
+      console.error("Failed to persist normalized language settings", err);
+    }
+  }
 
   res.json(user);
 });
