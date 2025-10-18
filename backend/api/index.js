@@ -38,6 +38,9 @@ const reminderRoute      = require('../routes/reminders');
 const roomsRoute         = require('../routes/rooms');
 const ttsRoute           = require('../routes/tts');
 const authRoute          = require('../routes/auth');
+const adminUsersRoute    = require("../routes/admin/users");
+//const adminMealsRoute    = require("../routes/admin/meals");
+//const adminAllergiesRoute = require("../routes/admin/allergies");
 
 // ─── App & Server setup ───────────────────────────────────────────────────────
 const app    = express();
@@ -155,6 +158,9 @@ app.use('/exercises',     exercisesRoute);
 app.use('/reminders',     reminderRoute);
 app.use('/rooms',         roomsRoute);
 app.use('/tts',           ttsRoute);
+app.use("/admin/users", adminUsersRoute);
+//app.use("/admin/meals", adminMealsRoute);
+//app.use("/admin/allergies", adminAllergiesRoute);
 
 app.get('/', (_req, res) => {
   res.send('API is live! 🚀');

@@ -188,6 +188,8 @@ router.post("/google", async (req, res) => {
 // ────────────────────────────────
 //  SESSION CHECK
 // ────────────────────────────────
+  const Admin = require("../models/admin");
+
 router.get("/me", async (req, res) => {
   const sess = readSession(req);
   if (!sess?.uid) return res.status(401).json({ message: "No session" });
@@ -195,6 +197,7 @@ router.get("/me", async (req, res) => {
   const user = await User.findById(sess.uid).select("-passwordHash");
   if (!user) return res.status(404).json({ message: "User not found" });
 
+  // Normalize language (keep your original logic)
   const { changed } = normalizeUserLanguage(user);
   if (changed) {
     try {
@@ -204,7 +207,16 @@ router.get("/me", async (req, res) => {
     }
   }
 
-  res.json(user);
+  // ✅ New: check admin table
+  let isAdmin = false;
+  try {
+    isAdmin = await Admin.exists({ userId: user._id });
+  } catch (err) {
+    console.error("Admin check failed:", err);
+  }
+
+  // Send user + admin flag
+  res.json({ ...user.toObject(), isAdmin });
 });
 
 // ────────────────────────────────

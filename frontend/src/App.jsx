@@ -9,6 +9,8 @@ import Register from "./components/Register";
 import { AppContext } from "./shared/AppContext";
 import { API, fetchJsonAuth } from "./shared/config";
 import i18n from "./shared/i18n";
+import AdminPanel from "./features/AdminPanel";
+import ProtectedAdminRoute from "./components/ProtectedAdminRoute";
 
 export default function App() {
   const [user, setUser] = useState(null);
@@ -93,19 +95,37 @@ export default function App() {
             setDarkMode,
           }}
         >
-          <div
-            className="w-full max-w-screen-lg mx-auto p-4 min-h-screen flex flex-col bg-white dark:bg-gray-900 dark:text-gray-100"
-            style={{ fontSize: "var(--font-size-base,22px)" }}
-          >
-            <Header />
-            <div
-              id="mainContent"
-              className="flex-1 flex flex-col md:flex-row gap-2 md:overflow-hidden overflow-y-auto"
-            >
-              <LeftSide />
-              <RightSide />
-            </div>
-          </div>
+          <Routes>
+            {/* 🏠 Default CareBell interface */}
+            <Route
+              path="/"
+              element={
+                <div
+                  className="w-full max-w-screen-lg mx-auto p-4 min-h-screen flex flex-col bg-white dark:bg-gray-900 dark:text-gray-100"
+                  style={{ fontSize: "var(--font-size-base,22px)" }}
+                >
+                  <Header />
+                  <div
+                    id="mainContent"
+                    className="flex-1 flex flex-col md:flex-row gap-2 md:overflow-hidden overflow-y-auto"
+                  >
+                    <LeftSide />
+                    <RightSide />
+                  </div>
+                </div>
+              }
+            />
+
+            {/* 🛡️ Admin Panel — protected */}
+            <Route
+              path="/admin"
+              element={
+                <ProtectedAdminRoute>
+                  <AdminPanel />
+                </ProtectedAdminRoute>
+              }
+            />
+          </Routes>
         </AppContext.Provider>
       )}
     </BrowserRouter>
