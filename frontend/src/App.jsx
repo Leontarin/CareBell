@@ -8,6 +8,7 @@ import Login from "./components/Login";
 import Register from "./components/Register";
 import { AppContext } from "./shared/AppContext";
 import { API, fetchJsonAuth } from "./shared/config";
+import i18n from "./shared/i18n";
 
 export default function App() {
   const [user, setUser] = useState(null);
@@ -34,6 +35,26 @@ export default function App() {
       }
     })();
   }, []);
+
+  useEffect(() => {
+    const preferred = (() => {
+      if (user?.language) return user.language;
+      if (Array.isArray(user?.languages)) {
+        for (const code of user.languages) {
+          if (code) return code;
+        }
+      }
+      return null;
+    })();
+
+    if (!preferred) return;
+
+    const normalized = String(preferred).trim().toLowerCase();
+    if (!normalized || i18n.language === normalized) return;
+
+    i18n.changeLanguage(normalized).catch(() => {});
+    localStorage.setItem("i18nextLng", normalized);
+  }, [user?.language, user?.languages]);
 
   const handleLoggedIn = async () => {
     try {

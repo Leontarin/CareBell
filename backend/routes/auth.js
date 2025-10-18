@@ -2,6 +2,7 @@ const express = require("express");
 const bcrypt = require("bcrypt");
 const { OAuth2Client } = require("google-auth-library");
 const User = require("../models/user");
+const { computeLanguageSettings, normalizeUserLanguage } = require("../lib/language");
 const { setSessionCookie, readSession, clearSessionCookie } = require("../lib/session");
 
 const router = express.Router();
@@ -12,7 +13,17 @@ const googleClient = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
 // ────────────────────────────────
 router.post("/register", async (req, res) => {
   try {
-    const { email, username, password, fullName, dateOfBirth, gender, phoneNumber } = req.body;
+    const {
+      email,
+      username,
+      password,
+      fullName,
+      dateOfBirth,
+      gender,
+      phoneNumber,
+      country,
+      language,
+    } = req.body;
 
     if (!fullName || !password || (!email && !username)) {
       return res.status(400).json({
@@ -51,6 +62,21 @@ router.post("/register", async (req, res) => {
 
     if (emailKey) userData.email = emailKey;       // only set if not empty
     if (usernameKey) userData.username = usernameKey; // only set if not empty
+
+    if (country || language) {
+      try {
+        const settings = computeLanguageSettings({
+          country,
+          preferredLanguage: language,
+        });
+
+        if (settings.country) userData.country = settings.country;
+        userData.language = settings.language;
+        userData.languages = settings.languages;
+      } catch (langErr) {
+        return res.status(400).json({ message: langErr.message });
+      }
+    }
 
     const user = await User.create(userData);
 
@@ -168,6 +194,15 @@ router.get("/me", async (req, res) => {
 
   const user = await User.findById(sess.uid).select("-passwordHash");
   if (!user) return res.status(404).json({ message: "User not found" });
+
+  const { changed } = normalizeUserLanguage(user);
+  if (changed) {
+    try {
+      await user.save();
+    } catch (err) {
+      console.error("Failed to persist normalized language settings", err);
+    }
+  }
 
   res.json(user);
 });
