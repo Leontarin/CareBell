@@ -1,5 +1,5 @@
 // src/components/Register.jsx
-import { useEffect, useMemo, useState, useRef } from "react";
+import { useMemo, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import logo from "../resources/Logo_Gold_Blau_Rubik.png";
@@ -7,108 +7,62 @@ import { API } from "../shared/config";
 import NotificationModal from "./NotificationModal";
 import TopRightControls from "./TopRightControls";
 
-/** ─────────────────────────── Config ─────────────────────────── **/
 const LANG_LABELS = { en: "English", de: "German", he: "Hebrew", fi: "Finnish" };
-
 const COUNTRIES = [
   { code: "DE", name: "Germany", languages: ["de", "en"], flag: "🇩🇪" },
   { code: "FI", name: "Finland", languages: ["fi", "en"], flag: "🇫🇮" },
   { code: "IL", name: "Israel", languages: ["he", "en"], flag: "🇮🇱" },
 ];
 
-/** Wheel-style picker with search */
 function CountryWheelPicker({ open, onClose, onSelect }) {
   const [query, setQuery] = useState("");
-  const containerRef = useRef(null);
-
   const list = useMemo(() => {
     if (!query.trim()) return COUNTRIES;
-    const q = query.trim().toLowerCase();
+    const q = query.toLowerCase();
     return COUNTRIES.filter(
       (c) => c.name.toLowerCase().includes(q) || c.code.toLowerCase().includes(q)
     );
   }, [query]);
-
-  useEffect(() => {
-    if (open) setQuery("");
-  }, [open]);
-
   if (!open) return null;
-
   return (
     <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4">
-      <div className="w-full max-w-md rounded-3xl bg-white dark:bg-gray-900 shadow-2xl p-4 md:p-6">
+      <div className="w-full max-w-md rounded-3xl bg-white dark:bg-gray-900 shadow-2xl p-4">
         <div className="flex items-center gap-2 mb-3">
           <ion-icon name="earth" className="text-2xl text-yellow-600" />
           <h3 className="text-xl font-bold">Select country</h3>
         </div>
-
-        {/* Search */}
-        <div className="relative mb-4">
-          <ion-icon
-            name="search"
-            className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 text-xl"
-          />
-          <input
-            autoFocus
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            placeholder="Search country…"
-            className="w-full rounded-2xl border-2 border-yellow-400 bg-white dark:bg-gray-800 pl-10 pr-3 py-2.5 focus:ring-4 focus:ring-yellow-500/30"
-          />
-        </div>
-
-        {/* Wheel list */}
-        <div
-          ref={containerRef}
-          className="
-            relative h-48 overflow-y-auto px-2
-            snap-y snap-mandatory
-            mask-[linear-gradient(to_bottom,transparent,black_20%,black_80%,transparent)]
-          "
-          style={{
-            scrollBehavior: "smooth",
-          }}
-        >
-
-          <ul className="space-y-2 py-6">
-            {list.length === 0 && (
-              <li className="text-center text-gray-500 py-8">No matches</li>
-            )}
-            {list.map((c) => (
-              <li
-                key={c.code}
-                className="
-                  snap-center
-                  cursor-pointer select-none
-                  rounded-xl border border-transparent hover:border-yellow-400
-                  bg-gray-50 dark:bg-gray-800/60
-                  px-4 py-2.5
-                  flex items-center gap-3
-                  justify-between
-                "
-                onClick={() => {
-                  onSelect(c);
-                  onClose();
-                }}
-              >
-                <div className="flex items-center gap-3">
-                  <span className="text-2xl">{c.flag}</span>
-                  <div>
-                    <div className="font-semibold">{c.name}</div>
-                    <div className="text-xs text-gray-500">{c.code}</div>
-                  </div>
+        <input
+          autoFocus
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          placeholder="Search..."
+          className="w-full rounded-2xl border-2 border-yellow-400 bg-white dark:bg-gray-800 text-gray-900 dark:text-white pl-10 pr-3 py-2.5 mb-4"
+        />
+        <ul className="space-y-2 max-h-48 overflow-y-auto">
+          {list.map((c) => (
+            <li
+              key={c.code}
+              className="rounded-xl border hover:border-yellow-400 bg-gray-50 dark:bg-gray-800/60 px-4 py-2.5 flex items-center justify-between cursor-pointer"
+              onClick={() => {
+                onSelect(c);
+                onClose();
+              }}
+            >
+              <div className="flex items-center gap-3">
+                <span className="text-2xl">{c.flag}</span>
+                <div>
+                  <div className="font-semibold">{c.name}</div>
+                  <div className="text-xs text-gray-500">{c.code}</div>
                 </div>
-                <ion-icon name="chevron-forward" className="text-xl text-gray-500" />
-              </li>
-            ))}
-          </ul>
-        </div>
-
+              </div>
+              <ion-icon name="chevron-forward" className="text-xl text-gray-500" />
+            </li>
+          ))}
+        </ul>
         <div className="mt-4 flex justify-end">
           <button
             onClick={onClose}
-            className="rounded-xl px-4 py-2 bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600"
+            className="rounded-xl px-4 py-2 bg-gray-200 hover:bg-gray-300"
           >
             Close
           </button>
@@ -119,420 +73,363 @@ function CountryWheelPicker({ open, onClose, onSelect }) {
 }
 
 export default function Register() {
-  const { t, i18n } = useTranslation();
+  const { t } = useTranslation();
   const navigate = useNavigate();
-
-  const [fullName, setFullName] = useState("");
+  const [step, setStep] = useState(1);
   const [email, setEmail] = useState("");
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
-  const [dateOfBirth, setDateOfBirth] = useState("");
-  const [gender, setGender] = useState("other");
-  const [phoneNumber, setPhoneNumber] = useState("");
-  const [submitting, setSubmitting] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
-
-  // New: country & language
-  const [country, setCountry] = useState(null); // {code, name, languages}
-  const [language, setLanguage] = useState(""); // "en" | "de" | "he" | "fi"
+  const [fullName, setFullName] = useState("");
+  const [gender, setGender] = useState("other");
+  const [phone, setPhone] = useState("");
+  const [country, setCountry] = useState(null);
+  const [language, setLanguage] = useState("");
   const [countryOpen, setCountryOpen] = useState(false);
-  const [showLanguageRow, setShowLanguageRow] = useState(false);
-
-  // Notification modal
+  const [submitting, setSubmitting] = useState(false);
   const [modalOpen, setModalOpen] = useState(false);
   const [modalMsg, setModalMsg] = useState("");
-  const [modalTitle, setModalTitle] = useState(t("Header.settings", { defaultValue: "Notice" }));
-  const showError = (
-    msg,
-    title = t("Header.settings", { defaultValue: "Please fix the following" })
-  ) => {
-    setModalTitle(title);
-    setModalMsg(msg);
-    setModalOpen(true);
-  };
+  const [modalTitle, setModalTitle] = useState("Notice");
 
-  // When a country is selected, prompt language (and reset previous choice)
-  useEffect(() => {
-    if (country) {
-      setLanguage("");
-      setShowLanguageRow(true);
-    } else {
-      setShowLanguageRow(false);
-    }
-  }, [country]);
+  const emailOk = (v) => /^\S+@\S+\.\S+$/.test(v.trim());
+  const usernameOk = (v) => v.trim().length >= 3;
+  const passwordOk = (v) => v.length >= 8;
+  const confirmOk = (p, c) => p === c && c.length > 0;
+  const phoneOk = (v) => v.trim().length >= 6;
+  const step1Valid = emailOk(email) || usernameOk(username);
+  const step2Valid = passwordOk(password) && confirmOk(password, confirmPassword);
+  const step3Valid = fullName.trim().length > 1 && phoneOk(phone);
+  const step4Valid = !!country?.code && !!language;
 
-  // Switch UI language on selection
-  useEffect(() => {
-    if (language && i18n.language !== language) {
-      i18n.changeLanguage(language).catch(() => {});
-    }
-  }, [language, i18n]);
-
-  const handleSubmit = async (e) => {
+  const submit = async (e) => {
     e.preventDefault();
-
-    // Aggregate validation
-    const missing = [];
-    if (!fullName.trim()) missing.push(t("Auth.Register.fullName", { defaultValue: "Full name" }));
-    if (!email.trim() && !username.trim())
-      missing.push(t("Auth.Register.emailOrUsername", { defaultValue: "Email or Username" }));
-    if (!password.trim()) missing.push(t("Auth.Register.password", { defaultValue: "Password" }));
-    if (!confirmPassword.trim())
-      missing.push(t("Auth.Register.verifyPassword", { defaultValue: "Verify password" }));
-    
-
-    if (missing.length) {
-      showError(
-        `${t("Auth.Register.missing", {
-          defaultValue: "Required field(s) missing:",
-        })}\n• ${missing.join("\n• ")}`
-      );
-      return;
-    }
-    if (password !== confirmPassword) {
-      showError(t("Auth.Register.noMatch", { defaultValue: "Passwords do not match." }));
-      return;
-    }
-
+    if (!step4Valid) return;
     setSubmitting(true);
     try {
-      const payload = {
-        fullName: fullName.trim(),
-        email: email.trim() || undefined,
-        username: username.trim() || undefined,
-        password,
-        dateOfBirth: dateOfBirth || undefined,
-        gender,
-        phoneNumber: phoneNumber.trim() || undefined,
-        // New fields:
-        country: country?.code, // "DE" | "FI" | "IL"
-        language: language || undefined, // "en" | "de" | "he" | "fi"
-      };
-
       const res = await fetch(`${API}/auth/register`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
-        body: JSON.stringify(payload),
+        body: JSON.stringify({
+          fullName,
+          email,
+          username,
+          password,
+          gender,
+          phoneNumber: phone,
+          country: country?.code,
+          language,
+        }),
       });
-
-      if (!res.ok) {
-        const data = await res.json().catch(() => ({}));
-        throw new Error(
-          data?.message || t("Auth.Register.failed", { defaultValue: "Registration failed" })
-        );
-      }
-
+      if (!res.ok) throw new Error("Registration failed");
       navigate("/");
     } catch (e) {
-      showError(
-        String(e?.message || e) ||
-          t("Auth.Register.failed", { defaultValue: "Registration failed" }),
-        t("Auth.Register.failed", { defaultValue: "Registration failed" })
-      );
+      setModalMsg(e.message);
+      setModalOpen(true);
     } finally {
       setSubmitting(false);
     }
   };
 
   return (
-    <div className="relative min-h-screen bg-gray-100 dark:bg-gray-900 flex items-center justify-center p-4 md:p-6">
-      {/* Top-right controls */}
+    <div
+  className="fixed inset-0 overflow-hidden bg-gray-100 dark:bg-gray-900 flex items-center justify-center"
+  style={{ overscrollBehavior: "none", WebkitOverflowScrolling: "auto" }}
+>
       <TopRightControls />
-
-      {/* Modal */}
       <NotificationModal
         open={modalOpen}
         title={modalTitle}
         message={modalMsg}
         onClose={() => setModalOpen(false)}
       />
-
-      {/* Country picker modal */}
       <CountryWheelPicker
         open={countryOpen}
         onClose={() => setCountryOpen(false)}
-        onSelect={(c) => setCountry(c)}
+        onSelect={(c) => {
+          setCountry(c);
+          setLanguage("");
+        }}
       />
 
-      <div className="w-full max-w-4xl">
-        <div className="flex flex-col items-center gap-3 mb-4 md:mb-5">
-          <img src={logo} alt="CareBells Logo" className="h-14 w-auto md:h-16 lg:h-20" draggable={false} />
-          <h1 className="text-3xl font-semibold text-blue-900 dark:text-gray-100 text-center md:text-[28px] lg:text-4xl">
-            {t("Auth.Register.header", { defaultValue: "Create your account" })}
+      <div className="w-full max-w-4xl h-fit">
+        <div className="flex flex-col items-center gap-2 mb-2">
+          <img src={logo} alt="CareBells Logo" className="h-20 w-auto" />
+          <h1 className="text-3xl font-bold text-blue-900 dark:text-gray-100 text-center">
+            Create your account
           </h1>
         </div>
 
-        <div className="rounded-3xl bg-white dark:bg-gray-800 shadow-2xl px-4 py-6 md:px-8 md:py-8 lg:px-12 lg:py-10 text-[17px]">
-          <h2 className="text-center text-3xl md:text-[28px] lg:text-4xl font-bold">
-            {t("Auth.Register.title", { defaultValue: "Register" })}
-          </h2>
+        <div className="rounded-3xl bg-white dark:bg-gray-800 shadow-2xl px-8 py-8 text-[17px]">
+          <div className="w-full bg-gray-200 rounded-full h-2 mb-4">
+            <div
+              className="bg-yellow-500 h-2 rounded-full transition-all duration-500"
+              style={{ width: `${(step / 4) * 100}%` }}
+            />
+          </div>
 
-          {/* FORM */}
-          <form
-            onSubmit={handleSubmit}
-            className="grid grid-cols-1 md:grid-cols-2 gap-x-8 lg:gap-x-12 gap-y-8 mt-6 items-start"
-          >
-            {/* Row 1: Username | Full name */}
-            <div>
-              <label htmlFor="username" className="block text-lg font-bold mb-2">
-                {t("Auth.Register.username", { defaultValue: "Username" })}{" "}
-                <span className="text-red-600">*</span>
-                <span className="ml-2 text-sm text-gray-500">
-                  ({t("Auth.Register.oneOf", { defaultValue: "one of Email or Username is required" })})
-                </span>
-              </label>
-              <div className="relative">
-                <span className="absolute inset-y-0 left-0 flex items-center pl-4 pointer-events-none text-gray-400 dark:text-gray-500">
-                  <ion-icon name="person" className="text-2xl lg:text-3xl"></ion-icon>
-                </span>
-                <input
-                  id="username"
-                  type="text"
-                  value={username}
-                  onChange={(e) => setUsername(e.target.value)}
-                  className="w-full text-lg rounded-2xl border-2 border-yellow-400 bg-white dark:bg-gray-900 pl-12 pr-4 py-3.5 focus:ring-4 focus:ring-yellow-500/30"
-                  placeholder={t("Auth.Register.usernamePh", { defaultValue: "yourusername" })}
-                  autoComplete="username"
-                />
-              </div>
-            </div>
+          <p className="text-center text-gray-700 dark:text-gray-300 mb-4">
+            Step {step} of 4
+          </p>
 
-            <div>
-              <label htmlFor="fullName" className="block text-lg font-bold mb-2">
-                {t("Auth.Register.fullName", { defaultValue: "Full name" })}{" "}
-                <span className="text-red-600">*</span>
-              </label>
-              <input
-                id="fullName"
-                type="text"
-                value={fullName}
-                onChange={(e) => setFullName(e.target.value)}
-                className="w-full text-lg rounded-2xl border-2 border-yellow-400 bg-white dark:bg-gray-900 pl-4 pr-4 py-3.5 focus:ring-4 focus:ring-yellow-500/30"
-                placeholder={t("Auth.Register.fullNamePh", { defaultValue: "Jane Doe" })}
-                required
-              />
-            </div>
-
-            {/* Row 2: Email | Date of birth */}
-            <div>
-              <label htmlFor="email" className="block text-lg font-bold mb-2">
-                {t("Auth.Register.email", { defaultValue: "Email" })}{" "}
-                <span className="text-red-600">*</span>
-                <span className="ml-2 text-sm text-gray-500">
-                  ({t("Auth.Register.oneOf", { defaultValue: "one of Email or Username is required" })})
-                </span>
-              </label>
-              <div className="relative">
-                <span className="absolute inset-y-0 left-0 flex items-center pl-4 pointer-events-none text-gray-400 dark:text-gray-500">
-                  <ion-icon name="mail" className="text-2xl lg:text-3xl"></ion-icon>
-                </span>
-                <input
+          <form onSubmit={submit} className="space-y-3">
+            {step === 1 && (
+              <div className="grid gap-4">
+                <p className="text-center font-bold text-xl text-gray-800 dark:text-gray-100 mb-1">
+                  Please provide either an email or a username to continue.
+                </p>
+                <LabeledInput
                   id="email"
+                  label="Email"
                   type="email"
-                  inputMode="email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  className="w-full text-lg rounded-2xl border-2 border-yellow-400 bg-white dark:bg-gray-900 pl-12 pr-4 py-3.5 focus:ring-4 focus:ring-yellow-500/30"
-                  placeholder={t("Auth.Register.emailPh", { defaultValue: "you@example.com" })}
+                  placeholder="you@example.com"
                   autoComplete="email"
                 />
-              </div>
-            </div>
-
-            <div>
-              <label htmlFor="dob" className="block text-lg font-bold mb-2">
-                {t("Auth.Register.dob", { defaultValue: "Date of birth" })}
-              </label>
-              <input
-                id="dob"
-                type="date"
-                value={dateOfBirth}
-                onChange={(e) => setDateOfBirth(e.target.value)}
-                className="w-full text-lg rounded-2xl border-2 border-yellow-400 bg-white dark:bg-gray-900 pl-4 pr-4 py-3.5 focus:ring-4 focus:ring-yellow-500/30"
-              />
-            </div>
-
-            {/* Row 3: Password | Gender */}
-            <div>
-              <label htmlFor="password" className="block text-lg font-bold mb-2">
-                {t("Auth.Register.password", { defaultValue: "Password" })}{" "}
-                <span className="text-red-600">*</span>
-              </label>
-              <div className="relative">
-                <span className="absolute inset-y-0 left-0 flex items-center pl-4 pointer-events-none text-gray-400 dark:text-gray-500">
-                  <ion-icon name="lock-closed" className="text-2xl lg:text-3xl"></ion-icon>
-                </span>
-                <input
-                  id="password"
-                  type={showPassword ? "text" : "password"}
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  className="w-full text-lg rounded-2xl border-2 border-yellow-400 bg-white dark:bg-gray-900 pl-12 pr-14 py-3.5 focus:ring-4 focus:ring-yellow-500/30"
-                  placeholder={t("Auth.Register.passwordPh", { defaultValue: "Enter a secure password" })}
-                  autoComplete="new-password"
-                  required
+                <LabeledInput
+                  id="username"
+                  label="Username"
+                  value={username}
+                  onChange={(e) => setUsername(e.target.value)}
+                  placeholder="yourusername"
+                  autoComplete="username"
                 />
-                <button
-                  type="button"
-                  onClick={() => setShowPassword((s) => !s)}
-                  className="absolute inset-y-0 right-0 px-4 flex items-center text-gray-600 dark:text-gray-300 hover:text-gray-800 dark:hover:text-white"
-                  aria-label={
-                    showPassword
-                      ? t("Auth.Register.hide", { defaultValue: "Hide password" })
-                      : t("Auth.Register.show", { defaultValue: "Show password" })
-                  }
-                >
-                  <ion-icon name={showPassword ? "eye-off" : "eye"} className="text-xl lg:text-2xl"></ion-icon>
-                </button>
-              </div>
-            </div>
-
-            <div>
-              <label htmlFor="gender" className="block text-lg font-bold mb-2">
-                {t("Auth.Register.gender", { defaultValue: "Gender" })}
-              </label>
-              <select
-                id="gender"
-                value={gender}
-                onChange={(e) => setGender(e.target.value)}
-                className="w-full text-lg rounded-2xl border-2 border-yellow-400 bg-white dark:bg-gray-900 pl-4 pr-4 py-3.5 focus:ring-4 focus:ring-yellow-500/30"
-              >
-                <option value="other">{t("Auth.Register.genderOther", { defaultValue: "Other" })}</option>
-                <option value="male">{t("Auth.Register.genderMale", { defaultValue: "Male" })}</option>
-                <option value="female">{t("Auth.Register.genderFemale", { defaultValue: "Female" })}</option>
-              </select>
-            </div>
-
-            {/* Row 4: Verify Password | Phone */}
-            <div>
-              <label htmlFor="confirmPassword" className="block text-lg font-bold mb-2">
-                {t("Auth.Register.verifyPassword", { defaultValue: "Verify password" })}{" "}
-                <span className="text-red-600">*</span>
-              </label>
-              <div className="relative">
-                <span className="absolute inset-y-0 left-0 flex items-center pl-4 pointer-events-none text-gray-400 dark:text-gray-500">
-                  <ion-icon name="shield-checkmark" className="text-2xl lg:text-3xl"></ion-icon>
-                </span>
-                <input
-                  id="confirmPassword"
-                  type={showConfirm ? "text" : "password"}
-                  value={confirmPassword}
-                  onChange={(e) => setConfirmPassword(e.target.value)}
-                  className="w-full text-lg rounded-2xl border-2 border-yellow-400 bg-white dark:bg-gray-900 pl-12 pr-14 py-3.5 focus:ring-4 focus:ring-yellow-500/30"
-                  placeholder={t("Auth.Register.verifyPasswordPh", { defaultValue: "Re-enter your password" })}
-                  autoComplete="new-password"
-                  required
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowConfirm((s) => !s)}
-                  className="absolute inset-y-0 right-0 px-4 flex items-center text-gray-600 dark:text-gray-300 hover:text-gray-800 dark:hover:text-white"
-                  aria-label={
-                    showConfirm
-                      ? t("Auth.Register.hide", { defaultValue: "Hide" })
-                      : t("Auth.Register.show", { defaultValue: "Show" })
-                  }
-                >
-                  <ion-icon name={showConfirm ? "eye-off" : "eye"} className="text-xl lg:text-2xl"></ion-icon>
-                </button>
-              </div>
-            </div>
-
-            <div>
-              <label htmlFor="phone" className="block text-lg font-bold mb-2">
-                {t("Auth.Register.phone", { defaultValue: "Phone number" })}
-              </label>
-              <input
-                id="phone"
-                type="tel"
-                value={phoneNumber}
-                onChange={(e) => setPhoneNumber(e.target.value)}
-                className="w-full text-lg rounded-2xl border-2 border-yellow-400 bg-white dark:bg-gray-900 pl-4 pr-4 py-3.5 focus:ring-4 focus:ring-yellow-500/30"
-                placeholder={t("Auth.Register.phonePh", { defaultValue: "555-123-4567" })}
-                autoComplete="tel"
-              />
-            </div>
-
-            {/* New Row: Country (wheel picker trigger) */}
-            <div className="md:col-span-2">
-              <label className="block text-lg font-bold mb-2">
-                Country
-              </label>
-              <button
-                type="button"
-                onClick={() => setCountryOpen(true)}
-                className="w-full text-left text-lg rounded-2xl border-2 border-yellow-400 bg-white dark:bg-gray-900 px-4 py-3.5 focus:ring-4 focus:ring-yellow-500/30 flex items-center justify-between"
-              >
-                <span className="flex items-center gap-3">
-                  <ion-icon name="earth" className="text-2xl text-gray-600 dark:text-gray-300"></ion-icon>
-                  {country ? (
-                    <span className="flex items-center gap-2">
-                      <span className="text-2xl">{country.flag}</span>
-                      <span className="font-semibold">{country.name}</span>
-                      <span className="text-sm text-gray-500">({country.code})</span>
-                    </span>
-                  ) : (
-                    <span className="text-gray-500">Select country</span>
-                  )}
-                </span>
-                <ion-icon name="chevron-down" className="text-xl"></ion-icon>
-              </button>
-            </div>
-
-            {/* New Row: Language (appears only after country) */}
-            {showLanguageRow && (
-              <div className="md:col-span-2">
-                <label className="block text-lg font-bold mb-2">
-                  Preferred language (based on country)
-                </label>
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                  {country?.languages.map((code) => (
-                    <button
-                      type="button"
-                      key={code}
-                      onClick={() => setLanguage(code)}
-                      className={[
-                        "rounded-2xl border-2 px-4 py-3 font-semibold",
-                        language === code
-                          ? "border-yellow-500 bg-yellow-50 dark:bg-yellow-900/20"
-                          : "border-yellow-400 bg-white dark:bg-gray-900",
-                      ].join(" ")}
-                      aria-pressed={language === code}
-                    >
-                      {LANG_LABELS[code]}
-                    </button>
-                  ))}
+                <div className="flex justify-end pt-1">
+                  <button
+                    type="button"
+                    disabled={!step1Valid}
+                    onClick={() => setStep(2)}
+                    className={`px-6 py-3 rounded-xl text-white font-bold ${
+                      step1Valid ? "bg-yellow-600 hover:bg-yellow-700" : "bg-gray-300"
+                    }`}
+                  >
+                    Next →
+                  </button>
                 </div>
-                {!language && (
-                  <p className="text-sm text-red-600 mt-2">Please choose a language.</p>
-                )}
               </div>
             )}
 
-            {/* Actions */}
-            <div className="md:col-span-2 flex flex-col items-center gap-4 mt-2">
-              <button
-                type="submit"
-                disabled={submitting}
-                className="w-full md:w-2/3 lg:w-1/2 rounded-2xl bg-yellow-600 hover:bg-yellow-500 disabled:opacity-60 text-white py-3.5 text-xl font-extrabold"
-              >
-                {submitting
-                  ? t("Auth.Register.creating", { defaultValue: "Creating..." })
-                  : t("Auth.Register.create", { defaultValue: "Create account" })}
-              </button>
-              <p className="text-center text-gray-700 dark:text-gray-300">
-                {t("Auth.Register.haveAccount", { defaultValue: "Already have an account?" })}{" "}
-                <Link to="/" className="text-blue-600 dark:text-blue-400 font-bold hover:underline">
-                  {t("Auth.Register.login", { defaultValue: "Login" })}
-                </Link>
-              </p>
-            </div>
+            {step === 2 && (
+              <div className="grid gap-4">
+                <PasswordRow
+                  id="password"
+                  label="Password *"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  show={showPassword}
+                  setShow={setShowPassword}
+                  placeholder="At least 8 characters"
+                />
+                <PasswordRow
+                  id="confirmPassword"
+                  label="Verify password *"
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  show={showConfirm}
+                  setShow={setShowConfirm}
+                  placeholder="Re-enter your password"
+                />
+                <div className="flex justify-between pt-1">
+                  <button
+                    onClick={() => setStep(1)}
+                    type="button"
+                    className="px-6 py-3 rounded-xl bg-gray-200 hover:bg-gray-300 text-gray-800 font-semibold"
+                  >
+                    ← Back
+                  </button>
+                  <button
+                    onClick={() => setStep(3)}
+                    disabled={!step2Valid}
+                    type="button"
+                    className={`px-6 py-3 rounded-xl text-white font-bold ${
+                      step2Valid ? "bg-yellow-600 hover:bg-yellow-700" : "bg-gray-300"
+                    }`}
+                  >
+                    Next →
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {step === 3 && (
+              <div className="grid gap-4">
+                <LabeledInput
+                  id="fullName"
+                  label="Full name *"
+                  value={fullName}
+                  onChange={(e) => setFullName(e.target.value)}
+                  placeholder="Jane Doe"
+                />
+                <div>
+                  <label className="block text-2xl font-bold mb-1">Gender *</label>
+                  <select
+                    value={gender}
+                    onChange={(e) => setGender(e.target.value)}
+                    className="w-full text-lg rounded-2xl border-2 border-yellow-400 px-4 py-3 bg-white dark:bg-gray-900 dark:text-white"
+                  >
+                    <option value="other">Other</option>
+                    <option value="male">Male</option>
+                    <option value="female">Female</option>
+                  </select>
+                </div>
+                <LabeledInput
+                  id="phone"
+                  label="Phone number *"
+                  type="tel"
+                  value={phone}
+                  onChange={(e) => setPhone(e.target.value)}
+                  placeholder="555-123-4567"
+                  autoComplete="tel"
+                />
+                <div className="flex justify-between pt-1">
+                  <button
+                    onClick={() => setStep(2)}
+                    type="button"
+                    className="px-6 py-3 rounded-xl bg-gray-200 hover:bg-gray-300 text-gray-800 font-semibold"
+                  >
+                    ← Back
+                  </button>
+                  <button
+                    onClick={() => setStep(4)}
+                    disabled={!step3Valid}
+                    type="button"
+                    className={`px-6 py-3 rounded-xl text-white font-bold ${
+                      step3Valid ? "bg-yellow-600 hover:bg-yellow-700" : "bg-gray-300"
+                    }`}
+                  >
+                    Next →
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {step === 4 && (
+              <div className="grid gap-4">
+                <div>
+                  <label className="block text-lg font-bold mb-1">Country *</label>
+                  <button
+                    type="button"
+                    onClick={() => setCountryOpen(true)}
+                    className="w-full text-left text-lg rounded-2xl border-2 border-yellow-400 px-4 py-3 flex items-center justify-between bg-white dark:bg-gray-900 dark:text-white"
+                  >
+                    <span>
+                      {country ? `${country.flag} ${country.name}` : "Select country"}
+                    </span>
+                    <ion-icon name="chevron-down" className="text-xl"></ion-icon>
+                  </button>
+                </div>
+                <div>
+                  <label className="block text-lg font-bold mb-1">
+                    Preferred language *
+                  </label>
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                    {(country?.languages || []).map((code) => (
+                      <button
+                        key={code}
+                        onClick={() => setLanguage(code)}
+                        type="button"
+                        className={`rounded-2xl border-2 px-4 py-3 font-semibold ${
+                          language === code
+                            ? "border-yellow-500 bg-yellow-50 dark:text-black"
+                            : "border-yellow-400 bg-white dark:text-black"
+                        }`}
+                      >
+                        {LANG_LABELS[code]}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+                <div className="flex justify-between pt-1">
+                  <button
+                    onClick={() => setStep(3)}
+                    type="button"
+                    className="px-6 py-3 rounded-xl bg-gray-200 hover:bg-gray-300 text-gray-800 font-semibold"
+                  >
+                    ← Back
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={!step4Valid || submitting}
+                    className={`px-6 py-3 rounded-xl text-white font-bold ${
+                      step4Valid && !submitting
+                        ? "bg-yellow-600 hover:bg-yellow-700"
+                        : "bg-gray-300"
+                    }`}
+                  >
+                    {submitting ? "Creating..." : "Create account"}
+                  </button>
+                </div>
+              </div>
+            )}
           </form>
+
+          {/* ─────────── Already have an account line ─────────── */}
+          <div className="mt-6 text-center">
+            <p className="text-gray-700 dark:text-gray-300">
+              Already have an account?{" "}
+              <Link
+                to="/.."
+                className="text-blue-700 dark:text-blue-400 underline font-bold hover:text-blue-800 dark:hover:text-blue-200"
+              >
+                Login
+              </Link>
+            </p>
+          </div>
         </div>
       </div>
+    </div>
+  );
+}
+
+function LabeledInput({ id, label, type = "text", placeholder = "", ...props }) {
+  return (
+    <div>
+      <label htmlFor={id} className="block text-2xl font-bold mb-1">
+        {label}
+      </label>
+      <input
+        id={id}
+        type={type}
+        placeholder={placeholder}
+        {...props}
+        className="w-full text-lg rounded-2xl border-2 border-yellow-400 px-4 py-3 bg-white dark:bg-gray-900 dark:text-white"
+      />
+    </div>
+  );
+}
+
+function PasswordRow({ id, label, value, onChange, show, setShow, placeholder }) {
+  const isInvalid = id === "password" && value.length > 0 && value.length < 8;
+  return (
+    <div>
+      <label htmlFor={id} className="block text-2xl font-bold mb-1">
+        {label}
+      </label>
+      <div className="relative">
+        <input
+          id={id}
+          type={show ? "text" : "password"}
+          value={value}
+          onChange={onChange}
+          placeholder={placeholder}
+          className="w-full text-xl rounded-2xl border-2 border-yellow-400 pl-4 pr-12 py-3 bg-white dark:bg-gray-900 dark:text-white"
+        />
+        <button
+          type="button"
+          onClick={() => setShow((s) => !s)}
+          className="absolute inset-y-0 right-0 px-4 text-gray-600 hover:text-gray-800"
+        >
+          <ion-icon name={show ? "eye-off" : "eye"} className="text-xl"></ion-icon>
+        </button>
+      </div>
+      {isInvalid && (
+        <p className="mt-3 text-yellow-600 font-bold text-xl text-center">
+          Password must be at least 8 characters long.
+        </p>
+      )}
     </div>
   );
 }
