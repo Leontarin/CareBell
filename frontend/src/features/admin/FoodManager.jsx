@@ -6,6 +6,11 @@ import AddFoodModal from "./AddFoodModal";
 import { AVAILABLE_LANGUAGES, LANG_LABELS } from "../../shared/constants";
 
 export default function FoodManager() {
+  const toFoodKey = (food) => {
+    const raw = food?.id ?? food?._id;
+    return raw != null ? raw.toString() : "";
+  };
+
   const [foods, setFoods] = useState([]);
   const [editingId, setEditingId] = useState(null);
   const [editForm, setEditForm] = useState({});
@@ -58,7 +63,8 @@ export default function FoodManager() {
      Editing setup
   ─────────────────────────────── */
   const startEdit = (food) => {
-    setEditingId(food._id);
+    const key = toFoodKey(food);
+    setEditingId(key);
     const t = food.translations || {};
     setTranslations(
       Object.fromEntries(
@@ -264,33 +270,36 @@ export default function FoodManager() {
             </tr>
           </thead>
           <tbody>
-            {foods.map((f) => (
-              <tr
-                key={f._id}
-                className="border-t border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-800"
-              >
-                <td className="p-2">
-                  <input
-                    type="checkbox"
-                    checked={selected.has(f._id)}
-                    onChange={() => toggleSelect(f._id)}
-                  />
-                </td>
-                <td className="p-2 text-center">
-                  {f.imageURL ? (
-                    <img
-                      src={`${API}${f.imageURL}`}
-                      alt="food"
-                      className="w-12 h-12 object-cover rounded mx-auto"
+            {foods.map((f) => {
+              const rowKey = toFoodKey(f);
+              const imagePath = f.imageURL || f.publicImageURL;
+              return (
+                <tr
+                  key={rowKey || f._id}
+                  className="border-t border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-800"
+                >
+                  <td className="p-2">
+                    <input
+                      type="checkbox"
+                      checked={selected.has(rowKey)}
+                      onChange={() => toggleSelect(rowKey)}
                     />
-                  ) : (
-                    <span className="text-gray-400">no image</span>
-                  )}
-                </td>
-                <td className="p-2">{f.barcode}</td>
+                  </td>
+                  <td className="p-2 text-center">
+                    {imagePath ? (
+                      <img
+                        src={`${API}${imagePath}`}
+                        alt="food"
+                        className="w-12 h-12 object-cover rounded mx-auto"
+                      />
+                    ) : (
+                      <span className="text-gray-400">no image</span>
+                    )}
+                  </td>
+                  <td className="p-2">{f.barcode}</td>
 
-                {editingId === f._id ? (
-                  <>
+                  {editingId === rowKey ? (
+                    <>
                     {/* 🈯 Language Tabs */}
                     <td colSpan={3} className="p-2 align-top">
                       <div className="mb-2 flex gap-2 border-b border-gray-300 dark:border-gray-600">
@@ -376,7 +385,7 @@ export default function FoodManager() {
                     </td>
                     <td className="p-2 text-center">
                       <button
-                        onClick={() => saveEdit(f._id)}
+                        onClick={() => saveEdit(rowKey)}
                         className="px-2 py-1 bg-green-600 text-white rounded mr-1"
                       >
                         Save
@@ -445,7 +454,7 @@ export default function FoodManager() {
                       <button
                         onClick={async () => {
                           if (confirm("Delete this food?")) {
-                            await fetch(`${API}/admin/foods/${f._id}`, {
+                            await fetch(`${API}/admin/foods/${rowKey}`, {
                               method: "DELETE",
                               credentials: "include",
                             });
@@ -460,7 +469,8 @@ export default function FoodManager() {
                   </>
                 )}
               </tr>
-            ))}
+              );
+            })}
           </tbody>
         </table>
       </div>

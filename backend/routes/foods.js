@@ -64,7 +64,8 @@ function localizeFood(food, lang = "en", includeFull = false) {
   if (f.image && f.image.data) delete f.image;
 
   const imageId = f.id ?? f._id;
-  f.imageURL = imageId ? `/foods/${imageId}/image` : null;
+  const stringifiedId = imageId != null ? imageId.toString() : null;
+  f.imageURL = stringifiedId ? `/foods/${stringifiedId}/image` : null;
   return f;
 }
 

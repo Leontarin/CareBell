@@ -142,7 +142,9 @@ function serializeFood(food) {
   }
 
   const imageId = obj.id ?? obj._id;
-  obj.imageURL = imageId ? `/foods/${imageId}/image` : null;
+  const stringifiedId = imageId != null ? imageId.toString() : null;
+  obj.imageURL = stringifiedId ? `/admin/foods/${stringifiedId}/image` : null;
+  obj.publicImageURL = stringifiedId ? `/foods/${stringifiedId}/image` : null;
 
   return obj;
 }

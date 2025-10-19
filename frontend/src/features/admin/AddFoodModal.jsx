@@ -30,8 +30,28 @@ export default function AddFoodModal({ onClose }) {
       );
       if (file) fd.append("image", file);
 
-      // append translations generically
-      for (const [lang, { dish, description, category }] of Object.entries(translations)) {
+      const translationPayload = Object.fromEntries(
+        Object.entries(translations).map(([lang, values]) => [
+          lang,
+          {
+            dish: values?.dish?.trim() || "",
+            description: values?.description?.trim() || "",
+            category: values?.category?.trim() || "",
+          },
+        ])
+      );
+
+      if (!translationPayload.en) {
+        translationPayload.en = { dish: "", description: "", category: "" };
+      }
+
+      if (!translationPayload.en.category && form.category) {
+        translationPayload.en.category = form.category.trim();
+      }
+
+      for (const [lang, { dish, description, category }] of Object.entries(
+        translationPayload
+      )) {
         if (dish) fd.append(`dish_${lang}`, dish);
         if (description) fd.append(`description_${lang}`, description);
         if (category) fd.append(`category_${lang}`, category);
@@ -90,6 +110,12 @@ export default function AddFoodModal({ onClose }) {
             onChange={(e) => updateTranslation(activeLang, "dish", e.target.value)}
             className="w-full px-3 py-2 rounded border dark:bg-gray-700"
             required={activeLang === "en"}
+          />
+          <input
+            placeholder={`Category (${LANG_LABELS[activeLang]})`}
+            value={translations[activeLang]?.category || ""}
+            onChange={(e) => updateTranslation(activeLang, "category", e.target.value)}
+            className="w-full px-3 py-2 rounded border dark:bg-gray-700"
           />
           <textarea
             placeholder={`Description (${LANG_LABELS[activeLang]})`}
