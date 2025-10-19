@@ -151,8 +151,6 @@ app.use('/rooms',         roomsRoute);
 app.use('/tts',           ttsRoute);
 app.use("/admin/users", adminUsersRoute);
 app.use("/admin/foods", adminFoodsRoute);
-app.use("/admin/users", adminUsersRoute);
-app.use("/admin/foods", adminFoodsRoute);
 
 
 app.get('/', (_req, res) => {

@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from "react";
 import { API, NEWS_REGIONS } from "../shared/config";
 import { useTranslation } from "react-i18next";
-import { playTts, playSmartTts } from "../shared/tts";
+import { playTts } from "../shared/tts";
 
 export default function News() {
   const { t, i18n } = useTranslation();

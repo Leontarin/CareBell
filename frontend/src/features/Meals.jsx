@@ -49,7 +49,7 @@ export default function Meals() {
     setBarcode(code);
     setLoading(true);
     try {
-      const res = await fetch(`${API}/${code}`);
+      const res = await fetch(`${API}/foods/${code}`);
       if (!res.ok) {
         if (res.status === 404) throw new Error("404");
         throw new Error(`Server ${res.status}`);
@@ -135,20 +135,30 @@ export default function Meals() {
 
   const createFoodDescription = (item) => {
     const dish = getLocalizedField(item, "dish");
-    const description = getLocalizedField(item, "description");
-    const diabeticText = item.diabeticFriendly
-      ? t("Meals.diabeticFriendlyYes")
-      : t("Meals.diabeticFriendlyNo");
+    const description = getLocalizedField(item, "description") || t("Meals.noDescription");
+    const diabeticText = `${t("Meals.diabeticFriendlyLabel")} ${
+      item.diabeticFriendly
+        ? t("Meals.diabeticFriendlyYes")
+        : t("Meals.diabeticFriendlyNo")
+    }`;
 
-    // build text for TTS — now uses localized allergen names
-    let desc = `${dish}. <break time='300ms'/> ${description || t("Meals.noDescription")}. <break time='300ms'/> `;
-    desc += `${diabeticText}. `;
+    const sentences = [];
+    const pushSentence = (value) => {
+      const text = (value || "").toString().trim();
+      if (!text) return;
+      sentences.push(text.replace(/[.?!]+$/u, ""));
+    };
+
+    pushSentence(dish);
+    pushSentence(description);
+    pushSentence(diabeticText);
 
     const allergens = trAllergens(item.allergens || []).join(", ");
     if (allergens) {
-      desc += `<break time='300ms'/> ${t("Meals.allergensList")} ${allergens}. `;
+      pushSentence(`${t("Meals.LegendHeadings.Allergens")}: ${allergens}`);
     }
-    return desc;
+
+    return sentences.length ? `${sentences.join(". ")}.` : "";
   };
 
   const backToList = () => {
@@ -227,9 +237,9 @@ export default function Meals() {
       {/* SINGLE MEAL VIEW */}
       {meal && (
         <div className="bg-green-50 p-8 mt-8 rounded-lg border-l-8 border-green-500 shadow-lg dark:border-yellow-400 dark:bg-slate-700">
-          {meal.id && (
+          {meal.imageURL && (
             <img
-              src={`${API}/foods/${meal.id}/image`}
+              src={`${API}${meal.imageURL}`}
               alt={getLocalizedField(meal, "dish")}
               className="w-full max-w-md mx-auto rounded-lg shadow-md mb-6"
             />

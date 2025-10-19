@@ -20,9 +20,32 @@ function safeFoodQuery(idOrString) {
 /* ─────────────────────────────────────────────
    Helper to localize a food doc
 ────────────────────────────────────────────── */
+function toPlainTranslations(value) {
+  if (!value) return undefined;
+
+  const entries = value instanceof Map ? [...value.entries()] : Object.entries(value);
+  if (!entries.length) return undefined;
+
+  const result = {};
+  for (const [lang, raw] of entries) {
+    if (!lang) continue;
+    const plain =
+      raw && typeof raw === "object" && typeof raw.toObject === "function"
+        ? raw.toObject()
+        : { ...(raw || {}) };
+    result[lang] = {
+      dish: plain.dish || "",
+      description: plain.description || "",
+      category: plain.category || "",
+    };
+  }
+
+  return result;
+}
+
 function localizeFood(food, lang = "en", includeFull = false) {
   const f = food.toObject ? food.toObject() : { ...food };
-  const tr = f.translations || {};
+  const tr = toPlainTranslations(f.translations) || {};
 
   const normalizedLang = AVAILABLE_LANGUAGES.includes(lang) ? lang : "en";
   const t = tr[normalizedLang] || tr.en || {};
@@ -30,12 +53,18 @@ function localizeFood(food, lang = "en", includeFull = false) {
   // flatten localized values for easy access
   f.dish = t.dish || f.dish;
   f.description = t.description || f.description;
+  f.category = t.category || f.category;
 
-  if (!includeFull) delete f.translations;
-  if (f.image && f.image.data) delete f.image; // avoid blobs
+  if (!includeFull) {
+    delete f.translations;
+  } else {
+    f.translations = tr;
+  }
 
-  // add public image URL if applicable
-  if (f._id || f.id) f.imageURL = `/foods/${f._id || f.id}/image`;
+  if (f.image && f.image.data) delete f.image;
+
+  const imageId = f.id ?? f._id;
+  f.imageURL = imageId ? `/foods/${imageId}/image` : null;
   return f;
 }
 

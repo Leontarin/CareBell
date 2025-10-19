@@ -17,6 +17,15 @@ const FLAG_TO_ENTRY = Object.fromEntries(
   Object.entries(ENTRY_TO_FLAG).map(([entry, flag]) => [flag, entry])
 );
 
+function isTruthy(value) {
+  if (typeof value === "boolean") return value;
+  if (typeof value === "number") return value === 1;
+  if (typeof value === "string") {
+    return /^(1|true|yes|on)$/i.test(value.trim());
+  }
+  return false;
+}
+
 // Derive boolean flags from allergen names (used by Meals/UI)
 function deriveFlagsFromAllergens(allergens = []) {
   const flags = { R:false,S:false,G:false,M:false,A:false,W:false,K:false,Y:false };
@@ -30,8 +39,13 @@ function deriveFlagsFromAllergens(allergens = []) {
 // Derive allergen list from boolean flags (used by Admin creation/update)
 function deriveAllergensFromFlags(flags = {}) {
   return Object.entries(FLAG_TO_ENTRY)
-    .filter(([flag]) => flags[`contains_${flag}`])
-    .map(([_, label]) => label);
+    .filter(([flag]) => {
+      const containsKey = `contains_${flag}`;
+      if (containsKey in flags) return isTruthy(flags[containsKey]);
+      if (flag in flags) return isTruthy(flags[flag]);
+      return false;
+    })
+    .map(([, label]) => label);
 }
 
 module.exports = {

@@ -1,4 +1,5 @@
 const LANGUAGE_CODES = ["en", "de", "fi", "he"];
+const AVAILABLE_LANGUAGES = Object.freeze([...LANGUAGE_CODES]);
 const DEFAULT_LANGUAGE = "en";
 
 const COUNTRY_LANGUAGE_MAP = {
@@ -152,6 +153,7 @@ function normalizeUserLanguage(doc = {}) {
 }
 
 module.exports = {
+  AVAILABLE_LANGUAGES,
   LANGUAGE_CODES,
   DEFAULT_LANGUAGE,
   COUNTRY_LANGUAGE_MAP,

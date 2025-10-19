@@ -11,7 +11,9 @@ export default function AddFoodModal({ onClose }) {
     diabeticFriendly: false,
   });
   const [translations, setTranslations] = useState(
-    Object.fromEntries(AVAILABLE_LANGUAGES.map((l) => [l, { dish: "", description: "" }]))
+    Object.fromEntries(
+      AVAILABLE_LANGUAGES.map((l) => [l, { dish: "", description: "", category: "" }])
+    )
   );
   const [activeLang, setActiveLang] = useState("en");
   const [file, setFile] = useState(null);
@@ -29,9 +31,10 @@ export default function AddFoodModal({ onClose }) {
       if (file) fd.append("image", file);
 
       // append translations generically
-      for (const [lang, { dish, description }] of Object.entries(translations)) {
+      for (const [lang, { dish, description, category }] of Object.entries(translations)) {
         if (dish) fd.append(`dish_${lang}`, dish);
         if (description) fd.append(`description_${lang}`, description);
+        if (category) fd.append(`category_${lang}`, category);
       }
 
       const res = await fetch(`${API}/admin/foods`, {
