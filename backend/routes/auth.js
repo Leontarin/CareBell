@@ -82,7 +82,7 @@ router.post("/register", async (req, res) => {
 
     console.log(`✅ Registered new user: ${user.username || user.email}`);
 
-    setSessionCookie(res, { uid: user._id.toString(), email: user.email });
+    setSessionCookie(res, { uid: user.id, email: user.email });
     res.status(201).end();
   } catch (err) {
     console.error("❌ Registration error:", err);
@@ -115,7 +115,7 @@ router.post("/login", async (req, res) => {
 
     if (!user.passwordHash) {
       if (password === "") {
-        setSessionCookie(res, { uid: user._id.toString(), email: user.email });
+        setSessionCookie(res, { uid: user.id, email: user.email });
         await User.updateOne({ _id: user._id }, { $set: { lastLoginAt: new Date() } });
         return res.status(204).end();
       }
@@ -127,7 +127,7 @@ router.post("/login", async (req, res) => {
     const ok = await bcrypt.compare(password, user.passwordHash);
     if (!ok) return res.status(401).json({ message: "Invalid credentials" });
 
-    setSessionCookie(res, { uid: user._id.toString(), email: user.email });
+    setSessionCookie(res, { uid: user.id, email: user.email });
     await User.updateOne({ _id: user._id }, { $set: { lastLoginAt: new Date() } });
     res.status(204).end();
   } catch (err) {
@@ -177,7 +177,7 @@ router.post("/google", async (req, res) => {
       );
     }
 
-    setSessionCookie(res, { uid: user._id.toString(), email: user.email });
+    setSessionCookie(res, { uid: user.id, email: user.email });
     res.status(204).end();
   } catch (err) {
     console.error("❌ Google auth error:", err);
@@ -188,25 +188,43 @@ router.post("/google", async (req, res) => {
 // ────────────────────────────────
 //  SESSION CHECK
 // ────────────────────────────────
+const Admin = require("../models/admin");
+
 router.get("/me", async (req, res) => {
   const sess = readSession(req);
   if (!sess?.uid) return res.status(401).json({ message: "No session" });
 
-  const user = await User.findById(sess.uid).select("-passwordHash");
-  if (!user) return res.status(404).json({ message: "User not found" });
+  try {
+    // Use your safe lookup function if available
+    const user = await User.findOne({ id: sess.uid }).select("-passwordHash");
+    if (!user) return res.status(404).json({ message: "User not found" });
 
-  const { changed } = normalizeUserLanguage(user);
-  if (changed) {
-    try {
-      await user.save();
-    } catch (err) {
-      console.error("Failed to persist normalized language settings", err);
+    // Normalize language if needed
+    const { changed } = normalizeUserLanguage(user);
+    if (changed) {
+      try {
+        await user.save();
+      } catch (err) {
+        console.error("Failed to persist normalized language settings", err);
+      }
     }
+
+    // ✅ Admin check (only by ObjectId)
+    let isAdmin = false;
+    try {
+      if (user._id) {
+        isAdmin = !!(await Admin.exists({ userId: user._id }));
+      }
+    } catch (err) {
+      console.error("Admin check failed:", err);
+    }
+
+    res.json({ ...user.toObject(), isAdmin });
+  } catch (err) {
+    console.error("❌ /me error:", err);
+    res.status(500).json({ message: "Internal error" });
   }
-
-  res.json(user);
 });
-
 // ────────────────────────────────
 //  LOGOUT
 // ────────────────────────────────

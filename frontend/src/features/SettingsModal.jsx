@@ -4,15 +4,18 @@ import {
   FaVolumeMute,
   FaVolumeUp,
   FaRunning,
-  FaTachometerAlt
+  FaTachometerAlt,
+  FaUserShield
 } from "react-icons/fa";
+import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { AppContext } from "../shared/AppContext";
 import { API } from "../shared/config";
 
 export default function SettingsModal({ onClose }) {
-  const { t, i18n } = useTranslation();
-  const { user, setUser, darkMode, setDarkMode } = useContext(AppContext);
+const { t, i18n } = useTranslation();
+const navigate = useNavigate();
+const { user, setUser, darkMode, setDarkMode } = useContext(AppContext);
 
   const [scale, setScale] = useState(parseFloat(localStorage.getItem("fontScale")) || 1);
   const [activeTab, setActiveTab] = useState("general");
@@ -113,8 +116,8 @@ export default function SettingsModal({ onClose }) {
   const saveHealth = async () => {
     if (!user) return;
     try {
-      const res = await fetch(`${API}/users/${user.id}`, {
-        method: "PUT",
+      const res = await fetch(`${API}/users/${user.id}/health`, {
+        method: "PATCH",
         headers: { "Content-Type": "application/json" },
         credentials: "include", // <-- important (session cookie)
         body: JSON.stringify({ Allergens: selectedAllergens, Diabetic: diabetic })
@@ -161,6 +164,18 @@ export default function SettingsModal({ onClose }) {
             >
               {t("SettingsModal.health")}
             </button>
+            {/* 🆕 Admin Panel button (only visible for admins) */}
+            {user?.isAdmin && (
+              <button
+                onClick={() => {
+                  onClose?.();
+                  navigate("/admin");
+                }}
+                className="px-3 py-2 rounded bg-yellow-500 hover:bg-yellow-400 text-white flex items-center justify-center gap-2"
+              >
+                <FaUserShield /> Admin
+              </button>
+            )}
           </nav>
         </div>
 
