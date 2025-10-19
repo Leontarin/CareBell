@@ -1,4 +1,3 @@
-// src/components/Meals.jsx
 import React, { useState, useEffect, useContext } from "react";
 import BarcodeScannerComponent from "react-qr-barcode-scanner";
 import { API } from "../shared/config";
@@ -12,19 +11,21 @@ export default function Meals() {
   const userAllergens = user?.Allergens || [];
 
   /* ---------- state ---------- */
-  const [activeTab,    setActiveTab]    = useState("scanner");
-  const [allMeals,     setAllMeals]     = useState([]);
-  const [scanning,     setScanning]     = useState(false);
-  const [manualCode,   setManualCode]   = useState("");
-  const [barcode,      setBarcode]      = useState(null);
-  const [meal,         setMeal]         = useState(null);
-  const [loading,      setLoading]      = useState(false);
-  const [error,        setError]        = useState("");
-  const [speaking,     setSpeaking]     = useState(false);
-  const [audioObj,     setAudioObj]     = useState(null);
+  const [activeTab, setActiveTab] = useState("scanner");
+  const [allMeals, setAllMeals] = useState([]);
+  const [scanning, setScanning] = useState(false);
+  const [manualCode, setManualCode] = useState("");
+  const [barcode, setBarcode] = useState(null);
+  const [meal, setMeal] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+  const [speaking, setSpeaking] = useState(false);
+  const [audioObj, setAudioObj] = useState(null);
 
   /* ---------- effects ---------- */
-  useEffect(() => { fetchAllMeals(); }, []);
+  useEffect(() => {
+    fetchAllMeals();
+  }, []);
   useEffect(() => () => { if (audioObj) audioObj.pause(); }, [audioObj]);
 
   /* ---------- fetch helpers ---------- */
@@ -44,7 +45,7 @@ export default function Meals() {
     }
   };
 
-  const fetchByCode = async code => {
+  const fetchByCode = async (code) => {
     setBarcode(code);
     setLoading(true);
     speakText(t("Meals.qrScanned"));
@@ -58,7 +59,7 @@ export default function Meals() {
       setMeal(data);
       setTimeout(() => speakText(createFoodDescription(data)), 1000);
     } catch {
-      const fallback = allMeals.find(m => m.barcode === code);
+      const fallback = allMeals.find((m) => m.barcode === code);
       if (fallback) {
         setMeal(fallback);
         setTimeout(() => speakText(createFoodDescription(fallback)), 1000);
@@ -87,15 +88,15 @@ export default function Meals() {
 
   /* ---------- speech ---------- */
   const toggleScanner = () => {
-    setScanning(s => !s);
+    setScanning((s) => !s);
     if (!scanning) speakText(t("Meals.positionLabel"));
   };
 
-  const speakText = async text => {
+  const speakText = async (text) => {
     stopSpeaking();
     if (!text) return;
     try {
-      const lang = i18n.language.split('-')[0];
+      const lang = i18n.language.split("-")[0];
       const audio = await playTts(text, lang);
       setAudioObj(audio);
       setSpeaking(true);
@@ -104,7 +105,7 @@ export default function Meals() {
         setAudioObj(null);
       };
     } catch (err) {
-      console.error('TTS error:', err);
+      console.error("TTS error:", err);
     }
   };
 
@@ -118,28 +119,31 @@ export default function Meals() {
   };
 
   /* ---------- description builder ---------- */
-  const createFoodDescription = item => {
-    let desc = `${item.Dish}. ${item.Description || t("Meals.noDescription")}. `;
-    desc += `It's ${item.diabetic_friendly ? "" : "NOT "}Diabetic Friendly. `;
-    if (item.Allergens?.length) {
-      const allergenList = trAllergens(item.Allergens).join(", ");
+  const createFoodDescription = (item) => {
+    let desc = `${item.dish}. ${item.description || t("Meals.noDescription")}. `;
+    desc += `It's ${item.diabeticFriendly ? "" : "NOT "}Diabetic Friendly. `;
+    if (item.allergens?.length) {
+      const allergenList = trAllergens(item.allergens).join(", ");
       desc += `Allergens: ${allergenList}. `;
     }
-    if (item.Additives?.length) {
-      const additiveList = trAdditives(item.Additives).join(", ");
+    if (item.additives?.length) {
+      const additiveList = trAdditives(item.additives).join(", ");
       desc += `Additives: ${additiveList}. `;
     }
-    if (item.Pictograms?.length) {
-      const pictogramList = trPictograms(item.Pictograms).join(", ");
+    if (item.pictograms?.length) {
+      const pictogramList = trPictograms(item.pictograms).join(", ");
       desc += `${pictogramList}.`;
     }
     return desc;
   };
 
   /* ---------- locale helpers ---------- */
-  const trAdditives  = codes => (codes||[]).map(c => t(`Meals.Legend.Additives.${c}`));
-  const trAllergens  = list  => (list||[]).map(a => t(`Meals.Legend.Allergens.${a}`));
-  const trPictograms = codes => (codes||[]).map(p => t(`Meals.Legend.Pictograms.${p}`));
+  const trAdditives = (codes) =>
+    (codes || []).map((c) => t(`Meals.Legend.Additives.${c}`));
+  const trAllergens = (list) =>
+    (list || []).map((a) => t(`Meals.Legend.Allergens.${a}`));
+  const trPictograms = (codes) =>
+    (codes || []).map((p) => t(`Meals.Legend.Pictograms.${p}`));
 
   const backToList = () => {
     setMeal(null);
@@ -159,10 +163,10 @@ export default function Meals() {
         <div className="mb-6">
           {/* Manual Code Entry */}
           <div className="mb-4 flex">
-          <input
+            <input
               type="text"
               value={manualCode}
-              onChange={e => setManualCode(e.target.value)}
+              onChange={(e) => setManualCode(e.target.value)}
               placeholder={t("Meals.enterBarcodePlaceholder")}
               className="
                 flex-1 px-4 py-3 rounded-l-lg
@@ -185,11 +189,12 @@ export default function Meals() {
               <div className="relative mb-4">
                 <div className="border-4 border-blue-400 dark:border-yellow-400 rounded-lg overflow-hidden">
                   <BarcodeScannerComponent
-                    width="100%" height={350}
+                    width="100%"
+                    height={350}
                     onUpdate={handleDetected}
                     delay={300}
                     facingMode="environment"
-                    videoConstraints={{ width:{ideal:1280}, height:{ideal:720} }}
+                    videoConstraints={{ width: { ideal: 1280 }, height: { ideal: 720 } }}
                   />
                   <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
                     <div className="w-3/5 h-3/5 border-4 border-red-500 border-dashed rounded opacity-70" />
@@ -222,18 +227,17 @@ export default function Meals() {
       {/* SINGLE MEAL VIEW */}
       {meal && (
         <div className="bg-green-50 p-8 mt-8 rounded-lg border-l-8 border-green-500 shadow-lg dark:border-yellow-400 dark:bg-slate-700">
-          {meal.imageURL && (
+          {meal._id && (
             <img
-              src={meal.imageURL}
-              alt={meal.Dish}
-              onError={e => e.target.style.display = "none"}
+              src={`${API}/foods/${meal._id}/image`}
+              alt={meal.dish}
               className="w-full max-w-md mx-auto rounded-lg shadow-md mb-6"
             />
           )}
 
           <div className="flex justify-between items-start">
             <div className="flex-1">
-              <h2 className="text-3xl font-bold mb-2">{meal.Dish}</h2>
+              <h2 className="text-3xl font-bold mb-2">{meal.dish}</h2>
               <p className="text-gray-600 text-xl mb-4 dark:text-white">
                 {t("Meals.barcodeLabel")} {meal.barcode}
               </p>
@@ -253,67 +257,113 @@ export default function Meals() {
                 className="flex items-center px-5 py-3 rounded-lg bg-green-600 text-white"
               >
                 <span className="mr-2 text-2xl">🔊</span>
-                {t("Exercise.read")} 
+                {t("Exercise.read")}
               </button>
             )}
           </div>
 
           <div className="my-6">
-            <h3 className="text-2xl font-semibold mb-3">{t("Exercise.descriptionLabel")}</h3>
+            <h3 className="text-2xl font-semibold mb-3">
+              {t("Exercise.descriptionLabel")}
+            </h3>
             <p className="text-xl leading-relaxed">
-              {meal.Description || t("Meals.noDescription")}
+              {meal.description || t("Meals.noDescription")}
             </p>
           </div>
 
           {(() => {
             if (!user) return null;
-            const overlap = meal.Allergens?.filter(a => userAllergens.includes(a));
+            const overlap = (meal.allergens || []).filter((a) =>
+              (userAllergens || []).includes(a)
+            );
             return overlap.length ? (
               <div className="bg-yellow-100 border-l-4 border-yellow-500 text-yellow-800 p-4 rounded mb-6">
                 <p className="font-semibold mb-2">{t("Meals.allergyWarning")}</p>
                 <ul className="list-disc list-inside text-lg">
-                  {overlap.map(key => <li key={key}>{t(`Meals.Legend.Allergens.${key}`)}</li>)}
+                  {overlap.map((key) => (
+                    <li key={key}>{t(`Meals.Legend.Allergens.${key}`)}</li>
+                  ))}
                 </ul>
               </div>
             ) : null;
           })()}
 
           <div className="mt-6">
-            <h3 className="text-2xl font-semibold mb-1">{t("Meals.diabeticFriendlyLabel")}</h3>
+            <h3 className="text-2xl font-semibold mb-1">
+              {t("Meals.diabeticFriendlyLabel")}
+            </h3>
             <p className="text-xl font-medium flex items-center">
-              <span className={`mr-2 text-2xl ${meal.diabetic_friendly ? "text-green-600" : "text-red-600"}`}>{meal.diabetic_friendly ? "✓" : "✕"}</span>
-              {t(meal.diabetic_friendly ? "Meals.diabeticFriendlyYes" : "Meals.diabeticFriendlyNo")}
+              <span
+                className={`mr-2 text-2xl ${
+                  meal.diabeticFriendly ? "text-green-600" : "text-red-600"
+                }`}
+              >
+                {meal.diabeticFriendly ? "✓" : "✕"}
+              </span>
+              {t(
+                meal.diabeticFriendly
+                  ? "Meals.diabeticFriendlyYes"
+                  : "Meals.diabeticFriendlyNo"
+              )}
             </p>
           </div>
 
           {(() => {
-            const renderSection = (key, list, tr) => list.length > 0 && (
-              <div key={key} className="mt-6">
-                <h3 className="text-2xl font-semibold mb-3">{t(`Meals.LegendHeadings.${key}`)}</h3>
-                <ul className="bg-white rounded-lg p-5 border border-gray-100 shadow-sm dark:bg-slate-900">
-                  {list.map((val, i) => {
-                    const allergic = key === "Allergens" && userAllergens.includes(val);
-                    return (
-                      <li key={i} className="py-3 text-xl border-b border-gray-100 last:border-0 flex items-center">
-                        <span className={`mr-3 text-2xl ${allergic ? "text-red-600" : "text-green-500"}`}>{allergic ? "✕" : "✓"}</span>
-                        {tr(val)}
-                      </li>
-                    );
-                  })}
-                </ul>
-              </div>
-            );
+            const renderSection = (key, list, tr) =>
+              list.length > 0 && (
+                <div key={key} className="mt-6">
+                  <h3 className="text-2xl font-semibold mb-3">
+                    {t(`Meals.LegendHeadings.${key}`)}
+                  </h3>
+                  <ul className="bg-white rounded-lg p-5 border border-gray-100 shadow-sm dark:bg-slate-900">
+                    {list.map((val, i) => {
+                      const allergic =
+                        key === "Allergens" && userAllergens.includes(val);
+                      return (
+                        <li
+                          key={i}
+                          className="py-3 text-xl border-b border-gray-100 last:border-0 flex items-center"
+                        >
+                          <span
+                            className={`mr-3 text-2xl ${
+                              allergic ? "text-red-600" : "text-green-500"
+                            }`}
+                          >
+                            {allergic ? "✕" : "✓"}
+                          </span>
+                          {tr(val)}
+                        </li>
+                      );
+                    })}
+                  </ul>
+                </div>
+              );
             return (
               <>
-                {renderSection("Allergens", meal.Allergens || [], a => t(`Meals.Legend.Allergens.${a}`))}
-                {renderSection("Additives", meal.Additives || [], a => t(`Meals.Legend.Additives.${a}`))}
-                {renderSection("Pictograms", meal.Pictograms || [], a => t(`Meals.Legend.Pictograms.${a}`))}
+                {renderSection(
+                  "Allergens",
+                  meal.allergens || [],
+                  (a) => t(`Meals.Legend.Allergens.${a}`)
+                )}
+                {renderSection(
+                  "Additives",
+                  meal.additives || [],
+                  (a) => t(`Meals.Legend.Additives.${a}`)
+                )}
+                {renderSection(
+                  "Pictograms",
+                  meal.pictograms || [],
+                  (a) => t(`Meals.Legend.Pictograms.${a}`)
+                )}
               </>
             );
           })()}
 
           <div className="mt-8 flex justify-center">
-            <button onClick={backToList} className="px-6 py-3 bg-blue-600 text-white text-xl font-semibold rounded-lg hover:bg-blue-700">
+            <button
+              onClick={backToList}
+              className="px-6 py-3 bg-blue-600 text-white text-xl font-semibold rounded-lg hover:bg-blue-700"
+            >
               {t("Meals.back")}
             </button>
           </div>

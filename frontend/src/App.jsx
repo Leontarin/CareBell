@@ -98,7 +98,7 @@ export default function App() {
           <Routes>
             {/* 🏠 Default CareBell interface */}
             <Route
-              path="/"
+              path="/*"
               element={
                 <div
                   className="w-full max-w-screen-lg mx-auto p-4 min-h-screen flex flex-col bg-white dark:bg-gray-900 dark:text-gray-100"

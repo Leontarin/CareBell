@@ -1,72 +1,64 @@
 const express = require("express");
-const router = express.Router();
+const mongoose = require("mongoose");
 const Food = require("../models/food");
 
-router.get("/", async (req, res) => {
-  const foods = await Food.find();
-  res.json(foods);
+const router = express.Router();
+
+// Utility: allow both ObjectId and numeric id lookups
+function safeFoodQuery(idOrString) {
+  if (!idOrString) return {};
+  if (mongoose.Types.ObjectId.isValid(idOrString)) {
+    return { $or: [{ _id: idOrString }, { id: Number(idOrString) || idOrString }] };
+  }
+  const asNum = Number(idOrString);
+  if (!Number.isNaN(asNum)) return { id: asNum };
+  return { id: idOrString };
+}
+
+/**
+ * GET /foods
+ * Returns all foods, excluding the binary image data.
+ */
+router.get("/", async (_req, res) => {
+  try {
+    const foods = await Food.find().sort({ createdAt: -1 }).lean();
+    // Hide binary data to avoid sending megabytes
+    foods.forEach(f => delete f.image);
+    res.json(foods);
+  } catch (e) {
+    res.status(500).json({ message: e.message });
+  }
 });
 
+/**
+ * GET /foods/:barcode
+ * Lookup by barcode.
+ */
 router.get("/:barcode", async (req, res) => {
   try {
-    const food = await Food.findOne({ barcode: req.params.barcode });
+    const food = await Food.findOne({ barcode: req.params.barcode }).lean();
     if (!food) return res.status(404).json({ message: "Not found" });
+    delete food.image; // remove heavy blob
     res.json(food);
   } catch (e) {
     res.status(500).json({ message: e.message });
   }
 });
 
-router.post("/addFood", async (req, res) => {
+/**
+ * GET /foods/:id/image
+ * Publicly returns the stored image blob.
+ */
+router.get("/:id/image", async (req, res) => {
   try {
-    const {
-      barcode,
-      imageURL,
-      id,
-      Date,
-      Category,
-      Dish,
-      Description,
-      Additives,
-      Allergens,
-      Pictograms,
-      diabetic_friendly,
-      contains_R,
-      contains_S,
-      contains_G,
-      contains_M,
-      contains_A,
-      contains_W,
-      contains_K,
-      contains_Y,
-    } = req.body;
-
-    const newFood = new Food({
-      barcode,
-      imageURL,
-      id,
-      date: Date,
-      category: Category,
-      dish: Dish,
-      description: Description || null,
-      additives: Additives || [],
-      allergens: Allergens || [],
-      pictograms: Pictograms || [],
-      diabeticFriendly: diabetic_friendly,
-      contains_R,
-      contains_S,
-      contains_G,
-      contains_M,
-      contains_A,
-      contains_W,
-      contains_K,
-      contains_Y,
-    });
-
-    const saved = await newFood.save();
-    res.status(201).json(saved);
+    const food = await Food.findOne(safeFoodQuery(req.params.id)).lean();
+    if (!food || !food.image || !food.image.data) {
+      return res.status(404).send("Image not found");
+    }
+    res.contentType(food.image.contentType || "image/png");
+    res.send(food.image.data);
   } catch (e) {
-    res.status(400).json({ error: e.message });
+    res.status(500).send("Error retrieving image");
   }
 });
 
