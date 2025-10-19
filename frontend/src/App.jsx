@@ -9,7 +9,7 @@ import Register from "./components/Register";
 import { AppContext } from "./shared/AppContext";
 import { API, fetchJsonAuth } from "./shared/config";
 import i18n from "./shared/i18n";
-import AdminPanel from "./features/AdminPanel";
+import AdminPanel from "./features/admin/AdminPanel";
 import ProtectedAdminRoute from "./components/ProtectedAdminRoute";
 
 export default function App() {
@@ -79,7 +79,7 @@ export default function App() {
     <BrowserRouter>
       {!user ? (
         <Routes>
-          <Route path="/" element={<Login onLoggedIn={handleLoggedIn} />} />
+          <Route path="*" element={<Login onLoggedIn={handleLoggedIn} />} />
           <Route path="/Register" element={<Register />} />
         </Routes>
       ) : (

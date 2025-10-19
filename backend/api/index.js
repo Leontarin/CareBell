@@ -50,20 +50,10 @@ app.set('trust proxy', 1); // if behind a proxy (nginx)
 
 // ─── CORS ────────────────────────────────────────────────────────────────────
 const FRONTEND_PORT = process.env.FRONTEND_PORT || "5173";
-const allowedOrigins = [
-  `https://demo.carebells.org`,        // production frontend
-  `http://localhost:${FRONTEND_PORT}`, // local dev
-  `http://127.0.0.1:${FRONTEND_PORT}`
-];
 
 app.use(cors({
-  origin: (origin, cb) => {
-    // Allow no origin (same-origin / curl / non-browser requests)
-    if (!origin) return cb(null, true);
-    if (allowedOrigins.includes(origin)) return cb(null, true);
-    return cb(new Error(`CORS blocked: ${origin}`), false);
-  },
-  credentials: true,
+  origin: true,              // ✅ automatically reflect any origin (works for all IPs/domains)
+  credentials: true,         // ✅ allow cookies / sessions
   methods: ['GET','HEAD','PUT','PATCH','POST','DELETE','OPTIONS'],
   allowedHeaders: ['Content-Type','Authorization'],
 }));

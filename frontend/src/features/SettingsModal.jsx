@@ -116,8 +116,8 @@ const { user, setUser, darkMode, setDarkMode } = useContext(AppContext);
   const saveHealth = async () => {
     if (!user) return;
     try {
-      const res = await fetch(`${API}/users/${user.id}`, {
-        method: "PUT",
+      const res = await fetch(`${API}/users/${user.id}/health`, {
+        method: "PATCH",
         headers: { "Content-Type": "application/json" },
         credentials: "include", // <-- important (session cookie)
         body: JSON.stringify({ Allergens: selectedAllergens, Diabetic: diabetic })

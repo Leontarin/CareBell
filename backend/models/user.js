@@ -48,6 +48,14 @@ const userSchema = new mongoose.Schema({
   lastLoginAt: { type: Date },
 }, { timestamps: true });
 
+userSchema.pre("save", function (next) {
+  if (this.isModified("id") && !this.isNew) {
+    // prevent accidental id changes
+    this.id = this._previousId || this.id;
+  }
+  next();
+});
+
 userSchema.pre('validate', function ensureLanguageDefaults(next) {
   try {
     const settings = computeLanguageSettings({
