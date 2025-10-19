@@ -1,10 +1,12 @@
+// backend/routes/foods.js
 const express = require("express");
 const mongoose = require("mongoose");
 const Food = require("../models/food");
+const { AVAILABLE_LANGUAGES } = require("../lib/language");
 
 const router = express.Router();
 
-// Utility: allow both ObjectId and numeric id lookups
+// Utility: allow both ObjectId and numeric lookups
 function safeFoodQuery(idOrString) {
   if (!idOrString) return {};
   if (mongoose.Types.ObjectId.isValid(idOrString)) {
@@ -15,40 +17,70 @@ function safeFoodQuery(idOrString) {
   return { id: idOrString };
 }
 
-/**
- * GET /foods
- * Returns all foods, excluding the binary image data.
- */
-router.get("/", async (_req, res) => {
+/* ─────────────────────────────────────────────
+   Helper to localize a food doc
+────────────────────────────────────────────── */
+function localizeFood(food, lang = "en", includeFull = false) {
+  const f = food.toObject ? food.toObject() : { ...food };
+  const tr = f.translations || {};
+
+  const normalizedLang = AVAILABLE_LANGUAGES.includes(lang) ? lang : "en";
+  const t = tr[normalizedLang] || tr.en || {};
+
+  // flatten localized values for easy access
+  f.dish = t.dish || f.dish;
+  f.description = t.description || f.description;
+
+  if (!includeFull) delete f.translations;
+  if (f.image && f.image.data) delete f.image; // avoid blobs
+
+  // add public image URL if applicable
+  if (f._id || f.id) f.imageURL = `/foods/${f._id || f.id}/image`;
+  return f;
+}
+
+/* ─────────────────────────────────────────────
+   GET /foods  → all foods (localized)
+────────────────────────────────────────────── */
+router.get("/", async (req, res) => {
   try {
+    const lang =
+      (req.query.lang ||
+        req.headers["accept-language"]?.split(",")[0]?.split("-")[0])?.toLowerCase() || "en";
+    const includeFull = req.query.full === "true";
+
     const foods = await Food.find().sort({ createdAt: -1 }).lean();
-    // Hide binary data to avoid sending megabytes
-    foods.forEach(f => delete f.image);
-    res.json(foods);
+    const localized = foods.map((f) => localizeFood(f, lang, includeFull));
+    res.json(localized);
   } catch (e) {
+    console.error("GET /foods failed:", e);
     res.status(500).json({ message: e.message });
   }
 });
 
-/**
- * GET /foods/:barcode
- * Lookup by barcode.
- */
+/* ─────────────────────────────────────────────
+   GET /foods/:barcode  → single item (localized)
+────────────────────────────────────────────── */
 router.get("/:barcode", async (req, res) => {
   try {
-    const food = await Food.findOne({ barcode: req.params.barcode }).lean();
+    const lang =
+      (req.query.lang ||
+        req.headers["accept-language"]?.split(",")[0]?.split("-")[0])?.toLowerCase() || "en";
+    const includeFull = req.query.full === "true";
+
+    const food = await Food.findOne({ barcode: req.params.barcode });
     if (!food) return res.status(404).json({ message: "Not found" });
-    delete food.image; // remove heavy blob
-    res.json(food);
+
+    res.json(localizeFood(food, lang, includeFull));
   } catch (e) {
+    console.error("GET /foods/:barcode failed:", e);
     res.status(500).json({ message: e.message });
   }
 });
 
-/**
- * GET /foods/:id/image
- * Publicly returns the stored image blob.
- */
+/* ─────────────────────────────────────────────
+   GET /foods/:id/image  → binary blob
+────────────────────────────────────────────── */
 router.get("/:id/image", async (req, res) => {
   try {
     const food = await Food.findOne(safeFoodQuery(req.params.id)).lean();
@@ -58,6 +90,7 @@ router.get("/:id/image", async (req, res) => {
     res.contentType(food.image.contentType || "image/png");
     res.send(food.image.data);
   } catch (e) {
+    console.error("GET /foods/:id/image failed:", e);
     res.status(500).send("Error retrieving image");
   }
 });

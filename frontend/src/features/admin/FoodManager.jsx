@@ -1,12 +1,17 @@
+// frontend/src/features/admin/FoodManager.jsx
 import React, { useEffect, useState } from "react";
 import { API } from "../../shared/config";
 import NotificationModal from "../../components/NotificationModal";
 import AddFoodModal from "./AddFoodModal";
+import { AVAILABLE_LANGUAGES, LANG_LABELS } from "../../shared/constants";
 
 export default function FoodManager() {
   const [foods, setFoods] = useState([]);
   const [editingId, setEditingId] = useState(null);
   const [editForm, setEditForm] = useState({});
+  const [translations, setTranslations] = useState({});
+  const [activeLang, setActiveLang] = useState("en");
+  const [viewLang, setViewLang] = useState("en");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [saveMsg, setSaveMsg] = useState(null);
@@ -14,15 +19,16 @@ export default function FoodManager() {
   const [query, setQuery] = useState("");
   const [addOpen, setAddOpen] = useState(false);
 
-  // ───────────────────────────────
-  //  Fetch all foods
-  // ───────────────────────────────
+  /* ───────────────────────────────
+     Fetch all foods
+  ─────────────────────────────── */
   async function fetchFoods() {
     setLoading(true);
     try {
-      const res = await fetch(`${API}/admin/foods${query ? `?q=${encodeURIComponent(query)}` : ""}`, {
-        credentials: "include",
-      });
+      const res = await fetch(
+        `${API}/admin/foods${query ? `?q=${encodeURIComponent(query)}` : ""}`,
+        { credentials: "include" }
+      );
       const data = await res.json();
       if (!res.ok) throw new Error(data.message || "Failed to load foods");
       setFoods(Array.isArray(data) ? data : []);
@@ -39,34 +45,80 @@ export default function FoodManager() {
     fetchFoods();
   }, []);
 
-  // ───────────────────────────────
-  //  Editing
-  // ───────────────────────────────
+  // Persist preferred preview language
+  useEffect(() => {
+    const saved = localStorage.getItem("adminViewLang");
+    if (saved && AVAILABLE_LANGUAGES.includes(saved)) setViewLang(saved);
+  }, []);
+  useEffect(() => {
+    localStorage.setItem("adminViewLang", viewLang);
+  }, [viewLang]);
+
+  /* ───────────────────────────────
+     Editing setup
+  ─────────────────────────────── */
   const startEdit = (food) => {
     setEditingId(food._id);
+    const t = food.translations || {};
+    setTranslations(
+      Object.fromEntries(
+        AVAILABLE_LANGUAGES.map((l) => [
+          l,
+          {
+            dish: t[l]?.dish || (l === "en" ? food.dish || "" : ""),
+            category: t[l]?.category || (l === "en" ? food.category || "" : ""), // ✅ new
+            description:
+              t[l]?.description || (l === "en" ? food.description || "" : ""),
+          },
+        ])
+      )
+    );
     setEditForm({
       barcode: food.barcode || "",
-      dish: food.dish || "",
       category: food.category || "",
-      description: food.description || "",
       diabeticFriendly: !!food.diabeticFriendly,
-      allergens: food.allergens?.join(", ") || "",
+      ...Object.fromEntries(
+        ["R", "S", "G", "M", "A", "W", "K", "Y"].map((c) => [
+          `contains_${c}`,
+          !!food[`contains_${c}`],
+        ])
+      ),
     });
+    setActiveLang("en");
   };
 
   const cancelEdit = () => {
     setEditingId(null);
     setEditForm({});
+    setTranslations({});
   };
 
+  const updateTranslation = (lang, key, val) =>
+    setTranslations((prev) => ({
+      ...prev,
+      [lang]: { ...prev[lang], [key]: val },
+    }));
+
+  /* ───────────────────────────────
+     Save edited item
+  ─────────────────────────────── */
   async function saveEdit(id) {
     try {
       setLoading(true);
-      const body = { ...editForm };
-      // normalize CSV to array
-      if (body.allergens) {
-        body.allergens = body.allergens.split(",").map((a) => a.trim()).filter(Boolean);
+      const body = {
+        ...editForm,
+        diabeticFriendly: editForm.diabeticFriendly ? "on" : "off",
+      };
+
+      // ✅ include category in language loop
+      for (const [lang, { dish, description, category }] of Object.entries(
+        translations
+      )) {
+        if (dish) body[`dish_${lang}`] = dish;
+        if (description) body[`description_${lang}`] = description;
+        if (category) body[`category_${lang}`] = category; // ✅ new
       }
+
       const res = await fetch(`${API}/admin/foods/${id}`, {
         method: "PUT",
         credentials: "include",
@@ -85,9 +137,9 @@ export default function FoodManager() {
     }
   }
 
-  // ───────────────────────────────
-  //  Delete (single or bulk)
-  // ───────────────────────────────
+  /* ───────────────────────────────
+     Delete (single or bulk)
+  ─────────────────────────────── */
   async function deleteSelected() {
     if (selected.size === 0) return;
     if (!confirm(`Delete ${selected.size} food item(s)?`)) return;
@@ -108,18 +160,34 @@ export default function FoodManager() {
     }
   }
 
-  // ───────────────────────────────
-  //  UI Helpers
-  // ───────────────────────────────
   const toggleSelect = (id) => {
     const newSet = new Set(selected);
-    if (newSet.has(id)) newSet.delete(id);
-    else newSet.add(id);
+    newSet.has(id) ? newSet.delete(id) : newSet.add(id);
     setSelected(newSet);
   };
 
+  const renderAllergenTags = (list = []) => {
+    if (!list.length) return <span className="text-gray-400">-</span>;
+    return (
+      <div className="flex flex-wrap gap-1 justify-center">
+        {list.map((a, i) => (
+          <span
+            key={i}
+            className="px-2 py-0.5 rounded-full text-xs font-semibold bg-yellow-200 text-yellow-800 dark:bg-yellow-500 dark:text-black"
+          >
+            {a.replace(/^contains\s*/i, "")}
+          </span>
+        ))}
+      </div>
+    );
+  };
+
+  /* ───────────────────────────────
+     Render
+  ─────────────────────────────── */
   return (
     <div className="space-y-4">
+      {/* Top controls */}
       <div className="flex justify-between items-center flex-wrap gap-2">
         <div className="flex gap-2">
           <input
@@ -135,6 +203,25 @@ export default function FoodManager() {
             Search
           </button>
         </div>
+
+        {/* 🌍 Language preview selector */}
+        <div className="flex items-center gap-2">
+          <label className="font-semibold text-sm text-gray-700 dark:text-gray-300">
+            View Language:
+          </label>
+          <select
+            value={viewLang}
+            onChange={(e) => setViewLang(e.target.value)}
+            className="px-3 py-2 rounded border dark:bg-gray-700 dark:border-gray-600"
+          >
+            {AVAILABLE_LANGUAGES.map((lang) => (
+              <option key={lang} value={lang}>
+                {LANG_LABELS[lang] || lang.toUpperCase()}
+              </option>
+            ))}
+          </select>
+        </div>
+
         <div className="flex gap-2">
           <button
             onClick={() => setAddOpen(true)}
@@ -155,7 +242,9 @@ export default function FoodManager() {
 
       {loading && <p>Loading...</p>}
       {error && <p className="text-red-500">{error}</p>}
-      {saveMsg && <NotificationModal message={saveMsg} onClose={() => setSaveMsg(null)} />}
+      {saveMsg && (
+        <NotificationModal message={saveMsg} onClose={() => setSaveMsg(null)} />
+      )}
 
       {/* Table */}
       <div className="overflow-x-auto">
@@ -202,60 +291,89 @@ export default function FoodManager() {
 
                 {editingId === f._id ? (
                   <>
-                    <td className="p-2">
-                      <input
-                        value={editForm.dish}
-                        onChange={(e) => setEditForm({ ...editForm, dish: e.target.value })}
-                        className="w-full px-2 py-1 rounded border dark:bg-gray-700 dark:border-gray-600"
-                      />
+                    {/* 🈯 Language Tabs */}
+                    <td colSpan={3} className="p-2 align-top">
+                      <div className="mb-2 flex gap-2 border-b border-gray-300 dark:border-gray-600">
+                        {AVAILABLE_LANGUAGES.map((lang) => (
+                          <button
+                            key={lang}
+                            onClick={() => setActiveLang(lang)}
+                            className={`px-3 py-1 rounded-t-md font-semibold ${
+                              activeLang === lang
+                                ? "bg-blue-600 text-white"
+                                : "bg-gray-200 dark:bg-gray-700 dark:text-gray-200"
+                            }`}
+                          >
+                            {LANG_LABELS[lang]}
+                          </button>
+                        ))}
+                      </div>
+                      <div className="space-y-2">
+                        <input
+                          placeholder={`Dish (${LANG_LABELS[activeLang]})`}
+                          value={translations[activeLang]?.dish || ""}
+                          onChange={(e) =>
+                            updateTranslation(activeLang, "dish", e.target.value)
+                          }
+                          className="w-full px-2 py-1 rounded border dark:bg-gray-700 dark:border-gray-600"
+                        />
+
+                        {/* ✅ new: Category input */}
+                        <input
+                          placeholder={`Category (${LANG_LABELS[activeLang]})`}
+                          value={translations[activeLang]?.category || ""}
+                          onChange={(e) =>
+                            updateTranslation(activeLang, "category", e.target.value)
+                          }
+                          className="w-full px-2 py-1 rounded border dark:bg-gray-700 dark:border-gray-600"
+                        />
+
+                        <textarea
+                          placeholder={`Description (${LANG_LABELS[activeLang]})`}
+                          value={translations[activeLang]?.description || ""}
+                          onChange={(e) =>
+                            updateTranslation(
+                              activeLang,
+                              "description",
+                              e.target.value
+                            )
+                          }
+                          className="w-full px-2 py-1 rounded border dark:bg-gray-700 dark:border-gray-600"
+                        />
+                      </div>
                     </td>
-                    <td className="p-2">
-                      <input
-                        value={editForm.category}
-                        onChange={(e) => setEditForm({ ...editForm, category: e.target.value })}
-                        className="w-full px-2 py-1 rounded border dark:bg-gray-700 dark:border-gray-600"
-                      />
-                    </td>
-                    <td className="p-2">
-                      <textarea
-                        value={editForm.description}
-                        onChange={(e) => setEditForm({ ...editForm, description: e.target.value })}
-                        className="w-full px-2 py-1 rounded border dark:bg-gray-700 dark:border-gray-600"
-                      />
-                    </td>
-                    <td className="p-2">
-                      <input
-                        value={editForm.allergens}
-                        onChange={(e) => setEditForm({ ...editForm, allergens: e.target.value })}
-                        placeholder="comma separated"
-                        className="w-full px-2 py-1 rounded border dark:bg-gray-700 dark:border-gray-600"
-                      />
-                    </td>
+
                     <td className="p-2 text-center">
                       <input
                         type="checkbox"
                         checked={editForm.diabeticFriendly}
                         onChange={(e) =>
-                          setEditForm({ ...editForm, diabeticFriendly: e.target.checked })
+                          setEditForm({
+                            ...editForm,
+                            diabeticFriendly: e.target.checked,
+                          })
                         }
                       />
                     </td>
                     <td className="p-2 text-center">
-                        <div className="flex flex-wrap gap-1 justify-center text-xs">
-                            {["R","S","G","M","A","W","K","Y"].map((c) => (
-                            <label key={c} className="flex items-center gap-1">
-                                <input
-                                type="checkbox"
-                                checked={!!editForm[`contains_${c}`]}
-                                onChange={(e) =>
-                                    setEditForm({ ...editForm, [`contains_${c}`]: e.target.checked })
-                                }
-                                />
-                                {c}
-                            </label>
-                            ))}
-                        </div>
-                        </td>
+                      <div className="flex flex-wrap gap-1 justify-center text-xs">
+                        {["R", "S", "G", "M", "A", "W", "K", "Y"].map((c) => (
+                          <label key={c} className="flex items-center gap-1">
+                            <input
+                              type="checkbox"
+                              checked={!!editForm[`contains_${c}`]}
+                              onChange={(e) =>
+                                setEditForm({
+                                  ...editForm,
+                                  [`contains_${c}`]: e.target.checked,
+                                })
+                              }
+                            />
+                            {c}
+                          </label>
+                        ))}
+                      </div>
+                    </td>
                     <td className="p-2 text-center">
                       <button
                         onClick={() => saveEdit(f._id)}
@@ -273,28 +391,49 @@ export default function FoodManager() {
                   </>
                 ) : (
                   <>
-                    <td className="p-2">{f.dish}</td>
-                    <td className="p-2">{f.category}</td>
-                    <td className="p-2">{f.description || "-"}</td>
-                    <td className="p-2">{f.allergens?.join(", ") || "-"}</td>
+                    <td
+                      className={`p-2 ${
+                        !f.translations?.[viewLang] ? "opacity-60 italic" : ""
+                      }`}
+                    >
+                      {f.translations?.[viewLang]?.dish || f.dish || "-"}
+                    </td>
+                    {/* ✅ localized category display */}
+                    <td
+                      className={`p-2 ${
+                        !f.translations?.[viewLang] ? "opacity-60 italic" : ""
+                      }`}
+                    >
+                      {f.translations?.[viewLang]?.category || f.category || "-"}
+                    </td>
+                    <td
+                      className={`p-2 ${
+                        !f.translations?.[viewLang] ? "opacity-60 italic" : ""
+                      }`}
+                    >
+                      {f.translations?.[viewLang]?.description ||
+                        f.description ||
+                        "-"}
+                    </td>
+                    <td className="p-2">{renderAllergenTags(f.allergens)}</td>
                     <td className="p-2 text-center">
                       {f.diabeticFriendly ? "✅" : "❌"}
                     </td>
                     <td className="p-2 text-center">
-                        <div className="flex flex-wrap gap-1 justify-center text-xs">
-                            {["R","S","G","M","A","W","K","Y"].map((c) => (
-                            <span
-                                key={c}
-                                className={`px-1 rounded ${
-                                f[`contains_${c}`]
-                                    ? "bg-green-600 text-white"
-                                    : "bg-gray-500 text-gray-200"
-                                }`}
-                            >
-                                {c}
-                            </span>
-                            ))}
-                        </div>
+                      <div className="flex flex-wrap gap-1 justify-center text-xs">
+                        {["R", "S", "G", "M", "A", "W", "K", "Y"].map((c) => (
+                          <span
+                            key={c}
+                            className={`px-1 rounded ${
+                              f[`contains_${c}`]
+                                ? "bg-green-600 text-white"
+                                : "bg-gray-500 text-gray-200"
+                            }`}
+                          >
+                            {c}
+                          </span>
+                        ))}
+                      </div>
                     </td>
                     <td className="p-2 text-center">
                       <button

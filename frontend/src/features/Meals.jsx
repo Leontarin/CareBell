@@ -1,3 +1,4 @@
+// frontend/src/features/Meals.jsx
 import React, { useState, useEffect, useContext } from "react";
 import BarcodeScannerComponent from "react-qr-barcode-scanner";
 import { API } from "../shared/config";
@@ -10,7 +11,6 @@ export default function Meals() {
   const { user } = useContext(AppContext);
   const userAllergens = user?.Allergens || [];
 
-  /* ---------- state ---------- */
   const [activeTab, setActiveTab] = useState("scanner");
   const [allMeals, setAllMeals] = useState([]);
   const [scanning, setScanning] = useState(false);
@@ -48,7 +48,6 @@ export default function Meals() {
   const fetchByCode = async (code) => {
     setBarcode(code);
     setLoading(true);
-    speakText(t("Meals.qrScanned"));
     try {
       const res = await fetch(`${API}/${code}`);
       if (!res.ok) {
@@ -89,7 +88,6 @@ export default function Meals() {
   /* ---------- speech ---------- */
   const toggleScanner = () => {
     setScanning((s) => !s);
-    if (!scanning) speakText(t("Meals.positionLabel"));
   };
 
   const speakText = async (text) => {
@@ -118,32 +116,40 @@ export default function Meals() {
     setSpeaking(false);
   };
 
-  /* ---------- description builder ---------- */
+  /* ---------- helpers ---------- */
+  const getLocalizedField = (meal, field) => {
+    const lang = i18n.language.split("-")[0];
+    return (
+      meal.translations?.[lang]?.[field] ||
+      meal.translations?.en?.[field] ||
+      meal[field] ||
+      ""
+    );
+  };
+
+  const trAllergens = (list) =>
+    (list || []).map((a) => {
+      const key = a.toLowerCase();
+      return t(`Meals.Legend.Allergens.${key}`, key);
+    });
+
   const createFoodDescription = (item) => {
-    let desc = `${item.dish}. ${item.description || t("Meals.noDescription")}. `;
-    desc += `It's ${item.diabeticFriendly ? "" : "NOT "}Diabetic Friendly. `;
-    if (item.allergens?.length) {
-      const allergenList = trAllergens(item.allergens).join(", ");
-      desc += `Allergens: ${allergenList}. `;
-    }
-    if (item.additives?.length) {
-      const additiveList = trAdditives(item.additives).join(", ");
-      desc += `Additives: ${additiveList}. `;
-    }
-    if (item.pictograms?.length) {
-      const pictogramList = trPictograms(item.pictograms).join(", ");
-      desc += `${pictogramList}.`;
+    const dish = getLocalizedField(item, "dish");
+    const description = getLocalizedField(item, "description");
+    const diabeticText = item.diabeticFriendly
+      ? t("Meals.diabeticFriendlyYes")
+      : t("Meals.diabeticFriendlyNo");
+
+    // build text for TTS — now uses localized allergen names
+    let desc = `${dish}. <break time='300ms'/> ${description || t("Meals.noDescription")}. <break time='300ms'/> `;
+    desc += `${diabeticText}. `;
+
+    const allergens = trAllergens(item.allergens || []).join(", ");
+    if (allergens) {
+      desc += `<break time='300ms'/> ${t("Meals.allergensList")} ${allergens}. `;
     }
     return desc;
   };
-
-  /* ---------- locale helpers ---------- */
-  const trAdditives = (codes) =>
-    (codes || []).map((c) => t(`Meals.Legend.Additives.${c}`));
-  const trAllergens = (list) =>
-    (list || []).map((a) => t(`Meals.Legend.Allergens.${a}`));
-  const trPictograms = (codes) =>
-    (codes || []).map((p) => t(`Meals.Legend.Pictograms.${p}`));
 
   const backToList = () => {
     setMeal(null);
@@ -152,28 +158,23 @@ export default function Meals() {
     setActiveTab("scanner");
   };
 
+  /* ---------- render ---------- */
   return (
     <div className="p-4 max-w-4xl mx-auto bg-white dark:bg-gray-800 shadow-lg rounded-lg">
       <h1 className="text-4xl font-bold mb-8 text-center text-blue-800">
         {t("Meals.FoodInfo")}
       </h1>
 
-      {/* SCANNER TAB (or Manual Entry) */}
+      {/* SCANNER / MANUAL */}
       {!meal && (
         <div className="mb-6">
-          {/* Manual Code Entry */}
           <div className="mb-4 flex">
             <input
               type="text"
               value={manualCode}
               onChange={(e) => setManualCode(e.target.value)}
               placeholder={t("Meals.enterBarcodePlaceholder")}
-              className="
-                flex-1 px-4 py-3 rounded-l-lg
-                border border-gray-300 bg-white text-gray-900 placeholder-gray-500
-                focus:outline-none
-                dark:bg-gray-700 dark:border-gray-600 dark:text-gray-100 dark:placeholder-gray-400
-              "
+              className="flex-1 px-4 py-3 rounded-l-lg border border-gray-300 bg-white text-gray-900 dark:bg-gray-700 dark:border-gray-600 dark:text-gray-100"
             />
             <button
               onClick={handleManualSubmit}
@@ -183,7 +184,6 @@ export default function Meals() {
             </button>
           </div>
 
-          {/* Scanner Controls and Feed */}
           {scanning ? (
             <>
               <div className="relative mb-4">
@@ -194,15 +194,15 @@ export default function Meals() {
                     onUpdate={handleDetected}
                     delay={300}
                     facingMode="environment"
-                    videoConstraints={{ width: { ideal: 1280 }, height: { ideal: 720 } }}
+                    videoConstraints={{
+                      width: { ideal: 1280 },
+                      height: { ideal: 720 },
+                    }}
                   />
                   <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
                     <div className="w-3/5 h-3/5 border-4 border-red-500 border-dashed rounded opacity-70" />
                   </div>
                 </div>
-                <p className="text-center text-xl mt-4 text-gray-600 font-medium">
-                  {t("Meals.positionLabel")}
-                </p>
               </div>
               <button
                 onClick={toggleScanner}
@@ -227,17 +227,19 @@ export default function Meals() {
       {/* SINGLE MEAL VIEW */}
       {meal && (
         <div className="bg-green-50 p-8 mt-8 rounded-lg border-l-8 border-green-500 shadow-lg dark:border-yellow-400 dark:bg-slate-700">
-          {meal._id && (
+          {meal.id && (
             <img
-              src={`${API}/foods/${meal._id}/image`}
-              alt={meal.dish}
+              src={`${API}/foods/${meal.id}/image`}
+              alt={getLocalizedField(meal, "dish")}
               className="w-full max-w-md mx-auto rounded-lg shadow-md mb-6"
             />
           )}
 
           <div className="flex justify-between items-start">
             <div className="flex-1">
-              <h2 className="text-3xl font-bold mb-2">{meal.dish}</h2>
+              <h2 className="text-3xl font-bold mb-2">
+                {getLocalizedField(meal, "dish")}
+              </h2>
               <p className="text-gray-600 text-xl mb-4 dark:text-white">
                 {t("Meals.barcodeLabel")} {meal.barcode}
               </p>
@@ -267,10 +269,12 @@ export default function Meals() {
               {t("Exercise.descriptionLabel")}
             </h3>
             <p className="text-xl leading-relaxed">
-              {meal.description || t("Meals.noDescription")}
+              {getLocalizedField(meal, "description") ||
+                t("Meals.noDescription")}
             </p>
           </div>
 
+          {/* 🧠 Allergy alert section (localized) */}
           {(() => {
             if (!user) return null;
             const overlap = (meal.allergens || []).filter((a) =>
@@ -281,83 +285,33 @@ export default function Meals() {
                 <p className="font-semibold mb-2">{t("Meals.allergyWarning")}</p>
                 <ul className="list-disc list-inside text-lg">
                   {overlap.map((key) => (
-                    <li key={key}>{t(`Meals.Legend.Allergens.${key}`)}</li>
+                    <li key={key}>
+                      {t(`Meals.Legend.Allergens.${key.toLowerCase()}`, key)}
+                    </li>
                   ))}
                 </ul>
               </div>
             ) : null;
           })()}
 
-          <div className="mt-6">
-            <h3 className="text-2xl font-semibold mb-1">
-              {t("Meals.diabeticFriendlyLabel")}
-            </h3>
-            <p className="text-xl font-medium flex items-center">
-              <span
-                className={`mr-2 text-2xl ${
-                  meal.diabeticFriendly ? "text-green-600" : "text-red-600"
-                }`}
-              >
-                {meal.diabeticFriendly ? "✓" : "✕"}
-              </span>
-              {t(
-                meal.diabeticFriendly
-                  ? "Meals.diabeticFriendlyYes"
-                  : "Meals.diabeticFriendlyNo"
-              )}
-            </p>
-          </div>
-
-          {(() => {
-            const renderSection = (key, list, tr) =>
-              list.length > 0 && (
-                <div key={key} className="mt-6">
-                  <h3 className="text-2xl font-semibold mb-3">
-                    {t(`Meals.LegendHeadings.${key}`)}
-                  </h3>
-                  <ul className="bg-white rounded-lg p-5 border border-gray-100 shadow-sm dark:bg-slate-900">
-                    {list.map((val, i) => {
-                      const allergic =
-                        key === "Allergens" && userAllergens.includes(val);
-                      return (
-                        <li
-                          key={i}
-                          className="py-3 text-xl border-b border-gray-100 last:border-0 flex items-center"
-                        >
-                          <span
-                            className={`mr-3 text-2xl ${
-                              allergic ? "text-red-600" : "text-green-500"
-                            }`}
-                          >
-                            {allergic ? "✕" : "✓"}
-                          </span>
-                          {tr(val)}
-                        </li>
-                      );
-                    })}
-                  </ul>
-                </div>
-              );
-            return (
-              <>
-                {renderSection(
-                  "Allergens",
-                  meal.allergens || [],
-                  (a) => t(`Meals.Legend.Allergens.${a}`)
-                )}
-                {renderSection(
-                  "Additives",
-                  meal.additives || [],
-                  (a) => t(`Meals.Legend.Additives.${a}`)
-                )}
-                {renderSection(
-                  "Pictograms",
-                  meal.pictograms || [],
-                  (a) => t(`Meals.Legend.Pictograms.${a}`)
-                )}
-              </>
-            );
-          })()}
+          {/* 🧠 Allergen list section */}
+          {meal.allergens?.length > 0 && (
+            <div className="mt-6">
+              <h3 className="text-2xl font-semibold mb-3">
+                {t("Meals.LegendHeadings.Allergens")}
+              </h3>
+              <ul className="bg-white rounded-lg p-5 border border-gray-100 shadow-sm dark:bg-slate-900">
+                {meal.allergens.map((a, i) => (
+                  <li
+                    key={i}
+                    className="py-3 text-xl border-b border-gray-100 last:border-0 flex items-center"
+                  >
+                    {t(`Meals.Legend.Allergens.${a.toLowerCase()}`, a)}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
 
           <div className="mt-8 flex justify-center">
             <button

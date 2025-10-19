@@ -1,5 +1,6 @@
 // backend/lib/allergenMap.js
-// Map allergen strings → boolean flags (used by Admin UI)
+// Central mapping between allergen names and flags
+
 const ENTRY_TO_FLAG = {
   "contains gluten": "G",
   "contains wheat": "W",
@@ -11,6 +12,12 @@ const ENTRY_TO_FLAG = {
   "contains soy": "Y",
 };
 
+// Reverse mapping for quick lookup (flag → allergen)
+const FLAG_TO_ENTRY = Object.fromEntries(
+  Object.entries(ENTRY_TO_FLAG).map(([entry, flag]) => [flag, entry])
+);
+
+// Derive boolean flags from allergen names (used by Meals/UI)
 function deriveFlagsFromAllergens(allergens = []) {
   const flags = { R:false,S:false,G:false,M:false,A:false,W:false,K:false,Y:false };
   for (const entry of allergens) {
@@ -20,4 +27,16 @@ function deriveFlagsFromAllergens(allergens = []) {
   return flags;
 }
 
-module.exports = { deriveFlagsFromAllergens };
+// Derive allergen list from boolean flags (used by Admin creation/update)
+function deriveAllergensFromFlags(flags = {}) {
+  return Object.entries(FLAG_TO_ENTRY)
+    .filter(([flag]) => flags[`contains_${flag}`])
+    .map(([_, label]) => label);
+}
+
+module.exports = {
+  ENTRY_TO_FLAG,
+  FLAG_TO_ENTRY,
+  deriveFlagsFromAllergens,
+  deriveAllergensFromFlags,
+};

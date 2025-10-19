@@ -151,6 +151,9 @@ app.use('/rooms',         roomsRoute);
 app.use('/tts',           ttsRoute);
 app.use("/admin/users", adminUsersRoute);
 app.use("/admin/foods", adminFoodsRoute);
+app.use("/admin/users", adminUsersRoute);
+app.use("/admin/foods", adminFoodsRoute);
+
 
 app.get('/', (_req, res) => {
   res.send('API is live! 🚀');
@@ -183,6 +186,8 @@ if (require.main === module) {
 
   startServer();
 }
+
+
 
 module.exports = server;
 
