@@ -3,7 +3,6 @@ const router = express.Router();
 const User = require("../models/user");
 const { readSession } = require("../lib/session");
 const { safeUserQuery } = require("../lib/utils");
-const { deriveFlagsFromAllergens } = require("../lib/allergenMap");
 
 const BLOCKED_UPDATE_FIELDS = new Set([
   "passwordHash",
@@ -23,21 +22,24 @@ const BLOCKED_UPDATE_FIELDS = new Set([
 router.get("/:id", async (req, res) => {
   try {
     const session = readSession(req);
-    if (!session?.uid) return res.status(401).json({ message: "Not authenticated" });
+    if (!session?.uid)
+      return res.status(401).json({ message: "Not authenticated" });
 
     const { id } = req.params;
     const currentUser = await User.findOne({ id: session.uid });
-    if (!currentUser) return res.status(404).json({ message: "Current user not found" });
+    if (!currentUser)
+      return res.status(404).json({ message: "Current user not found" });
 
     const isAdmin = currentUser.roles?.includes("admin");
-    if (!isAdmin && currentUser.id !== id) {
+    if (!isAdmin && currentUser.id !== id)
       return res.status(403).json({ message: "Forbidden" });
-    }
 
     const user = await User.findOne(safeUserQuery(id)).select("-passwordHash");
     if (!user) return res.status(404).json({ message: "Not found" });
+
     res.json(user);
   } catch (e) {
+    console.error("GET /users/:id failed:", e);
     res.status(500).json({ message: e.message });
   }
 });
@@ -48,19 +50,22 @@ router.get("/:id", async (req, res) => {
 router.put("/:id", async (req, res) => {
   try {
     const session = readSession(req);
-    if (!session?.uid) return res.status(401).json({ message: "Not authenticated" });
+    if (!session?.uid)
+      return res.status(401).json({ message: "Not authenticated" });
 
     const { id } = req.params;
     const currentUser = await User.findOne({ id: session.uid });
-    if (!currentUser) return res.status(404).json({ message: "Current user not found" });
+    if (!currentUser)
+      return res.status(404).json({ message: "Current user not found" });
 
     const isAdmin = currentUser.roles?.includes("admin");
-    if (!isAdmin && currentUser.id !== id) {
+    if (!isAdmin && currentUser.id !== id)
       return res.status(403).json({ message: "Forbidden" });
-    }
 
     const updates = { ...req.body };
     delete updates.id;
+
+    // Remove any restricted fields
     for (const key of Object.keys(updates)) {
       if (BLOCKED_UPDATE_FIELDS.has(key)) delete updates[key];
     }
@@ -79,51 +84,70 @@ router.put("/:id", async (req, res) => {
 
     res.json({ ...safe, isAdmin: !!adminRecord });
   } catch (e) {
+    console.error("PUT /users/:id failed:", e);
     res.status(400).json({ message: e.message });
   }
 });
 
-// PATCH: Update Health (self or admin)
+// ────────────────────────────────
+//  PATCH: Update Health (self or admin)
+// ────────────────────────────────
 router.patch("/:id/health", async (req, res) => {
   try {
     const session = readSession(req);
-    if (!session?.uid) return res.status(401).json({ message: "Not authenticated" });
+    if (!session?.uid)
+      return res.status(401).json({ message: "Not authenticated" });
 
     const { id } = req.params;
     const currentUser = await User.findOne({ id: session.uid });
-    if (!currentUser) return res.status(404).json({ message: "Current user not found" });
+    if (!currentUser)
+      return res.status(404).json({ message: "Current user not found" });
 
     const isAdmin = currentUser.roles?.includes("admin");
-    if (!isAdmin && currentUser.id !== id) {
+    if (!isAdmin && currentUser.id !== id)
       return res.status(403).json({ message: "Forbidden" });
-    }
 
-    const allowedFields = ["R", "S", "G", "M", "A", "W", "K", "Y", "Allergens", "Diabetic"];
+    const allowedFields = [
+      "R", "S", "G", "M", "A", "W", "K", "Y", "Diabetic"
+    ];
+
+    // Pick only allowed fields
     const filtered = Object.fromEntries(
       Object.entries(req.body).filter(([k]) => allowedFields.includes(k))
     );
 
-    // 🔥 New: derive boolean flags from allergens
-    if (Array.isArray(filtered.Allergens)) {
-      Object.assign(filtered, deriveFlagsFromAllergens(filtered.Allergens));
+    // Normalize to boolean flags
+    for (const key of allowedFields) {
+      if (typeof filtered[key] !== "undefined") {
+        const val = filtered[key];
+        filtered[key] = val === "on" || val === true;
+      }
     }
+
+    // Remove any legacy "Allergens" field entirely
+    delete filtered.Allergens;
 
     const updatedUser = await User.findOneAndUpdate(
       safeUserQuery(id),
       filtered,
       { new: true }
     );
-    if (!updatedUser) return res.status(404).json({ message: "User not found" });
+    if (!updatedUser)
+      return res.status(404).json({ message: "User not found" });
 
     const Admin = require("../models/admin");
     const adminRecord = await Admin.exists({ userId: updatedUser._id });
 
     const safe = updatedUser.toObject();
     delete safe.passwordHash;
+
     res.json({ ...safe, isAdmin: !!adminRecord });
   } catch (err) {
-    console.error("Health update failed:", err);
-    res.status(500).json({ message: "Failed to update health info", error: err.message });
+    console.error("PATCH /users/:id/health failed:", err);
+    res.status(500).json({
+      message: "Failed to update health info",
+      error: err.message,
+    });
   }
 });
 

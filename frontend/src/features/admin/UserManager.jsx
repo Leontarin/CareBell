@@ -1,3 +1,4 @@
+//frontend/src/features/admin/UserManager.jsx
 import React, { useEffect, useMemo, useState } from "react";
 import { API } from "../../shared/config";
 import {
@@ -9,6 +10,8 @@ import NotificationModal from "../../components/NotificationModal";
 import AddUserModal from "./AddUserModal";
 import ResetPasswordModal from "./ResetPasswordModal";
 import { useTranslation } from "react-i18next";
+import { useContext } from "react";
+import { AppContext } from "../../shared/AppContext";
 
 export default function UserManager() {
   const { t } = useTranslation();
@@ -35,6 +38,7 @@ export default function UserManager() {
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [addOpen, setAddOpen] = useState(false);
   const [resetTarget, setResetTarget] = useState(null);
+  const { user, setUser } = useContext(AppContext);
 
   // ────────────────────────────────
   //  Load all users
@@ -104,19 +108,39 @@ export default function UserManager() {
 
   const saveEdit = async (u) => {
     try {
+      // clone form
       const payload = { ...editForm };
+  
+      // 🔒 Safety check — only split if Allergens field exists
+      if (typeof payload.Allergens === "string") {
+        payload.Allergens = payload.Allergens
+          .split(",")
+          .map((a) => a.trim())
+          .filter((a) => a);
+      }
+  
+      // if the Allergens text field doesn't exist in edit mode, ensure it's an array
+      if (!payload.Allergens) {
+        payload.Allergens = [];
+      }
+  
       const res = await fetch(`${API}/admin/users/${u._id || u.id}`, {
         method: "PATCH",
         credentials: "include",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
       });
+  
       const data = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(data?.message || `Save failed (${res.status})`);
-      setSaveMsg(t("Admin.Users.saved", "✅ Saved"));
+      if (editingId && user && (user._id === editingId || user.id === editingId)) {
+        // If admin edited their own profile, sync context too
+        setUser((prev) => ({ ...prev, ...payload }));
+      }
+      setSaveMsg("✅ Saved");
       setEditingId(null);
       setEditForm({});
-      await fetchUsers();
+      await fetchUsers(); // 🔥 force refresh from backend to get up-to-date values
     } catch (err) {
       console.error(err);
       setSaveMsg(`❌ ${err.message}`);

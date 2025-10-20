@@ -14,10 +14,10 @@ router.use(isAdmin);
 // ────────────────────────────────
 router.get("/", async (req, res) => {
   try {
-    // Always fetch fresh data, not cached documents
+    // Always fetch fresh data, not cached docs
     const users = await User.find({}, { passwordHash: 0 }).lean({ getters: true });
 
-    // Normalize boolean + arrays for safety
+    // Normalize fields so checkboxes match backend
     const normalized = users.map((u) => ({
       ...u,
       R: !!u.R,
@@ -29,7 +29,7 @@ router.get("/", async (req, res) => {
       K: !!u.K,
       Y: !!u.Y,
       Diabetic: !!u.Diabetic,
-      Allergens: Array.isArray(u.Allergens) ? u.Allergens : [],
+      // ⚠️ Drop textual allergens — localization handles text in frontend
     }));
 
     res.json(normalized);
@@ -62,7 +62,6 @@ router.post("/add", async (req, res) => {
       W,
       K,
       Y,
-      Allergens,
       Diabetic,
     } = req.body;
 
@@ -79,13 +78,12 @@ router.post("/add", async (req, res) => {
 
     const hashed = password ? await bcrypt.hash(password, 10) : undefined;
 
-    // Build consistent allergens
+    // Normalize allergen flags
     const allergenKeys = ["R", "S", "G", "M", "A", "W", "K", "Y"];
     const allergenFlags = {};
     allergenKeys.forEach((key) => {
       allergenFlags[key] = req.body[key] === "on" || req.body[key] === true;
     });
-    const allergenArray = allergenKeys.filter((k) => allergenFlags[k]);
 
     const newUser = new User({
       id: id || crypto.randomUUID(),
@@ -97,7 +95,6 @@ router.post("/add", async (req, res) => {
       dateOfBirth,
       gender,
       ...allergenFlags,
-      Allergens: allergenArray,
       Diabetic: Diabetic ?? false,
       ...(hashed && { passwordHash: hashed }),
     });
@@ -132,19 +129,16 @@ router.patch("/:id", async (req, res) => {
     delete req.body._id;
 
     // ────────────────────────────────
-    //  Keep allergens in sync
+    //  Normalize allergen flags only (no textual array)
     // ────────────────────────────────
     const allergenKeys = ["R", "S", "G", "M", "A", "W", "K", "Y"];
-
-    // Normalize flags
     allergenKeys.forEach((key) => {
       const val = req.body[key];
-      if (val === "on" || val === true) req.body[key] = true;
-      else if (val === "off" || val === false) req.body[key] = false;
+      req.body[key] = val === "on" || val === true;
     });
 
-    // Build array from flags
-    req.body.Allergens = allergenKeys.filter((k) => req.body[k]);
+    // Remove textual allergens if present
+    delete req.body.Allergens;
 
     // ────────────────────────────────
     //  Apply and save
@@ -153,9 +147,18 @@ router.patch("/:id", async (req, res) => {
     const saved = await user.save();
     const safe = saved.toObject();
     delete safe.passwordHash;
-
+    // 🔁 Keep admin session in sync when they edit themselves
+    if (req.session?.user && String(user._id) === String(req.session.user._id)) {
+      req.session.user = {
+        ...req.session.user,
+        ...req.body,
+        updatedAt: new Date(),
+      };
+      console.log("🔄 Session user refreshed after self-edit via Admin panel");
+    }
     res.json({ message: "User updated", user: safe });
   } catch (e) {
+    console.error("Admin user update failed:", e);
     res.status(400).json({ message: e.message });
   }
 });
@@ -182,7 +185,6 @@ router.post("/bulk-delete", async (req, res) => {
     if (!Array.isArray(ids) || ids.length === 0)
       return res.status(400).json({ message: "No user IDs provided" });
 
-    // Only delete where _id is valid ObjectId
     const { Types } = require("mongoose");
     const validIds = ids.filter((x) => Types.ObjectId.isValid(x));
     const result = await User.deleteMany({ _id: { $in: validIds } });
