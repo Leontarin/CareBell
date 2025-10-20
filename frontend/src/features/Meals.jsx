@@ -1,5 +1,5 @@
 // frontend/src/features/Meals.jsx
-import React, { useState, useEffect, useContext } from "react";
+import React, { useState, useEffect, useContext, useCallback, useRef } from "react";
 import BarcodeScannerComponent from "react-qr-barcode-scanner";
 import { API } from "../shared/config";
 import { useTranslation } from "react-i18next";
@@ -11,66 +11,110 @@ export default function Meals() {
   const { user } = useContext(AppContext);
   const userAllergens = user?.Allergens || [];
 
-  const [activeTab, setActiveTab] = useState("scanner");
   const [allMeals, setAllMeals] = useState([]);
   const [scanning, setScanning] = useState(false);
   const [manualCode, setManualCode] = useState("");
-  const [barcode, setBarcode] = useState(null);
   const [meal, setMeal] = useState(null);
+  const [activeBarcode, setActiveBarcode] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [speaking, setSpeaking] = useState(false);
-  const [audioObj, setAudioObj] = useState(null);
-
-  /* ---------- effects ---------- */
-  useEffect(() => {
-    fetchAllMeals();
-  }, []);
-  useEffect(() => () => { if (audioObj) audioObj.pause(); }, [audioObj]);
+  const audioRef = useRef(null);
+  const activeBarcodeRef = useRef("");
 
   /* ---------- fetch helpers ---------- */
-  const fetchAllMeals = async () => {
+  const fetchAllMeals = useCallback(async () => {
     try {
       setLoading(true);
-      const res = await fetch(`${API}/foods`);
+      const lang = i18n.language.split("-")[0];
+      const res = await fetch(`${API}/foods?lang=${lang}`);
       if (!res.ok) throw new Error(`${res.status} ${res.statusText}`);
       const data = await res.json();
       if (!Array.isArray(data)) throw new Error("Invalid data format");
       setAllMeals(data);
+      const currentBarcode = activeBarcodeRef.current;
+      if (currentBarcode) {
+        const updated = data.find((m) => m.barcode === currentBarcode);
+        if (updated) setMeal(updated);
+      }
     } catch (err) {
       setError(`Could not load meals: ${err.message}`);
       setAllMeals([]);
     } finally {
       setLoading(false);
     }
-  };
+  }, [i18n.language]);
 
-  const fetchByCode = async (code) => {
-    setBarcode(code);
-    setLoading(true);
-    try {
-      const res = await fetch(`${API}/foods/${code}`);
-      if (!res.ok) {
-        if (res.status === 404) throw new Error("404");
-        throw new Error(`Server ${res.status}`);
+  /* ---------- effects ---------- */
+  useEffect(() => {
+    fetchAllMeals();
+  }, [fetchAllMeals]);
+  useEffect(() => {
+    activeBarcodeRef.current = activeBarcode;
+  }, [activeBarcode]);
+  useEffect(
+    () => () => {
+      if (audioRef.current) {
+        audioRef.current.pause();
+        audioRef.current.currentTime = 0;
+        audioRef.current = null;
       }
-      const data = await res.json();
-      setMeal(data);
-      setTimeout(() => speakText(createFoodDescription(data)), 1000);
-    } catch {
-      const fallback = allMeals.find((m) => m.barcode === code);
-      if (fallback) {
-        setMeal(fallback);
-        setTimeout(() => speakText(createFoodDescription(fallback)), 1000);
-      } else {
-        setError(t("Meals.notFoundWithCode", { code }));
-        setMeal(null);
-        speakText(t("Meals.notFoundSpoken"));
+    },
+    []
+  );
+  const fetchByCode = useCallback(
+    async (code, { speak = true, showNotFoundError = true } = {}) => {
+      const trimmed = (code || "").trim();
+      if (!trimmed) return;
+      setActiveBarcode(trimmed);
+      setLoading(true);
+      setError("");
+      try {
+        const lang = i18n.language.split("-")[0];
+        const res = await fetch(`${API}/foods/${trimmed}?lang=${lang}`);
+        if (!res.ok) {
+          const err = new Error(res.status === 404 ? "NOT_FOUND" : "HTTP_ERROR");
+          err.status = res.status;
+          throw err;
+        }
+        const data = await res.json();
+        setMeal(data);
+        if (speak) {
+          setTimeout(() => speakText(createFoodDescription(data)), 600);
+        }
+      } catch (err) {
+        console.warn("Meal lookup failed", err);
+        const fallback = allMeals.find((m) => m.barcode === trimmed);
+        if (fallback) {
+          setMeal(fallback);
+          if (speak) {
+            setTimeout(() => speakText(createFoodDescription(fallback)), 600);
+          }
+        } else if (showNotFoundError) {
+          setMeal(null);
+          const message = t("Meals.notFoundWithCode", { code: trimmed });
+          setError(message);
+          if (speak) {
+            setTimeout(() => speakText(t("Meals.notFoundSpoken")), 300);
+          }
+        }
+      } finally {
+        setLoading(false);
       }
-    } finally {
-      setLoading(false);
-    }
-  };
+    },
+    [
+      allMeals,
+      createFoodDescription,
+      i18n.language,
+      speakText,
+      t,
+    ]
+  );
+
+  useEffect(() => {
+    if (!activeBarcode) return;
+    fetchByCode(activeBarcode, { speak: false, showNotFoundError: false });
+  }, [activeBarcode, fetchByCode, i18n.language]);
 
   /* ---------- barcode handlers ---------- */
   const handleDetected = (_, result) => {
@@ -90,82 +134,100 @@ export default function Meals() {
     setScanning((s) => !s);
   };
 
-  const speakText = async (text) => {
-    stopSpeaking();
-    if (!text) return;
-    try {
-      const lang = i18n.language.split("-")[0];
-      const audio = await playTts(text, lang);
-      setAudioObj(audio);
-      setSpeaking(true);
-      audio.onended = () => {
-        setSpeaking(false);
-        setAudioObj(null);
-      };
-    } catch (err) {
-      console.error("TTS error:", err);
-    }
-  };
-
-  const stopSpeaking = () => {
-    if (audioObj) {
-      audioObj.pause();
-      audioObj.currentTime = 0;
-      setAudioObj(null);
+  const stopSpeaking = useCallback(() => {
+    if (audioRef.current) {
+      audioRef.current.pause();
+      audioRef.current.currentTime = 0;
+      audioRef.current = null;
     }
     setSpeaking(false);
-  };
+  }, []);
+
+  const speakText = useCallback(
+    async (text) => {
+      stopSpeaking();
+      if (!text) return;
+      try {
+        const lang = i18n.language.split("-")[0];
+        const audio = await playTts(text, lang);
+        audioRef.current = audio;
+        setSpeaking(true);
+        audio.onended = () => {
+          if (audioRef.current === audio) {
+            audioRef.current = null;
+            setSpeaking(false);
+          }
+        };
+      } catch (err) {
+        console.error("TTS error:", err);
+      }
+    },
+    [i18n.language, stopSpeaking]
+  );
 
   /* ---------- helpers ---------- */
-  const getLocalizedField = (meal, field) => {
-    const lang = i18n.language.split("-")[0];
-    return (
-      meal.translations?.[lang]?.[field] ||
-      meal.translations?.en?.[field] ||
-      meal[field] ||
-      ""
-    );
-  };
+  const getLocalizedField = useCallback(
+    (meal, field) => {
+      const direct = meal?.[field];
+      if (direct && String(direct).trim().length) return direct;
 
-  const trAllergens = (list) =>
-    (list || []).map((a) => {
-      const key = a.toLowerCase();
-      return t(`Meals.Legend.Allergens.${key}`, key);
-    });
+      const lang = i18n.language.split("-")[0];
+      return (
+        meal?.translations?.[lang]?.[field] ||
+        meal?.translations?.en?.[field] ||
+        ""
+      );
+    },
+    [i18n.language]
+  );
 
-  const createFoodDescription = (item) => {
-    const dish = getLocalizedField(item, "dish");
-    const description = getLocalizedField(item, "description") || t("Meals.noDescription");
-    const diabeticText = `${t("Meals.diabeticFriendlyLabel")} ${
-      item.diabeticFriendly
-        ? t("Meals.diabeticFriendlyYes")
-        : t("Meals.diabeticFriendlyNo")
-    }`;
+  const trAllergens = useCallback(
+    (list) =>
+      (list || []).map((a) => {
+        const key = a.toLowerCase();
+        return t(`Meals.Legend.Allergens.${key}`, key);
+      }),
+    [t]
+  );
 
-    const sentences = [];
-    const pushSentence = (value) => {
-      const text = (value || "").toString().trim();
-      if (!text) return;
-      sentences.push(text.replace(/[.?!]+$/u, ""));
-    };
+  const createFoodDescription = useCallback(
+    (item) => {
+      const dish = getLocalizedField(item, "dish");
+      const description =
+        getLocalizedField(item, "description") || t("Meals.noDescription");
+      const diabeticText = `${t("Meals.diabeticFriendlyLabel")} ${
+        item.diabeticFriendly
+          ? t("Meals.diabeticFriendlyYes")
+          : t("Meals.diabeticFriendlyNo")
+      }`;
 
-    pushSentence(dish);
-    pushSentence(description);
-    pushSentence(diabeticText);
+      const sentences = [];
+      const pushSentence = (value) => {
+        const text = (value || "").toString().trim();
+        if (!text) return;
+        sentences.push(text.replace(/[.?!]+$/u, ""));
+      };
 
-    const allergens = trAllergens(item.allergens || []).join(", ");
-    if (allergens) {
-      pushSentence(`${t("Meals.LegendHeadings.Allergens")}: ${allergens}`);
-    }
+      pushSentence(dish);
+      pushSentence(description);
+      pushSentence(diabeticText);
 
-    return sentences.length ? `${sentences.join(". ")}.` : "";
-  };
+      const allergens = trAllergens(item.allergens || []).join(", ");
+      if (allergens) {
+        pushSentence(`${t("Meals.LegendHeadings.Allergens")}: ${allergens}`);
+      }
+
+      return sentences.length ? `${sentences.join(". ")}.` : "";
+    },
+    [getLocalizedField, trAllergens, t]
+  );
 
   const backToList = () => {
     setMeal(null);
     setManualCode("");
     setError("");
-    setActiveTab("scanner");
+    setActiveBarcode("");
+    stopSpeaking();
   };
 
   /* ---------- render ---------- */
@@ -174,6 +236,15 @@ export default function Meals() {
       <h1 className="text-4xl font-bold mb-8 text-center text-blue-800">
         {t("Meals.FoodInfo")}
       </h1>
+
+      {loading && (
+        <p className="text-sm text-gray-600 dark:text-gray-300 mb-4">
+          {t("Meals.loadingLabel")}
+        </p>
+      )}
+      {error && (
+        <p className="text-sm text-red-600 dark:text-red-400 mb-4">{error}</p>
+      )}
 
       {/* SCANNER / MANUAL */}
       {!meal && (

@@ -1,11 +1,14 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState, useCallback } from "react";
 import { API } from "../../shared/config";
 import { COUNTRIES, LANG_LABELS, AVAILABLE_LANGUAGES } from "../../shared/constants";
 import NotificationModal from "../../components/NotificationModal";
 import AddUserModal from "./AddUserModal";
 import ResetPasswordModal from "./ResetPasswordModal";
+import { useTranslation } from "react-i18next";
 
 export default function UserManager() {
+  const { t } = useTranslation();
+  const userKey = (user) => user?._id || user?.id;
   const [users, setUsers] = useState([]);
   const [editingId, setEditingId] = useState(null);
   const [editForm, setEditForm] = useState({});
@@ -22,7 +25,7 @@ export default function UserManager() {
   // ────────────────────────────────
   //  Load all users
   // ────────────────────────────────
-  async function fetchUsers() {
+  const fetchUsers = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
@@ -32,22 +35,22 @@ export default function UserManager() {
       setUsers(Array.isArray(data) ? data : []);
     } catch (err) {
       console.error(err);
-      setError(err.message);
+      setError(t("Admin.Users.messages.loadError", { message: err.message }));
       setUsers([]);
     } finally {
       setLoading(false);
     }
-  }
+  }, [t]);
 
   useEffect(() => {
     fetchUsers();
-  }, []);
+  }, [fetchUsers]);
 
   // ────────────────────────────────
   //  Editing & Saving
   // ────────────────────────────────
   const startEdit = (u) => {
-    setEditingId(u._id || u.id);
+    setEditingId(userKey(u));
     setEditForm({
       fullName: u.fullName || "",
       username: u.username || "",
@@ -101,13 +104,13 @@ const saveEdit = async (u) => {
     const data = await res.json().catch(() => ({}));
     if (!res.ok) throw new Error(data?.message || `Save failed (${res.status})`);
 
-    setSaveMsg("✅ Saved");
+    setSaveMsg(t("Admin.Common.messages.saved"));
     setEditingId(null);
     setEditForm({});
     await fetchUsers();
   } catch (err) {
     console.error(err);
-    setSaveMsg(`❌ ${err.message}`);
+    setSaveMsg(t("Admin.Users.messages.saveError", { message: err.message }));
   } finally {
     setTimeout(() => setSaveMsg(null), 2500);
   }
@@ -142,13 +145,13 @@ const saveEdit = async (u) => {
             const data = await res.json().catch(() => ({}));
             if (!res.ok) throw new Error(data?.message || `Failed (${res.status})`);
 
-            setUsers((prev) => prev.filter((u) => !selected.has(u._id)));
+            setUsers((prev) => prev.filter((u) => !selected.has(userKey(u))));
             setSelected(new Set());
-            setSaveMsg(`🗑️ Deleted ${ids.length} user(s)`);
+            setSaveMsg(t("Admin.Common.messages.deleted", { count: ids.length }));
             setTimeout(() => setSaveMsg(null), 2500);
         } catch (err) {
             console.error(err);
-            setSaveMsg(`❌ ${err.message}`);
+            setSaveMsg(t("Admin.Users.messages.deleteError", { message: err.message }));
         }
     };
     const filteredUsers = useMemo(() => {
@@ -167,20 +170,20 @@ const saveEdit = async (u) => {
   return (
     <div className="p-4 text-gray-900 dark:text-gray-100">
         <div className="flex items-center justify-between mb-4 flex-wrap gap-2">
-        <h2 className="text-2xl font-semibold">User Manager</h2>
+        <h2 className="text-2xl font-semibold">{t("Admin.Users.title")}</h2>
 
         <div className="flex items-center gap-2">
             <button
                 onClick={() => setAddOpen(true)}
                 className="px-3 py-1 rounded bg-blue-600 hover:bg-blue-500 text-white"
             >
-                + Add New User
+                + {t("Admin.Users.buttons.add")}
             </button>
             <input
             type="text"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder="Search name, username, or email…"
+            placeholder={t("Admin.Users.searchPlaceholder")}
             className="px-3 py-1 rounded-xl border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100"
             />
 
@@ -194,7 +197,7 @@ const saveEdit = async (u) => {
                         : "bg-red-600 hover:bg-red-500"
                     }`}
                 >
-                    Delete Selected ({selected.size})
+                    {t("Admin.Users.buttons.deleteSelected", { count: selected.size })}
                 </button>
             )}
 
@@ -202,12 +205,12 @@ const saveEdit = async (u) => {
             onClick={fetchUsers}
             className="px-3 py-1 rounded bg-gray-300 dark:bg-gray-700 hover:bg-gray-400 dark:hover:bg-gray-600"
             >
-            Refresh
+            {t("Admin.Common.buttons.refresh")}
             </button>
         </div>
         </div>
 
-      {loading && <div>Loading users…</div>}
+      {loading && <div>{t("Admin.Users.messages.loading")}</div>}
       {error && (
         <div className="p-2 rounded bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200">
           {error}
@@ -234,29 +237,30 @@ const saveEdit = async (u) => {
                 }
             />
             </th>
-                <th className="p-2 text-left">Username</th>
-                <th className="p-2 text-left">Email</th>
-                <th className="p-2 text-left">Full Name</th>
-                <th className="p-2 text-left">Gender</th>
-                <th className="p-2 text-left">Country</th>
-                <th className="p-2 text-left">Language</th>
-                <th className="p-2 text-left">Health</th>
-                <th className="p-2 text-center w-32">Actions</th>
+                <th className="p-2 text-left">{t("Admin.Users.table.username")}</th>
+                <th className="p-2 text-left">{t("Admin.Users.table.email")}</th>
+                <th className="p-2 text-left">{t("Admin.Users.table.fullName")}</th>
+                <th className="p-2 text-left">{t("Admin.Users.table.gender")}</th>
+                <th className="p-2 text-left">{t("Admin.Users.table.country")}</th>
+                <th className="p-2 text-left">{t("Admin.Users.table.language")}</th>
+                <th className="p-2 text-left">{t("Admin.Users.table.health")}</th>
+                <th className="p-2 text-center w-32">{t("Admin.Users.table.actions")}</th>
             </tr>
           </thead>
           <tbody>
             {filteredUsers.map((u) => {
-              const isEditing = editingId === (u._id || u.id);
+              const rowKey = userKey(u);
+              const isEditing = editingId === rowKey;
               return (
                 <tr
-                  key={u._id || u.id}
+                  key={rowKey}
                   className="border-t border-gray-300 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800"
                 >
                   <td className="p-2">
                     <input
                     type="checkbox"
-                    checked={selected.has(u._id)}
-                    onChange={() => toggleSelect(u._id)}
+                    checked={selected.has(rowKey)}
+                    onChange={() => toggleSelect(rowKey)}
                     />
                   </td>
 
@@ -293,9 +297,9 @@ const saveEdit = async (u) => {
                           onChange={handleChange}
                           className="w-full rounded bg-gray-100 dark:bg-gray-900 border border-gray-400 dark:border-gray-600 p-1"
                         >
-                          <option value="male">Male</option>
-                          <option value="female">Female</option>
-                          <option value="other">Other</option>
+                          <option value="male">{t("Admin.Users.gender.male")}</option>
+                          <option value="female">{t("Admin.Users.gender.female")}</option>
+                          <option value="other">{t("Admin.Users.gender.other")}</option>
                         </select>
                       </td>
                       <td className="p-2">
@@ -305,7 +309,7 @@ const saveEdit = async (u) => {
                           onChange={handleChange}
                           className="w-full rounded bg-gray-100 dark:bg-gray-900 border border-gray-400 dark:border-gray-600 p-1"
                         >
-                          <option value="">Select Country</option>
+                          <option value="">{t("Admin.Users.select.country")}</option>
                           {COUNTRIES.map((c) => (
                             <option key={c.code} value={c.code}>
                               {c.flag} {c.name}
@@ -320,7 +324,7 @@ const saveEdit = async (u) => {
                           onChange={handleChange}
                           className="w-full rounded bg-gray-100 dark:bg-gray-900 border border-gray-400 dark:border-gray-600 p-1"
                         >
-                          <option value="">Select Language</option>
+                          <option value="">{t("Admin.Users.select.language")}</option>
                           {(COUNTRIES.find(c => c.code === editForm.country)?.languages ||
                             AVAILABLE_LANGUAGES
                           ).map((lang) => (
@@ -344,7 +348,9 @@ const saveEdit = async (u) => {
                             </label>
                           ))}
                         </div>
-                        <label className="block text-xs mt-1">Allergens</label>
+                        <label className="block text-xs mt-1">
+                          {t("Admin.Users.labels.allergens")}
+                        </label>
                         <input
                           name="Allergens"
                           value={editForm.Allergens}
@@ -359,7 +365,7 @@ const saveEdit = async (u) => {
                             onChange={handleChange}
                             className="mr-1"
                           />
-                          Diabetic
+                          {t("Admin.Users.labels.diabetic")}
                         </label>
                       </td>
                       <td className="p-2 text-center">
@@ -367,24 +373,26 @@ const saveEdit = async (u) => {
                           onClick={() => saveEdit(u)}
                           className="bg-green-600 hover:bg-green-500 text-white px-3 py-1 rounded mr-1"
                         >
-                          Save
+                          {t("Admin.Common.buttons.save")}
                         </button>
                         <button
                           onClick={cancelEdit}
                           className="bg-gray-500 hover:bg-gray-400 text-white px-3 py-1 rounded"
                         >
-                          Cancel
+                          {t("Admin.Common.buttons.cancel")}
                         </button>
                       </td>
                     </>
                   ) : (
                     <>
-                      <td className="p-2">{u.username || "—"}</td>
-                      <td className="p-2">{u.email || "—"}</td>
-                      <td className="p-2">{u.fullName}</td>
-                      <td className="p-2 capitalize">{u.gender}</td>
-                      <td className="p-2">{u.country}</td>
-                      <td className="p-2">{u.language}</td>
+                      <td className="p-2">{u.username || t("Admin.Users.table.empty")}</td>
+                      <td className="p-2">{u.email || t("Admin.Users.table.empty")}</td>
+                      <td className="p-2">{u.fullName || t("Admin.Users.table.empty")}</td>
+                      <td className="p-2 capitalize">
+                        {t(`Admin.Users.gender.${u.gender || "other"}`)}
+                      </td>
+                      <td className="p-2">{u.country || t("Admin.Users.table.empty")}</td>
+                      <td className="p-2">{LANG_LABELS[u.language] || u.language || t("Admin.Users.table.empty")}</td>
                       <td className="p-2">
                         <div className="flex flex-wrap gap-1 text-xs">
                           {["R","S","G","M","A","W","K","Y"].filter(k => u[k]).map(k => (
@@ -393,11 +401,15 @@ const saveEdit = async (u) => {
                         </div>
                         {u.Allergens?.length > 0 && (
                           <div className="text-xs mt-1">
-                            🧂 {u.Allergens.join(", ")}
+                            {t("Admin.Users.labels.allergensPrefix", {
+                              list: u.Allergens.join(", "),
+                            })}
                           </div>
                         )}
                         {u.Diabetic && (
-                          <div className="text-xs text-red-600 dark:text-red-400">Diabetic</div>
+                          <div className="text-xs text-red-600 dark:text-red-400">
+                            {t("Admin.Users.labels.diabetic")}
+                          </div>
                         )}
                       </td>
                       <td className="p-2 text-center">
@@ -405,13 +417,13 @@ const saveEdit = async (u) => {
                           onClick={() => startEdit(u)}
                           className="text-blue-600 dark:text-blue-400 hover:underline"
                         >
-                          Edit
+                          {t("Admin.Common.buttons.edit")}
                         </button>
                         <button
                             onClick={() => setResetTarget(u)}
                             className="text-red-600 dark:text-red-400 hover:underline ml-2"
                             >
-                            Reset Password
+                            {t("Admin.Users.buttons.resetPassword")}
                         </button>
                       </td>
                     </>
@@ -422,7 +434,7 @@ const saveEdit = async (u) => {
             {filteredUsers.length === 0 && !loading && !error && (
               <tr>
                 <td colSpan="9" className="p-3 text-center text-gray-500 dark:text-gray-400">
-                  No users found.
+                  {t("Admin.Users.table.emptyState")}
                 </td>
               </tr>
             )}
@@ -445,18 +457,18 @@ const saveEdit = async (u) => {
             onClose={() => setAddOpen(false)}
             onAdded={(newUser) => {
                 setUsers((prev) => [newUser, ...prev]);
-                setSaveMsg("✅ User added successfully");
+                setSaveMsg(t("Admin.Users.messages.added"));
                 setTimeout(() => setSaveMsg(null), 2500);
             }}
         />
         <NotificationModal
             open={confirmOpen}
-            title="Confirm deletion"
-            message={`Are you sure you want to delete ${selected.size} selected user(s)? This cannot be undone.`}
+            title={t("Admin.Users.modals.deleteTitle")}
+            message={t("Admin.Users.modals.deleteMessage", { count: selected.size })}
             onClose={() => setConfirmOpen(false)}
             onConfirm={confirmDelete}
-            confirmText="Delete"
-            cancelText="Cancel"
+            confirmText={t("Admin.Common.buttons.delete")}
+            cancelText={t("Admin.Common.buttons.cancel")}
         />
     </div>
   );

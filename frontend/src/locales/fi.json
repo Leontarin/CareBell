@@ -359,5 +359,148 @@
       "noMatch": "Salasanat eivät täsmää.",
       "missing": "Pakolliset kentät puuttuvat:"
     }
+  },
+  "Admin": {
+    "Common": {
+      "buttons": {
+        "search": "Haku",
+        "refresh": "Päivitä",
+        "save": "Tallenna",
+        "cancel": "Peruuta",
+        "edit": "Muokkaa",
+        "delete": "Poista",
+        "deleteSelected": "Poista valitut ({{count}})"
+      },
+      "labels": {
+        "viewLanguage": "Näyttökieli:",
+        "none": "Ei mitään",
+        "loading": "Ladataan…",
+        "noImage": "Ei kuvaa",
+        "imageUnavailable": "Kuva ei ole saatavilla",
+        "saving": "Tallennetaan…"
+      },
+      "messages": {
+        "saved": "✅ Tallennettu",
+        "deleted": "🗑️ Poistettiin {{count}} kohdetta",
+        "added": "✅ Lisätty onnistuneesti",
+        "error": "❌ {{message}}"
+      }
+    },
+    "Foods": {
+      "title": "Ruokahallinta",
+      "searchPlaceholder": "Hae ruokalajia, kategoriaa tai viivakoodia…",
+      "buttons": {
+        "addFood": "Lisää ruoka"
+      },
+      "columns": {
+        "image": "Kuva",
+        "barcode": "Viivakoodi",
+        "dish": "Ruoka",
+        "category": "Kategoria",
+        "description": "Kuvaus",
+        "allergens": "Allergeenit",
+        "diabetic": "Diabeetikoille sopiva",
+        "contains": "Allergeeniliput",
+        "actions": "Toiminnot"
+      },
+      "forms": {
+        "dish": "Ruoka ({{language}})",
+        "category": "Kategoria ({{language}})",
+        "description": "Kuvaus ({{language}})"
+      },
+      "messages": {
+        "loadError": "Ruokien lataus epäonnistui: {{message}}",
+        "saveError": "Ruoan tallennus epäonnistui: {{message}}",
+        "deleteError": "Ruokien poisto epäonnistui: {{message}}",
+        "confirmDeleteMany": "Poistetaanko {{count}} ruokaa?",
+        "confirmDeleteOne": "Poistetaanko tämä ruoka?"
+      },
+      "modals": {
+        "addTitle": "Lisää uusi ruoka",
+        "barcode": "Viivakoodi",
+        "baseCategory": "Kategoria",
+        "diabeticFriendly": "Diabeetikoille sopiva",
+        "containsFlags": "Allergeeniliput"
+      }
+    },
+    "Users": {
+      "title": "Käyttäjähallinta",
+      "searchPlaceholder": "Hae nimeä, käyttäjätunnusta tai sähköpostia…",
+      "buttons": {
+        "add": "Lisää käyttäjä",
+        "deleteSelected": "Poista valitut ({{count}})",
+        "resetPassword": "Palauta salasana"
+      },
+      "messages": {
+        "loading": "Käyttäjiä ladataan…",
+        "loadError": "Käyttäjien lataus epäonnistui: {{message}}",
+        "saveError": "Käyttäjän tallennus epäonnistui: {{message}}",
+        "deleteError": "Käyttäjien poisto epäonnistui: {{message}}",
+        "added": "✅ Käyttäjä lisättiin onnistuneesti"
+      },
+      "table": {
+        "username": "Käyttäjätunnus",
+        "email": "Sähköposti",
+        "fullName": "Koko nimi",
+        "gender": "Sukupuoli",
+        "country": "Maa",
+        "language": "Kieli",
+        "health": "Terveys",
+        "actions": "Toiminnot",
+        "empty": "—",
+        "emptyState": "Käyttäjiä ei löytynyt."
+      },
+      "labels": {
+        "healthFlags": "Terveysliput",
+        "allergens": "Allergeenit",
+        "allergensPrefix": "🧂 {{list}}",
+        "diabetic": "Diabeetikko"
+      },
+      "fields": {
+        "username": "Käyttäjätunnus",
+        "email": "Sähköposti",
+        "password": "Salasana",
+        "confirmPassword": "Vahvista salasana",
+        "fullName": "Koko nimi",
+        "phone": "Puhelinnumero",
+        "address": "Osoite",
+        "allergens": "Allergeenit (pilkuilla eroteltuna)",
+        "countryPlaceholder": "Maa (vain käyttöliittymä)",
+        "languagePlaceholder": "Kieli (vain käyttöliittymä)"
+      },
+      "select": {
+        "country": "Valitse maa",
+        "language": "Valitse kieli"
+      },
+      "gender": {
+        "male": "Mies",
+        "female": "Nainen",
+        "other": "Muu"
+      },
+      "modals": {
+        "addTitle": "Lisää uusi käyttäjä",
+        "deleteTitle": "Vahvista poisto",
+        "deleteMessage": "Haluatko varmasti poistaa {{count}} valittua käyttäjää? Toimintoa ei voi perua."
+      },
+      "add": {
+        "errors": {
+          "passwordMismatch": "Salasanat eivät täsmää.",
+          "fullNameRequired": "Koko nimi on pakollinen.",
+          "generic": "Käyttäjän lisääminen epäonnistui: {{message}}"
+        }
+      },
+      "reset": {
+        "success": "Salasana palautettiin onnistuneesti ✅",
+        "errors": {
+          "passwordMismatch": "Salasanat eivät täsmää.",
+          "generic": "Salasanan palautus epäonnistui: {{message}}"
+        },
+        "title": "Palauta salasana käyttäjälle {{name}}",
+        "fields": {
+          "newPassword": "Uusi salasana",
+          "confirmPassword": "Vahvista uusi salasana"
+        }
+      }
+    }
   }
 }

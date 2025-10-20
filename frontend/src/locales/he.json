@@ -373,5 +373,148 @@
       "noMatch": "הסיסמאות אינן תואמות.",
       "missing": "חסרים שדות נדרשים:"
     }
+  },
+  "Admin": {
+    "Common": {
+      "buttons": {
+        "search": "חיפוש",
+        "refresh": "רענון",
+        "save": "שמירה",
+        "cancel": "ביטול",
+        "edit": "עריכה",
+        "delete": "מחיקה",
+        "deleteSelected": "מחיקת פריטים נבחרים ({{count}})"
+      },
+      "labels": {
+        "viewLanguage": "שפת תצוגה:",
+        "none": "אין",
+        "loading": "טוען…",
+        "noImage": "אין תמונה",
+        "imageUnavailable": "התמונה אינה זמינה",
+        "saving": "שומר…"
+      },
+      "messages": {
+        "saved": "✅ נשמר",
+        "deleted": "🗑️ נמחקו {{count}} פריטים",
+        "added": "✅ נוסף בהצלחה",
+        "error": "❌ {{message}}"
+      }
+    },
+    "Foods": {
+      "title": "ניהול מנות",
+      "searchPlaceholder": "חפש מנה, קטגוריה או ברקוד…",
+      "buttons": {
+        "addFood": "הוסף מנה"
+      },
+      "columns": {
+        "image": "תמונה",
+        "barcode": "ברקוד",
+        "dish": "מנה",
+        "category": "קטגוריה",
+        "description": "תיאור",
+        "allergens": "אלרגנים",
+        "diabetic": "מתאים לסוכרתיים",
+        "contains": "סמלי אלרגנים",
+        "actions": "פעולות"
+      },
+      "forms": {
+        "dish": "מנה ({{language}})",
+        "category": "קטגוריה ({{language}})",
+        "description": "תיאור ({{language}})"
+      },
+      "messages": {
+        "loadError": "טעינת המנות נכשלה: {{message}}",
+        "saveError": "שמירת המנה נכשלה: {{message}}",
+        "deleteError": "מחיקת המנות נכשלה: {{message}}",
+        "confirmDeleteMany": "למחוק {{count}} מנות?",
+        "confirmDeleteOne": "למחוק את המנה הזו?"
+      },
+      "modals": {
+        "addTitle": "הוסף מנה חדשה",
+        "barcode": "ברקוד",
+        "baseCategory": "קטגוריה",
+        "diabeticFriendly": "מתאים לסוכרתיים",
+        "containsFlags": "סמלי אלרגנים"
+      }
+    },
+    "Users": {
+      "title": "ניהול משתמשים",
+      "searchPlaceholder": "חפש שם, שם משתמש או אימייל…",
+      "buttons": {
+        "add": "הוסף משתמש",
+        "deleteSelected": "מחיקת משתמשים נבחרים ({{count}})",
+        "resetPassword": "איפוס סיסמה"
+      },
+      "messages": {
+        "loading": "טוען משתמשים…",
+        "loadError": "טעינת המשתמשים נכשלה: {{message}}",
+        "saveError": "שמירת המשתמש נכשלה: {{message}}",
+        "deleteError": "מחיקת המשתמשים נכשלה: {{message}}",
+        "added": "✅ המשתמש נוסף בהצלחה"
+      },
+      "table": {
+        "username": "שם משתמש",
+        "email": "אימייל",
+        "fullName": "שם מלא",
+        "gender": "מגדר",
+        "country": "מדינה",
+        "language": "שפה",
+        "health": "בריאות",
+        "actions": "פעולות",
+        "empty": "—",
+        "emptyState": "לא נמצאו משתמשים."
+      },
+      "labels": {
+        "healthFlags": "דגלי בריאות",
+        "allergens": "אלרגנים",
+        "allergensPrefix": "🧂 {{list}}",
+        "diabetic": "סוכרתי"
+      },
+      "fields": {
+        "username": "שם משתמש",
+        "email": "אימייל",
+        "password": "סיסמה",
+        "confirmPassword": "אישור סיסמה",
+        "fullName": "שם מלא",
+        "phone": "מספר טלפון",
+        "address": "כתובת",
+        "allergens": "אלרגנים (מופרדים בפסיקים)",
+        "countryPlaceholder": "מדינה (לממשק בלבד)",
+        "languagePlaceholder": "שפה (לממשק בלבד)"
+      },
+      "select": {
+        "country": "בחר מדינה",
+        "language": "בחר שפה"
+      },
+      "gender": {
+        "male": "זכר",
+        "female": "נקבה",
+        "other": "אחר"
+      },
+      "modals": {
+        "addTitle": "הוסף משתמש חדש",
+        "deleteTitle": "אישור מחיקה",
+        "deleteMessage": "האם למחוק {{count}} משתמשים נבחרים? פעולה זו לא ניתנת לביטול."
+      },
+      "add": {
+        "errors": {
+          "passwordMismatch": "הסיסמאות אינן תואמות.",
+          "fullNameRequired": "שם מלא הוא שדה חובה.",
+          "generic": "הוספת המשתמש נכשלה: {{message}}"
+        }
+      },
+      "reset": {
+        "success": "הסיסמה אופסה בהצלחה ✅",
+        "errors": {
+          "passwordMismatch": "הסיסמאות אינן תואמות.",
+          "generic": "איפוס הסיסמה נכשל: {{message}}"
+        },
+        "title": "איפוס סיסמה עבור {{name}}",
+        "fields": {
+          "newPassword": "סיסמה חדשה",
+          "confirmPassword": "אשר סיסמה חדשה"
+        }
+      }
+    }
   }
 }

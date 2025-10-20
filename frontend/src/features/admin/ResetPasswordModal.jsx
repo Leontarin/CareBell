@@ -1,8 +1,10 @@
 // frontend/src/features/admin/ResetPasswordModal.jsx
 import React, { useState } from "react";
 import { API } from "../../shared/config";
+import { useTranslation } from "react-i18next";
 
 export default function ResetPasswordModal({ open, onClose, user }) {
+  const { t } = useTranslation();
   const [password, setPassword] = useState("");
   const [confirm, setConfirm] = useState("");
   const [loading, setLoading] = useState(false);
@@ -18,7 +20,7 @@ export default function ResetPasswordModal({ open, onClose, user }) {
     setSuccess(null);
 
     if (!password || password !== confirm) {
-      setError("Passwords do not match");
+      setError(t("Admin.Users.reset.errors.passwordMismatch"));
       return;
     }
 
@@ -33,7 +35,7 @@ export default function ResetPasswordModal({ open, onClose, user }) {
       const data = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(data?.message || `Failed (${res.status})`);
 
-      setSuccess("Password reset successfully ✅");
+      setSuccess(t("Admin.Users.reset.success"));
       setPassword("");
       setConfirm("");
       setTimeout(() => {
@@ -41,7 +43,7 @@ export default function ResetPasswordModal({ open, onClose, user }) {
         setSuccess(null);
       }, 1500);
     } catch (err) {
-      setError(err.message);
+      setError(t("Admin.Users.reset.errors.generic", { message: err.message }));
     } finally {
       setLoading(false);
     }
@@ -51,20 +53,20 @@ export default function ResetPasswordModal({ open, onClose, user }) {
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
       <div className="w-[90%] max-w-md bg-white dark:bg-gray-800 rounded-2xl shadow-2xl p-6">
         <h3 className="text-xl font-semibold mb-3 text-blue-900 dark:text-blue-200">
-          Reset Password for {user.fullName}
+          {t("Admin.Users.reset.title", { name: user.fullName })}
         </h3>
 
         <form onSubmit={handleSubmit} className="space-y-3">
           <input
             type="password"
-            placeholder="New password"
+            placeholder={t("Admin.Users.reset.fields.newPassword")}
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             className="w-full rounded p-2 bg-gray-100 dark:bg-gray-900 border border-gray-300 dark:border-gray-700 text-gray-900 dark:text-gray-100"
           />
           <input
             type="password"
-            placeholder="Confirm new password"
+            placeholder={t("Admin.Users.reset.fields.confirmPassword")}
             value={confirm}
             onChange={(e) => setConfirm(e.target.value)}
             className="w-full rounded p-2 bg-gray-100 dark:bg-gray-900 border border-gray-300 dark:border-gray-700 text-gray-900 dark:text-gray-100"
@@ -79,7 +81,7 @@ export default function ResetPasswordModal({ open, onClose, user }) {
               onClick={onClose}
               className="px-4 py-2 rounded bg-gray-300 dark:bg-gray-700 hover:bg-gray-400 dark:hover:bg-gray-600"
             >
-              Cancel
+              {t("Admin.Common.buttons.cancel")}
             </button>
             <button
               type="submit"
@@ -88,7 +90,9 @@ export default function ResetPasswordModal({ open, onClose, user }) {
                 loading ? "bg-gray-500 cursor-not-allowed" : "bg-blue-600 hover:bg-blue-500"
               }`}
             >
-              {loading ? "Saving…" : "Reset Password"}
+              {loading
+                ? t("Admin.Common.labels.saving")
+                : t("Admin.Users.buttons.resetPassword")}
             </button>
           </div>
         </form>

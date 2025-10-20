@@ -1,9 +1,16 @@
 // frontend/src/features/admin/AddFoodModal.jsx
-import React, { useState } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 import { API } from "../../shared/config";
 import { AVAILABLE_LANGUAGES, LANG_LABELS } from "../../shared/constants";
+import { useTranslation } from "react-i18next";
 
 export default function AddFoodModal({ onClose }) {
+  const { t, i18n } = useTranslation();
+  const defaultLanguage = useMemo(
+    () => (i18n.language || "en").split("-")[0] || "en",
+    [i18n.language]
+  );
+  const languageLabel = (lang) => LANG_LABELS[lang] || lang.toUpperCase();
   const [form, setForm] = useState({
     barcode: "",
     date: new Date().toISOString().slice(0, 10),
@@ -15,10 +22,14 @@ export default function AddFoodModal({ onClose }) {
       AVAILABLE_LANGUAGES.map((l) => [l, { dish: "", description: "", category: "" }])
     )
   );
-  const [activeLang, setActiveLang] = useState("en");
+  const [activeLang, setActiveLang] = useState(defaultLanguage);
   const [file, setFile] = useState(null);
   const [loading, setLoading] = useState(false);
   const [msg, setMsg] = useState(null);
+
+  useEffect(() => {
+    setActiveLang(defaultLanguage);
+  }, [defaultLanguage]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -65,10 +76,10 @@ export default function AddFoodModal({ onClose }) {
       const data = await res.json();
       if (!res.ok) throw new Error(data.message || "Failed to add food");
 
-      setMsg("✅ Added successfully");
+      setMsg(t("Admin.Common.messages.added"));
       setTimeout(onClose, 1000);
     } catch (err) {
-      setMsg(`❌ ${err.message}`);
+      setMsg(t("Admin.Common.messages.error", { message: err.message }));
     } finally {
       setLoading(false);
     }
@@ -83,7 +94,9 @@ export default function AddFoodModal({ onClose }) {
   return (
     <div className="fixed inset-0 bg-black/50 flex justify-center items-center z-50">
       <div className="bg-white dark:bg-gray-900 p-6 rounded-lg w-[90%] max-w-2xl shadow-lg">
-        <h2 className="text-2xl font-bold mb-4">Add New Food</h2>
+        <h2 className="text-2xl font-bold mb-4 text-gray-900 dark:text-gray-100">
+          {t("Admin.Foods.modals.addTitle")}
+        </h2>
 
         {/* Language Tabs */}
         <div className="flex gap-2 mb-4 border-b border-gray-300 dark:border-gray-700">
@@ -97,7 +110,7 @@ export default function AddFoodModal({ onClose }) {
                   : "bg-gray-200 dark:bg-gray-700 dark:text-gray-200"
               }`}
             >
-              {LANG_LABELS[lang] || lang.toUpperCase()}
+              {languageLabel(lang)}
             </button>
           ))}
         </div>
@@ -105,20 +118,26 @@ export default function AddFoodModal({ onClose }) {
         {/* Active Language Form */}
         <div className="space-y-3 mb-4">
           <input
-            placeholder={`Dish (${LANG_LABELS[activeLang]})`}
+            placeholder={t("Admin.Foods.forms.dish", {
+              language: languageLabel(activeLang),
+            })}
             value={translations[activeLang]?.dish || ""}
             onChange={(e) => updateTranslation(activeLang, "dish", e.target.value)}
             className="w-full px-3 py-2 rounded border dark:bg-gray-700"
             required={activeLang === "en"}
           />
           <input
-            placeholder={`Category (${LANG_LABELS[activeLang]})`}
+            placeholder={t("Admin.Foods.forms.category", {
+              language: languageLabel(activeLang),
+            })}
             value={translations[activeLang]?.category || ""}
             onChange={(e) => updateTranslation(activeLang, "category", e.target.value)}
             className="w-full px-3 py-2 rounded border dark:bg-gray-700"
           />
           <textarea
-            placeholder={`Description (${LANG_LABELS[activeLang]})`}
+            placeholder={t("Admin.Foods.forms.description", {
+              language: languageLabel(activeLang),
+            })}
             value={translations[activeLang]?.description || ""}
             onChange={(e) => updateTranslation(activeLang, "description", e.target.value)}
             className="w-full px-3 py-2 rounded border dark:bg-gray-700"
@@ -129,7 +148,7 @@ export default function AddFoodModal({ onClose }) {
         {/* Shared Fields */}
         <form onSubmit={handleSubmit} className="space-y-3">
           <input
-            placeholder="Barcode"
+            placeholder={t("Admin.Foods.modals.barcode")}
             value={form.barcode}
             onChange={(e) => setForm({ ...form, barcode: e.target.value })}
             className="w-full px-3 py-2 rounded border dark:bg-gray-700"
@@ -143,7 +162,7 @@ export default function AddFoodModal({ onClose }) {
             required
           />
           <input
-            placeholder="Category"
+            placeholder={t("Admin.Foods.modals.baseCategory")}
             value={form.category}
             onChange={(e) => setForm({ ...form, category: e.target.value })}
             className="w-full px-3 py-2 rounded border dark:bg-gray-700"
@@ -158,11 +177,13 @@ export default function AddFoodModal({ onClose }) {
                 setForm({ ...form, diabeticFriendly: e.target.checked })
               }
             />
-            Diabetic Friendly
+            {t("Admin.Foods.modals.diabeticFriendly")}
           </label>
 
           <div>
-            <p className="font-semibold mb-1">Contains Flags</p>
+            <p className="font-semibold mb-1">
+              {t("Admin.Foods.modals.containsFlags")}
+            </p>
             <div className="grid grid-cols-4 gap-2 text-sm">
               {["R", "S", "G", "M", "A", "W", "K", "Y"].map((c) => (
                 <label key={c} className="flex items-center gap-1">
@@ -194,14 +215,16 @@ export default function AddFoodModal({ onClose }) {
               onClick={onClose}
               className="px-4 py-2 rounded bg-gray-500 text-white"
             >
-              Cancel
+              {t("Admin.Common.buttons.cancel")}
             </button>
             <button
               type="submit"
               disabled={loading}
               className="px-4 py-2 rounded bg-blue-600 hover:bg-blue-500 text-white"
             >
-              {loading ? "Saving..." : "Save"}
+              {loading
+                ? t("Admin.Common.labels.saving")
+                : t("Admin.Common.buttons.save")}
             </button>
           </div>
         </form>

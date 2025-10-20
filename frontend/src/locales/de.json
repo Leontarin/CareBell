@@ -370,5 +370,148 @@
       "noMatch": "Passwörter stimmen nicht überein.",
       "missing": "Pflichtfelder fehlen:"
     }
+  },
+  "Admin": {
+    "Common": {
+      "buttons": {
+        "search": "Suchen",
+        "refresh": "Aktualisieren",
+        "save": "Speichern",
+        "cancel": "Abbrechen",
+        "edit": "Bearbeiten",
+        "delete": "Löschen",
+        "deleteSelected": "Ausgewählte löschen ({{count}})"
+      },
+      "labels": {
+        "viewLanguage": "Anzeigesprache:",
+        "none": "Keine",
+        "loading": "Lade…",
+        "noImage": "Kein Bild",
+        "imageUnavailable": "Bild nicht verfügbar",
+        "saving": "Speichere…"
+      },
+      "messages": {
+        "saved": "✅ Gespeichert",
+        "deleted": "🗑️ {{count}} Element(e) gelöscht",
+        "added": "✅ Erfolgreich hinzugefügt",
+        "error": "❌ {{message}}"
+      }
+    },
+    "Foods": {
+      "title": "Essensverwaltung",
+      "searchPlaceholder": "Gericht, Kategorie oder Barcode suchen…",
+      "buttons": {
+        "addFood": "Gericht hinzufügen"
+      },
+      "columns": {
+        "image": "Bild",
+        "barcode": "Barcode",
+        "dish": "Gericht",
+        "category": "Kategorie",
+        "description": "Beschreibung",
+        "allergens": "Allergene",
+        "diabetic": "Diabetikerfreundlich",
+        "contains": "Allergen-Kennzeichen",
+        "actions": "Aktionen"
+      },
+      "forms": {
+        "dish": "Gericht ({{language}})",
+        "category": "Kategorie ({{language}})",
+        "description": "Beschreibung ({{language}})"
+      },
+      "messages": {
+        "loadError": "Fehler beim Laden der Gerichte: {{message}}",
+        "saveError": "Gericht konnte nicht gespeichert werden: {{message}}",
+        "deleteError": "Gerichte konnten nicht gelöscht werden: {{message}}",
+        "confirmDeleteMany": "{{count}} Gericht(e) löschen?",
+        "confirmDeleteOne": "Dieses Gericht löschen?"
+      },
+      "modals": {
+        "addTitle": "Neues Gericht hinzufügen",
+        "barcode": "Barcode",
+        "baseCategory": "Kategorie",
+        "diabeticFriendly": "Diabetikerfreundlich",
+        "containsFlags": "Allergen-Kennzeichen"
+      }
+    },
+    "Users": {
+      "title": "Benutzerverwaltung",
+      "searchPlaceholder": "Name, Benutzername oder E-Mail suchen…",
+      "buttons": {
+        "add": "Benutzer hinzufügen",
+        "deleteSelected": "Ausgewählte löschen ({{count}})",
+        "resetPassword": "Passwort zurücksetzen"
+      },
+      "messages": {
+        "loading": "Benutzer werden geladen…",
+        "loadError": "Fehler beim Laden der Benutzer: {{message}}",
+        "saveError": "Benutzer konnte nicht gespeichert werden: {{message}}",
+        "deleteError": "Benutzer konnten nicht gelöscht werden: {{message}}",
+        "added": "✅ Benutzer erfolgreich hinzugefügt"
+      },
+      "table": {
+        "username": "Benutzername",
+        "email": "E-Mail-Adresse",
+        "fullName": "Vollständiger Name",
+        "gender": "Geschlecht",
+        "country": "Land",
+        "language": "Sprache",
+        "health": "Gesundheit",
+        "actions": "Aktionen",
+        "empty": "—",
+        "emptyState": "Keine Benutzer gefunden."
+      },
+      "labels": {
+        "healthFlags": "Gesundheitsindikatoren",
+        "allergens": "Allergene",
+        "allergensPrefix": "🧂 {{list}}",
+        "diabetic": "Diabetiker"
+      },
+      "fields": {
+        "username": "Benutzername",
+        "email": "E-Mail-Adresse",
+        "password": "Passwort",
+        "confirmPassword": "Passwort bestätigen",
+        "fullName": "Vollständiger Name",
+        "phone": "Telefonnummer",
+        "address": "Adresse",
+        "allergens": "Allergene (durch Komma getrennt)",
+        "countryPlaceholder": "Land (nur UI)",
+        "languagePlaceholder": "Sprache (nur UI)"
+      },
+      "select": {
+        "country": "Land auswählen",
+        "language": "Sprache auswählen"
+      },
+      "gender": {
+        "male": "Männlich",
+        "female": "Weiblich",
+        "other": "Divers"
+      },
+      "modals": {
+        "addTitle": "Neuen Benutzer hinzufügen",
+        "deleteTitle": "Löschen bestätigen",
+        "deleteMessage": "Möchten Sie {{count}} ausgewählte Benutzer wirklich löschen? Dies kann nicht rückgängig gemacht werden."
+      },
+      "add": {
+        "errors": {
+          "passwordMismatch": "Passwörter stimmen nicht überein.",
+          "fullNameRequired": "Der vollständige Name ist erforderlich.",
+          "generic": "Benutzer konnte nicht hinzugefügt werden: {{message}}"
+        }
+      },
+      "reset": {
+        "success": "Passwort erfolgreich zurückgesetzt ✅",
+        "errors": {
+          "passwordMismatch": "Passwörter stimmen nicht überein.",
+          "generic": "Passwort konnte nicht zurückgesetzt werden: {{message}}"
+        },
+        "title": "Passwort für {{name}} zurücksetzen",
+        "fields": {
+          "newPassword": "Neues Passwort",
+          "confirmPassword": "Neues Passwort bestätigen"
+        }
+      }
+    }
   }
 }

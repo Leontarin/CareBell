@@ -12,6 +12,41 @@ const upload = multer({ storage: multer.memoryStorage() });
 
 const FLAG_KEYS = ["R", "S", "G", "M", "A", "W", "K", "Y"];
 
+function ensureBuffer(value) {
+  if (!value) return null;
+  if (Buffer.isBuffer(value)) return value;
+  if (value.buffer) return Buffer.from(value.buffer);
+  if (value.data) return ensureBuffer(value.data);
+  try {
+    return Buffer.from(value);
+  } catch (_err) {
+    return null;
+  }
+}
+
+router.get("/:id/image", isAdmin, async (req, res) => {
+  try {
+    const food = await Food.findOne(safeFoodQuery(req.params.id)).select(
+      "image id"
+    );
+    if (!food || !food.image || !food.image.data) {
+      return res.status(404).send("Image not found");
+    }
+
+    const buffer = ensureBuffer(food.image.data);
+    if (!buffer) {
+      return res.status(500).send("Image data unavailable");
+    }
+
+    res.setHeader("Content-Type", food.image.contentType || "image/png");
+    res.setHeader("Cache-Control", "no-store");
+    res.end(buffer);
+  } catch (err) {
+    console.error("Admin food image failed:", err);
+    res.status(500).send("Error retrieving image");
+  }
+});
+
 router.use(isAdmin);
 
 function safeFoodQuery(idOrString) {
@@ -170,20 +205,6 @@ router.get("/", async (req, res) => {
   } catch (err) {
     console.error("Admin foods list failed:", err);
     res.status(500).json({ message: "Failed to load foods" });
-  }
-});
-
-router.get("/:id/image", async (req, res) => {
-  try {
-    const food = await Food.findOne(safeFoodQuery(req.params.id)).lean();
-    if (!food || !food.image || !food.image.data) {
-      return res.status(404).send("Image not found");
-    }
-    res.contentType(food.image.contentType || "image/png");
-    res.send(food.image.data);
-  } catch (err) {
-    console.error("Admin food image failed:", err);
-    res.status(500).send("Error retrieving image");
   }
 });
 

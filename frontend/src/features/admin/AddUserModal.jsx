@@ -2,8 +2,10 @@
 import React, { useState } from "react";
 import { API } from "../../shared/config";
 import { COUNTRIES, AVAILABLE_LANGUAGES, LANG_LABELS } from "../../shared/constants";
+import { useTranslation } from "react-i18next";
 
 export default function AddUserModal({ open, onClose, onAdded }) {
+  const { t } = useTranslation();
   const [form, setForm] = useState({
     fullName: "",
     username: "",
@@ -23,6 +25,8 @@ export default function AddUserModal({ open, onClose, onAdded }) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
+  const languageLabel = (code) => LANG_LABELS[code] || code.toUpperCase();
+
   if (!open) return null;
 
   const handleChange = (e) => {
@@ -35,11 +39,11 @@ export default function AddUserModal({ open, onClose, onAdded }) {
     setError(null);
 
     if (form.password && form.password !== form.confirmPassword) {
-      setError("Passwords do not match");
+      setError(t("Admin.Users.add.errors.passwordMismatch"));
       return;
     }
     if (!form.fullName.trim()) {
-      setError("Full name is required");
+      setError(t("Admin.Users.add.errors.fullNameRequired"));
       return;
     }
 
@@ -94,7 +98,7 @@ export default function AddUserModal({ open, onClose, onAdded }) {
         language: "",
       });
     } catch (err) {
-      setError(err.message);
+      setError(t("Admin.Users.add.errors.generic", { message: err.message }));
     } finally {
       setLoading(false);
     }
@@ -104,39 +108,39 @@ export default function AddUserModal({ open, onClose, onAdded }) {
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
       <div className="w-[92%] max-w-xl bg-white dark:bg-gray-800 rounded-2xl shadow-2xl p-6">
         <h3 className="text-2xl font-bold mb-4 text-blue-900 dark:text-blue-200">
-          Add New User
+          {t("Admin.Users.modals.addTitle")}
         </h3>
 
         <form onSubmit={handleSubmit} className="space-y-3">
           {/* Login credentials */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-            <input
-              name="username"
-              placeholder="Username"
+              <input
+                name="username"
+                placeholder={t("Admin.Users.fields.username")}
               value={form.username}
               onChange={handleChange}
               className="w-full rounded p-2 bg-gray-100 dark:bg-gray-900 border border-gray-300 dark:border-gray-700 text-gray-900 dark:text-gray-100"
             />
-            <input
-              name="email"
-              placeholder="Email"
-              type="email"
+              <input
+                name="email"
+                placeholder={t("Admin.Users.fields.email")}
+                type="email"
               value={form.email}
               onChange={handleChange}
               className="w-full rounded p-2 bg-gray-100 dark:bg-gray-900 border border-gray-300 dark:border-gray-700 text-gray-900 dark:text-gray-100"
             />
-            <input
-              name="password"
-              type="password"
-              placeholder="Password"
+              <input
+                name="password"
+                type="password"
+                placeholder={t("Admin.Users.fields.password")}
               value={form.password}
               onChange={handleChange}
               className="w-full rounded p-2 bg-gray-100 dark:bg-gray-900 border border-gray-300 dark:border-gray-700 text-gray-900 dark:text-gray-100"
             />
-            <input
-              name="confirmPassword"
-              type="password"
-              placeholder="Confirm Password"
+              <input
+                name="confirmPassword"
+                type="password"
+                placeholder={t("Admin.Users.fields.confirmPassword")}
               value={form.confirmPassword}
               onChange={handleChange}
               className="w-full rounded p-2 bg-gray-100 dark:bg-gray-900 border border-gray-300 dark:border-gray-700 text-gray-900 dark:text-gray-100"
@@ -145,24 +149,24 @@ export default function AddUserModal({ open, onClose, onAdded }) {
 
           {/* Basic info */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-            <input
-              name="fullName"
-              placeholder="Full name *"
+              <input
+                name="fullName"
+                placeholder={t("Admin.Users.fields.fullName")}
               value={form.fullName}
               onChange={handleChange}
               required
               className="w-full rounded p-2 bg-gray-100 dark:bg-gray-900 border border-gray-300 dark:border-gray-700 text-gray-900 dark:text-gray-100"
             />
-            <input
-              name="phoneNumber"
-              placeholder="Phone number"
+              <input
+                name="phoneNumber"
+                placeholder={t("Admin.Users.fields.phone")}
               value={form.phoneNumber}
               onChange={handleChange}
               className="w-full rounded p-2 bg-gray-100 dark:bg-gray-900 border border-gray-300 dark:border-gray-700 text-gray-900 dark:text-gray-100"
             />
-            <input
-              name="address"
-              placeholder="Address"
+              <input
+                name="address"
+                placeholder={t("Admin.Users.fields.address")}
               value={form.address}
               onChange={handleChange}
               className="w-full rounded p-2 bg-gray-100 dark:bg-gray-900 border border-gray-300 dark:border-gray-700 text-gray-900 dark:text-gray-100 md:col-span-2"
@@ -174,21 +178,23 @@ export default function AddUserModal({ open, onClose, onAdded }) {
               onChange={handleChange}
               className="w-full rounded p-2 bg-gray-100 dark:bg-gray-900 border border-gray-300 dark:border-gray-700 text-gray-900 dark:text-gray-100"
             />
-            <select
-              name="gender"
-              value={form.gender}
-              onChange={handleChange}
-              className="w-full rounded p-2 bg-gray-100 dark:bg-gray-900 border border-gray-300 dark:border-gray-700 text-gray-900 dark:text-gray-100"
-            >
-              <option value="male">Male</option>
-              <option value="female">Female</option>
-              <option value="other">Other</option>
-            </select>
+              <select
+                name="gender"
+                value={form.gender}
+                onChange={handleChange}
+                className="w-full rounded p-2 bg-gray-100 dark:bg-gray-900 border border-gray-300 dark:border-gray-700 text-gray-900 dark:text-gray-100"
+              >
+                <option value="male">{t("Admin.Users.gender.male")}</option>
+                <option value="female">{t("Admin.Users.gender.female")}</option>
+                <option value="other">{t("Admin.Users.gender.other")}</option>
+              </select>
           </div>
 
           {/* Health flags */}
           <div>
-            <div className="text-sm font-semibold mb-1 text-gray-800 dark:text-gray-200">Health Flags</div>
+            <div className="text-sm font-semibold mb-1 text-gray-800 dark:text-gray-200">
+              {t("Admin.Users.labels.healthFlags")}
+            </div>
             <div className="grid grid-cols-4 gap-2">
               {["R","S","G","M","A","W","K","Y"].map((key) => (
                 <label key={key} className="flex items-center gap-2">
@@ -206,9 +212,9 @@ export default function AddUserModal({ open, onClose, onAdded }) {
 
           {/* Allergens & Diabetic */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-            <input
-              name="AllergensCSV"
-              placeholder="Allergens (comma separated)"
+              <input
+                name="AllergensCSV"
+                placeholder={t("Admin.Users.fields.allergens")}
               value={form.AllergensCSV}
               onChange={handleChange}
               className="w-full rounded p-2 bg-gray-100 dark:bg-gray-900 border border-gray-300 dark:border-gray-700 text-gray-900 dark:text-gray-100"
@@ -220,7 +226,7 @@ export default function AddUserModal({ open, onClose, onAdded }) {
                 checked={form.Diabetic}
                 onChange={handleChange}
               />
-              <span className="text-sm">Diabetic</span>
+                <span className="text-sm">{t("Admin.Users.labels.diabetic")}</span>
             </label>
           </div>
 
@@ -232,7 +238,7 @@ export default function AddUserModal({ open, onClose, onAdded }) {
               onChange={handleChange}
               className="w-full rounded p-2 bg-gray-100 dark:bg-gray-900 border border-gray-300 dark:border-gray-700 text-gray-900 dark:text-gray-100"
             >
-              <option value="">Country (UI only)</option>
+                <option value="">{t("Admin.Users.fields.countryPlaceholder")}</option>
               {COUNTRIES.map((c) => (
                 <option key={c.code} value={c.code}>
                   {c.flag} {c.name}
@@ -246,10 +252,10 @@ export default function AddUserModal({ open, onClose, onAdded }) {
               onChange={handleChange}
               className="w-full rounded p-2 bg-gray-100 dark:bg-gray-900 border border-gray-300 dark:border-gray-700 text-gray-900 dark:text-gray-100"
             >
-              <option value="">Language (UI only)</option>
-              {(COUNTRIES.find(c => c.code === form.country)?.languages || AVAILABLE_LANGUAGES).map((lang) => (
-                <option key={lang} value={lang}>{LANG_LABELS[lang]}</option>
-              ))}
+                <option value="">{t("Admin.Users.fields.languagePlaceholder")}</option>
+                {(COUNTRIES.find(c => c.code === form.country)?.languages || AVAILABLE_LANGUAGES).map((lang) => (
+                  <option key={lang} value={lang}>{languageLabel(lang)}</option>
+                ))}
             </select>
           </div>
 
@@ -263,7 +269,7 @@ export default function AddUserModal({ open, onClose, onAdded }) {
               onClick={onClose}
               className="px-4 py-2 rounded bg-gray-300 dark:bg-gray-700 hover:bg-gray-400 dark:hover:bg-gray-600"
             >
-              Cancel
+              {t("Admin.Common.buttons.cancel")}
             </button>
             <button
               type="submit"
@@ -272,7 +278,9 @@ export default function AddUserModal({ open, onClose, onAdded }) {
                 loading ? "bg-gray-500 cursor-not-allowed" : "bg-blue-600 hover:bg-blue-500"
               }`}
             >
-              {loading ? "Saving…" : "Add User"}
+              {loading
+                ? t("Admin.Common.labels.saving")
+                : t("Admin.Users.buttons.add")}
             </button>
           </div>
         </form>

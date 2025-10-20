@@ -374,5 +374,148 @@
       "noMatch": "Passwords do not match.",
       "missing": "Required field(s) missing:"
     }
+  },
+  "Admin": {
+    "Common": {
+      "buttons": {
+        "search": "Search",
+        "refresh": "Refresh",
+        "save": "Save",
+        "cancel": "Cancel",
+        "edit": "Edit",
+        "delete": "Delete",
+        "deleteSelected": "Delete Selected ({{count}})"
+      },
+      "labels": {
+        "viewLanguage": "View language:",
+        "none": "None",
+        "loading": "Loading…",
+        "noImage": "No image",
+        "imageUnavailable": "Image unavailable",
+        "saving": "Saving…"
+      },
+      "messages": {
+        "saved": "✅ Saved",
+        "deleted": "🗑️ Deleted {{count}} item(s)",
+        "added": "✅ Added successfully",
+        "error": "❌ {{message}}"
+      }
+    },
+    "Foods": {
+      "title": "Food Manager",
+      "searchPlaceholder": "Search dish, category or barcode…",
+      "buttons": {
+        "addFood": "Add Food"
+      },
+      "columns": {
+        "image": "Image",
+        "barcode": "Barcode",
+        "dish": "Dish",
+        "category": "Category",
+        "description": "Description",
+        "allergens": "Allergens",
+        "diabetic": "Diabetic",
+        "contains": "Contains Flags",
+        "actions": "Actions"
+      },
+      "forms": {
+        "dish": "Dish ({{language}})",
+        "category": "Category ({{language}})",
+        "description": "Description ({{language}})"
+      },
+      "messages": {
+        "loadError": "Failed to load foods: {{message}}",
+        "saveError": "Failed to save food: {{message}}",
+        "deleteError": "Failed to delete foods: {{message}}",
+        "confirmDeleteMany": "Delete {{count}} food item(s)?",
+        "confirmDeleteOne": "Delete this food?"
+      },
+      "modals": {
+        "addTitle": "Add New Food",
+        "barcode": "Barcode",
+        "baseCategory": "Category",
+        "diabeticFriendly": "Diabetic Friendly",
+        "containsFlags": "Contains Flags"
+      }
+    },
+    "Users": {
+      "title": "User Manager",
+      "searchPlaceholder": "Search name, username, or email…",
+      "buttons": {
+        "add": "Add User",
+        "deleteSelected": "Delete Selected ({{count}})",
+        "resetPassword": "Reset Password"
+      },
+      "messages": {
+        "loading": "Loading users…",
+        "loadError": "Failed to load users: {{message}}",
+        "saveError": "Failed to save user: {{message}}",
+        "deleteError": "Failed to delete users: {{message}}",
+        "added": "✅ User added successfully"
+      },
+      "table": {
+        "username": "Username",
+        "email": "Email",
+        "fullName": "Full Name",
+        "gender": "Gender",
+        "country": "Country",
+        "language": "Language",
+        "health": "Health",
+        "actions": "Actions",
+        "empty": "—",
+        "emptyState": "No users found."
+      },
+      "labels": {
+        "healthFlags": "Health Flags",
+        "allergens": "Allergens",
+        "allergensPrefix": "🧂 {{list}}",
+        "diabetic": "Diabetic"
+      },
+      "fields": {
+        "username": "Username",
+        "email": "Email",
+        "password": "Password",
+        "confirmPassword": "Confirm Password",
+        "fullName": "Full name",
+        "phone": "Phone number",
+        "address": "Address",
+        "allergens": "Allergens (comma separated)",
+        "countryPlaceholder": "Country (UI only)",
+        "languagePlaceholder": "Language (UI only)"
+      },
+      "select": {
+        "country": "Select Country",
+        "language": "Select Language"
+      },
+      "gender": {
+        "male": "Male",
+        "female": "Female",
+        "other": "Other"
+      },
+      "modals": {
+        "addTitle": "Add New User",
+        "deleteTitle": "Confirm deletion",
+        "deleteMessage": "Are you sure you want to delete {{count}} selected user(s)? This cannot be undone."
+      },
+      "add": {
+        "errors": {
+          "passwordMismatch": "Passwords do not match.",
+          "fullNameRequired": "Full name is required.",
+          "generic": "Failed to add user: {{message}}"
+        }
+      },
+      "reset": {
+        "success": "Password reset successfully ✅",
+        "errors": {
+          "passwordMismatch": "Passwords do not match.",
+          "generic": "Failed to reset password: {{message}}"
+        },
+        "title": "Reset Password for {{name}}",
+        "fields": {
+          "newPassword": "New password",
+          "confirmPassword": "Confirm new password"
+        }
+      }
+    }
   }
 }
