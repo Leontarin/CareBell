@@ -152,7 +152,7 @@
     "notFoundSpoken": "Sorry, this food was not found.",
     "noDescription": "No description available",
     "includesLabel": "It includes:",
-    "diabeticFriendlyLabel": "Diabetic friendly:",
+    "diabeticFriendlyLabel": "Diabetic friendly",
     "diabeticFriendlyYes": "Yes",
     "diabeticFriendlyNo": "No",
     "allergyWarning": "You are allergic to the following in the meal:",
@@ -373,6 +373,36 @@
       "failed": "Registration failed",
       "noMatch": "Passwords do not match.",
       "missing": "Required field(s) missing:"
+    }
+  },
+  "Admin": {
+    "Users": {
+      "title": "User Manager",
+      "addUser": "+ Add New User",
+      "search": "Search name, username, or email…",
+      "deleteSelected": "Delete Selected ({{count}})",
+      "refresh": "Refresh",
+      "loading": "Loading users…",
+      "username": "Username",
+      "email": "Email",
+      "fullName": "Full Name",
+      "gender": "Gender",
+      "country": "Country",
+      "language": "Language",
+      "health": "Health",
+      "actions": "Actions",
+      "selectCountry": "Select Country",
+      "selectLanguage": "Select Language",
+      "edit": "Edit",
+      "save": "Save",
+      "cancel": "Cancel",
+      "resetPassword": "Reset Password",
+      "confirmDelete": "Confirm deletion",
+      "confirmMessage": "Are you sure you want to delete {{count}} selected user(s)? This cannot be undone.",
+      "delete": "Delete",
+      "deleted": "🗑️ Deleted {{count}} user(s)",
+      "saved": "✅ Saved successfully",
+      "added": "✅ User added successfully"
     }
   }
 }

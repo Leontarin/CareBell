@@ -18,7 +18,7 @@ router.get("/", async (req, res) => {
     const users = await User.find({}, { passwordHash: 0 }).lean({ getters: true });
 
     // Normalize boolean + arrays for safety
-    const normalized = users.map(u => ({
+    const normalized = users.map((u) => ({
       ...u,
       R: !!u.R,
       S: !!u.S,
@@ -54,7 +54,14 @@ router.post("/add", async (req, res) => {
       address,
       dateOfBirth,
       gender,
-      R, S, G, M, A, W, K, Y,
+      R,
+      S,
+      G,
+      M,
+      A,
+      W,
+      K,
+      Y,
       Allergens,
       Diabetic,
     } = req.body;
@@ -72,6 +79,14 @@ router.post("/add", async (req, res) => {
 
     const hashed = password ? await bcrypt.hash(password, 10) : undefined;
 
+    // Build consistent allergens
+    const allergenKeys = ["R", "S", "G", "M", "A", "W", "K", "Y"];
+    const allergenFlags = {};
+    allergenKeys.forEach((key) => {
+      allergenFlags[key] = req.body[key] === "on" || req.body[key] === true;
+    });
+    const allergenArray = allergenKeys.filter((k) => allergenFlags[k]);
+
     const newUser = new User({
       id: id || crypto.randomUUID(),
       fullName,
@@ -81,8 +96,8 @@ router.post("/add", async (req, res) => {
       address,
       dateOfBirth,
       gender,
-      R, S, G, M, A, W, K, Y,
-      Allergens: Allergens || [],
+      ...allergenFlags,
+      Allergens: allergenArray,
       Diabetic: Diabetic ?? false,
       ...(hashed && { passwordHash: hashed }),
     });
@@ -116,10 +131,29 @@ router.patch("/:id", async (req, res) => {
     delete req.body.id;
     delete req.body._id;
 
+    // ────────────────────────────────
+    //  Keep allergens in sync
+    // ────────────────────────────────
+    const allergenKeys = ["R", "S", "G", "M", "A", "W", "K", "Y"];
+
+    // Normalize flags
+    allergenKeys.forEach((key) => {
+      const val = req.body[key];
+      if (val === "on" || val === true) req.body[key] = true;
+      else if (val === "off" || val === false) req.body[key] = false;
+    });
+
+    // Build array from flags
+    req.body.Allergens = allergenKeys.filter((k) => req.body[k]);
+
+    // ────────────────────────────────
+    //  Apply and save
+    // ────────────────────────────────
     Object.assign(user, req.body);
     const saved = await user.save();
     const safe = saved.toObject();
     delete safe.passwordHash;
+
     res.json({ message: "User updated", user: safe });
   } catch (e) {
     res.status(400).json({ message: e.message });
