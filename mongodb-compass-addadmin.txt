@@ -1,0 +1,6 @@
+//Open Mongodb shell and replace USERNAME with requested user to add to admin
+const user = db.users.findOne({ username: "USERNAME" });
+db.admins.insertOne({
+  userId: user._id,
+  role: "superadmin"
+});
