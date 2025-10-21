@@ -31,46 +31,45 @@ router.post("/register", async (req, res) => {
       });
     }
 
-    const emailKey = email?.trim().toLowerCase();
-    const usernameKey = username?.trim().toLowerCase();
+    const emailKey = email?.trim().toLowerCase() || null;
+    const usernameKey = username?.trim().toLowerCase() || null;
 
-    // Duplicate checks
-    if (emailKey) {
-      const existingEmail = await User.findOne({ email: emailKey });
-      if (existingEmail) {
-        return res.status(409).json({ message: "Email already in use" });
-      }
-    }
-    if (usernameKey) {
-      const existingUser = await User.findOne({ username: usernameKey });
-      if (existingUser) {
-        return res.status(409).json({ message: "Username already in use" });
-      }
+    // ✅ Check for duplicates only if a real value exists
+    const existing = await User.findOne({
+      $or: [
+        ...(emailKey ? [{ email: emailKey }] : []),
+        ...(usernameKey ? [{ username: usernameKey }] : []),
+      ],
+    });
+
+    if (existing) {
+      const conflictField = existing.email === emailKey ? "Email" : "Username";
+      return res.status(409).json({ message: `${conflictField} already in use` });
     }
 
     const passwordHash = await bcrypt.hash(password, 12);
 
-    // --- Key change here: build object dynamically ---
     const userData = {
-      id: emailKey || usernameKey,
+      id: usernameKey || emailKey, // consistent user identifier
       fullName,
       passwordHash,
-      dateOfBirth: dateOfBirth ? new Date(dateOfBirth) : undefined,
       gender: gender || "other",
       phoneNumber: phoneNumber?.trim() || undefined,
     };
 
-    if (emailKey) userData.email = emailKey;       // only set if not empty
-    if (usernameKey) userData.username = usernameKey; // only set if not empty
+    if (emailKey) userData.email = emailKey;
+    if (usernameKey) userData.username = usernameKey;
 
+    if (dateOfBirth) userData.dateOfBirth = new Date(dateOfBirth);
+
+    // Language defaults
     if (country || language) {
       try {
         const settings = computeLanguageSettings({
           country,
           preferredLanguage: language,
         });
-
-        if (settings.country) userData.country = settings.country;
+        userData.country = settings.country;
         userData.language = settings.language;
         userData.languages = settings.languages;
       } catch (langErr) {
@@ -107,9 +106,16 @@ router.post("/login", async (req, res) => {
     const raw = String(emailOrUsername).trim();
     const key = raw.toLowerCase();
 
-    const user = await User.findOne({
-      $or: [{ email: key }, { username: key }, { id: raw }],
-    }).select("+passwordHash");
+    let user = null;
+
+    // Detect whether it's likely an email or username
+    if (key.includes("@")) {
+      user = await User.findOne({ email: key }).select("+passwordHash");
+    } else {
+      user = await User.findOne({
+        $or: [{ username: key }, { id: key }],
+      }).select("+passwordHash");
+    }
 
     if (!user) return res.status(401).json({ message: "Invalid credentials" });
 

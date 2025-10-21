@@ -27,7 +27,7 @@ const userSchema = new mongoose.Schema({
 
   //user auth fields
   username: { type: String, trim: true, lowercase: true, index: true, unique: false }, // optional
-  email: { type: String, trim: true, lowercase: true, index: true, unique: true, sparse: true },
+  email: {type: String, trim: true, lowercase: true, index: true, unique: true, sparse: true, validate: { validator: (v) => !v || /^\S+@\S+\.\S+$/.test(v), message: "Invalid email format", }, },
   passwordHash: { type: String, select: false },                  // only for local login
   googleId: { type: String, index: true },         // only for Google
   picture: { type: String },
