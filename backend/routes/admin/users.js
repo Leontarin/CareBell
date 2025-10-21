@@ -5,6 +5,7 @@ const AdminBackup = require("../../models/adminBackup");
 const isAdmin = require("../../middleware/isAdmin");
 const { safeUserQuery } = require("../../lib/utils");
 const bcrypt = require("bcrypt");
+const Admin = require("../../models/admin");
 
 // Apply admin guard to every route here
 router.use(isAdmin);
@@ -67,10 +68,21 @@ router.post("/add", async (req, res) => {
 
     if (!fullName)
       return res.status(400).json({ message: "Missing required field: fullName" });
+    
+    if (!email && !username) {
+      return res
+        .status(400)
+        .json({ message: "Either email or username is required" });
+    }
 
-    const existing = await User.findOne({
-      $or: [{ id }, { username }, { email }],
-    });
+    const query = [
+      ...(id ? [{ id }] : []),
+      ...(username ? [{ username }] : []),
+      ...(email ? [{ email }] : []),
+    ];
+    
+    const existing = query.length ? await User.findOne({ $or: query }) : null;
+    
     if (existing)
       return res
         .status(409)
@@ -109,7 +121,7 @@ router.post("/add", async (req, res) => {
 });
 
 // ────────────────────────────────
-//  PATCH: Update a user (with backup)
+//  PATCH: Update a user (with backup, safe duplicate handling)
 // ────────────────────────────────
 router.patch("/:id", async (req, res) => {
   try {
@@ -129,6 +141,30 @@ router.patch("/:id", async (req, res) => {
     delete req.body._id;
 
     // ────────────────────────────────
+    //  Safe duplicate check
+    // ────────────────────────────────
+    const { email, username } = req.body;
+    const emailKey = email?.trim().toLowerCase() || null;
+    const usernameKey = username?.trim().toLowerCase() || null;
+
+    // Check duplicates only if real values exist
+    const query = [
+      ...(emailKey ? [{ email: emailKey }] : []),
+      ...(usernameKey ? [{ username: usernameKey }] : []),
+    ];
+
+    if (query.length > 0) {
+      const existing = await User.findOne({
+        $or: query,
+        _id: { $ne: user._id }, // exclude self
+      });
+      if (existing) {
+        const conflictField = existing.email === emailKey ? "Email" : "Username";
+        return res.status(409).json({ message: `${conflictField} already in use` });
+      }
+    }
+
+    // ────────────────────────────────
     //  Normalize allergen flags only (no textual array)
     // ────────────────────────────────
     const allergenKeys = ["R", "S", "G", "M", "A", "W", "K", "Y"];
@@ -137,17 +173,17 @@ router.patch("/:id", async (req, res) => {
       req.body[key] = val === "on" || val === true;
     });
 
-    // Remove textual allergens if present
-    delete req.body.Allergens;
+    delete req.body.Allergens; // textual array removed
 
     // ────────────────────────────────
-    //  Apply and save
+    //  Apply updates and save
     // ────────────────────────────────
     Object.assign(user, req.body);
     const saved = await user.save();
     const safe = saved.toObject();
     delete safe.passwordHash;
-    // 🔁 Keep admin session in sync when they edit themselves
+
+    // 🔁 Keep admin session in sync when editing self
     if (req.session?.user && String(user._id) === String(req.session.user._id)) {
       req.session.user = {
         ...req.session.user,
@@ -156,6 +192,7 @@ router.patch("/:id", async (req, res) => {
       };
       console.log("🔄 Session user refreshed after self-edit via Admin panel");
     }
+
     res.json({ message: "User updated", user: safe });
   } catch (e) {
     console.error("Admin user update failed:", e);
@@ -232,6 +269,50 @@ router.patch("/:id/reset-password", async (req, res) => {
     if (!updated) return res.status(404).json({ message: "User not found" });
     res.json({ success: true, message: "Password reset successfully" });
   } catch (e) {
+    res.status(500).json({ message: e.message });
+  }
+});
+
+// ────────────────────────────────
+//  PATCH: Update user role (and sync Admin table)
+// ────────────────────────────────
+router.patch("/:id/role", async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { role } = req.body;
+
+    if (!["user", "superadmin"].includes(role)) {
+      return res.status(400).json({ message: "Invalid role" });
+    }
+
+    const user = await User.findOne(safeUserQuery(id));
+    if (!user) return res.status(404).json({ message: "User not found" });
+
+    // Update user's role array
+    user.roles = [role];
+    await user.save();
+
+    // Sync with Admin collection
+    const existingAdmin = await Admin.findOne({ userId: user._id });
+
+    if (role === "superadmin") {
+      // If user not admin, create or upgrade
+      if (!existingAdmin) {
+        await Admin.create({ userId: user._id, role: "superadmin" });
+      } else if (existingAdmin.role !== "superadmin") {
+        existingAdmin.role = "superadmin";
+        await existingAdmin.save();
+      }
+    } else if (role === "user") {
+      // Remove from Admins if currently listed
+      if (existingAdmin) {
+        await existingAdmin.deleteOne();
+      }
+    }
+
+    res.json({ message: "Role updated successfully", role });
+  } catch (e) {
+    console.error("Admin role update failed:", e);
     res.status(500).json({ message: e.message });
   }
 });

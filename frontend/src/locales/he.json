@@ -13,17 +13,17 @@
     "exitFullscreen": "צא ממסך מלא",
     "warningMessage": "אנא אל תמסור לבלה מידע אישי (סיסמאות, שמות משפחה, פרטי חשבון בנק וכו׳)",
     "menus": {
-      "פתח אנשי קשר":     "call-contacts",
-      "פתח חבר":      "meet-with-friends",
-      "פתח פגוש חבר":      "meet-with-friends",
-      "פתח תרופות":     "medicine",
-      "פתח ארוחות":        "meals",
-      "פתח מנת היום":        "meals",
-      "פתח אוכל":        "meals",
-      "פתח מזון":        "meals",
-      "פתח חדשות":         "news",
-      "פתח אימונ":     "exercise",
-      "פתח אימון":     "exercise"
+      "פתח אנשי קשר": "call-contacts",
+      "פתח חבר": "meet-with-friends",
+      "פתח פגוש חבר": "meet-with-friends",
+      "פתח תרופות": "medicine",
+      "פתח ארוחות": "meals",
+      "פתח מנת היום": "meals",
+      "פתח אוכל": "meals",
+      "פתח מזון": "meals",
+      "פתח חדשות": "news",
+      "פתח אימונ": "exercise",
+      "פתח אימון": "exercise"
     }
   },
   "Calendar": {
@@ -71,7 +71,6 @@
     "relationshipPlaceholder": "הקלד סוג קשר"
   },
   "Exercise": {
-    
     "Hard_label": ".ספריית התרגילים שלנו מתמקדת בתרגילים ברמת קושי 'קלה' ו'בינונית', שהם בטוחים ומתאימים למשתמשים מבוגרים",
     "no_exercises_criteria": "לא נמצאו תרגילים המתאימים לקטגוריה שבחרת",
     "Try_Again": "נסה שוב",
@@ -114,7 +113,6 @@
     "benefitsIntro": "היתרונות המרכזיים כוללים",
     "fetchError": "שגיאה בטעינת תרגילים: {{message}}",
     "targets": "ממוקד על"
-    
   },
   "Header": {
     "Emergency": "לחצן מצוקה",
@@ -160,8 +158,8 @@
     "enterBarcodePlaceholder": "הזן ברקוד",
     "enterButton": "הזן",
     "LegendHeadings": {
-      "Additives":  "תוספים",
-      "Allergens":  "אלרגנים",
+      "Additives": "תוספים",
+      "Allergens": "אלרגנים",
       "Pictograms": "פיקטוגרמות"
     },
     "Legend": {
@@ -205,15 +203,15 @@
         "contains mollusks": "מכיל רכיכות"
       },
       "Pictograms": {
-        "R": "מכיל בשר בקר",
-        "S": "מכיל בשר חזיר",
-        "G": "מכיל בשר עוף",
-        "M": "מכיל לקטוז",
-        "A": "מכיל אלכוהול",
-        "W": "מכיל גלוטן",
+        "R": "בשר בקר",
+        "S": "בשר חזיר",
+        "G": "בשר עוף",
+        "M": "לקטוז",
+        "A": "אלכוהול",
+        "W": "גלוטן",
         "K": "טעם שום חריף",
         "Y": "טבעוני"
-      }
+      }      
     }
   },
   "Medication": {
@@ -243,44 +241,44 @@
     "LeaveRoom": "🚪 עזוב את החדר",
     "VideoOn": "📹 וידיאו דולק",
     "VideoOff": "📹 וידאו כבוי",
-    "CameraOn":"הדלק/י את המצלמה",
+    "CameraOn": "הדלק/י את המצלמה",
     "CameraOff": "כבה/י את המצלמה",
     "mute": "🎤 השתק/י",
     "unmute": "🔇 בטל/י השתקה",
     "Fullscreen": "מסך מלא",
     "EnterFullscreen": "היכנס/י למסך מלא",
-    "ExitFullscreen":"צא/י ממסך מלא",
-    "Connecting":"...מתחבר",
-    "Connected":"מחובר",
-    "noParticipants":"אין משתתפים בחדר",
-    "roomFull":"🚫 החדר מלא",
+    "ExitFullscreen": "צא/י ממסך מלא",
+    "Connecting": "...מתחבר",
+    "Connected": "מחובר",
+    "noParticipants": "אין משתתפים בחדר",
+    "roomFull": "🚫 החדר מלא",
     "activeParticipants": ":משתתפים מחוברים",
     "videoCallInProgress": "שיחת וידאו בתהליך",
-    "leaveRoom":"צא מהחדר",
-    "endCall":"סיים שיחה",
-    "room":":חדר",
-    "noRooms":"!אין חדרים זמינים, תיצור חדר חדש כדי להתחיל",
+    "leaveRoom": "צא מהחדר",
+    "endCall": "סיים שיחה",
+    "room": ":חדר",
+    "noRooms": "!אין חדרים זמינים, תיצור חדר חדש כדי להתחיל",
     "joinCall": "🔗 הצטרפ/י לשיחה",
-    "online":"מחובר/ים",
-    "participants":"משתתפים",
-    "viewParticipants":"הצג משתתפים",
-    "hideParticipants":"הסתר משתתפים",
+    "online": "מחובר/ים",
+    "participants": "משתתפים",
+    "viewParticipants": "הצג משתתפים",
+    "hideParticipants": "הסתר משתתפים",
     "availableRooms": ":חדרים זמינים",
     "createRoom": "צור חדר",
-    "Title":" חדרי וידאו"
+    "Title": " חדרי וידאו"
   },
   "News": {
-    "latestNews":    "החדשות העדכניות",
+    "latestNews": "החדשות העדכניות",
     "selectRegions": "בחר אזורים",
-    "loading":       "טוען חדשות…",
-    "errorTitle":    "שגיאה",
-    "retry":         "נסה שוב",
+    "loading": "טוען חדשות…",
+    "errorTitle": "שגיאה",
+    "retry": "נסה שוב",
     "articlesFound": "כתבות נמצאו",
-    "stopReading":   "עצור קריאה",
-    "source":        "מקור",
-    "stop":          "עצור",
-    "read":          "קרא",
-    "readMore":      "קרא עוד",
+    "stopReading": "עצור קריאה",
+    "source": "מקור",
+    "stop": "עצור",
+    "read": "קרא",
+    "readMore": "קרא עוד",
     "badenWuerttemberg": "באדן-וירטמברג",
     "bavaria": "בוואריה",
     "berlin": "ברלין",
@@ -299,19 +297,20 @@
     "thuringia": "תורינגיה"
   },
   "RightSide": {
-    "callContacts":     "אנשי קשר",
-    "meetWithFriends":  "פגוש חברים",
-    "medicine":         "תרופות",
-    "meals":            "ארוחות",
-    "news":             "חדשות",
-    "exercise":         "אימונים",
-    "back":             "חזור",
-    "loadingUser":      "טוען משתמש..."
+    "callContacts": "אנשי קשר",
+    "meetWithFriends": "פגוש חברים",
+    "medicine": "תרופות",
+    "meals": "ארוחות",
+    "news": "חדשות",
+    "exercise": "אימונים",
+    "back": "חזור",
+    "loadingUser": "טוען משתמש..."
   },
   "SettingsModal": {
     "title": "הגדרות",
     "general": "כללי",
     "health": "בריאות",
+    "admin": "ניהול",
     "textSize": "גודל טקסט",
     "volume": "עוצמת קול",
     "speakingSpeed": "מהירות דיבור",
@@ -372,6 +371,59 @@
       "failed": "ההרשמה נכשלה",
       "noMatch": "הסיסמאות אינן תואמות.",
       "missing": "חסרים שדות נדרשים:"
+    }
+  },
+  "Admin": {
+    "Panel": {
+      "title": "לוח ניהול",
+      "back": "חזרה",
+      "users": "משתמשים",
+      "foods": "מאכלים"
+    },
+    "Users": {
+      "title": "ניהול משתמשים",
+      "addUser": "+ הוסף משתמש חדש",
+      "search": "חפש לפי שם, משתמש או אימייל…",
+      "deleteSelected": "מחק {{count}} משתמשים שנבחרו",
+      "refresh": "רענן",
+      "loading": "טוען משתמשים…",
+      "username": "שם משתמש",
+      "email": "אימייל",
+      "fullName": "שם מלא",
+      "gender": "מין",
+      "country": "מדינה",
+      "language": "שפה",
+      "health": "בריאות",
+      "actions": "פעולות",
+      "selectCountry": "בחר מדינה",
+      "selectLanguage": "בחר שפה",
+      "edit": "ערוך",
+      "save": "שמור",
+      "cancel": "בטל",
+      "resetPassword": "אפס סיסמה",
+      "confirmDelete": "אשר מחיקה",
+      "confirmMessage": "האם אתה בטוח שברצונך למחוק {{count}} משתמשים? לא ניתן לבטל פעולה זו.",
+      "delete": "מחק",
+      "deleted": "🗑️ נמחקו {{count}} משתמשים",
+      "saved": "✅ נשמר בהצלחה",
+      "added": "✅ המשתמש נוסף בהצלחה",
+      "passwordMismatch": "הסיסמאות אינן תואמות",
+      "fullNameRequired": "נדרש להזין שם מלא",
+      "saving": "שומר...",
+      "Reset": {
+      "title": "איפוס סיסמה עבור {{name}}",
+      "newPassword": "סיסמה חדשה",
+      "confirmPassword": "אשר סיסמה חדשה",
+      "cancel": "בטל",
+      "saving": "שומר...",
+      "reset": "אפס סיסמה",
+      "success": "הסיסמה אופסה בהצלחה ✅",
+      "errorMismatch": "הסיסמאות אינן תואמות",
+      "errorFailed": "האיפוס נכשל"
+      },
+      "role": "תפקיד",
+      "roleUser": "משתמש",
+      "roleSuperadmin": "מנהל-על"
     }
   }
 }

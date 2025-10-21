@@ -1,3 +1,4 @@
+//frontend/src/features/admin/AddFoodModal.jsx
 import React, { useState } from "react";
 import { API } from "../../shared/config";
 

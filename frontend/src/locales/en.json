@@ -313,6 +313,7 @@
     "title": "Settings",
     "general": "General",
     "health": "Health",
+    "admin": "Admin",
     "textSize": "Text Size",
     "volume": "Volume",
     "speakingSpeed": "Speaking Speed",
@@ -376,6 +377,12 @@
     }
   },
   "Admin": {
+    "Panel": {
+      "title": "Admin Panel",
+      "back": "Back",
+      "users": "Users",
+      "foods": "Foods"
+    },
     "Users": {
       "title": "User Manager",
       "addUser": "+ Add New User",
@@ -402,7 +409,24 @@
       "delete": "Delete",
       "deleted": "🗑️ Deleted {{count}} user(s)",
       "saved": "✅ Saved successfully",
-      "added": "✅ User added successfully"
+      "added": "✅ User added successfully",
+      "passwordMismatch": "Passwords do not match",
+      "fullNameRequired": "Full name is required",
+      "saving": "Saving…",
+      "Reset": {
+        "title": "Reset Password for {{name}}",
+        "newPassword": "New password",
+        "confirmPassword": "Confirm new password",
+        "cancel": "Cancel",
+        "saving": "Saving…",
+        "reset": "Reset Password",
+        "success": "Password reset successfully ✅",
+        "errorMismatch": "Passwords do not match",
+        "errorFailed": "Password reset failed"
+      },
+      "role": "Role",
+      "roleUser": "User",
+      "roleSuperadmin": "Superadmin"
     }
   }
 }

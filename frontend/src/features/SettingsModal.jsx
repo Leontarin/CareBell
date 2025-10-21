@@ -181,7 +181,7 @@ export default function SettingsModal({ onClose }) {
                 }}
                 className="px-3 py-2 rounded bg-yellow-500 hover:bg-yellow-400 text-white flex items-center justify-center gap-2"
               >
-                <FaUserShield /> Admin
+                <FaUserShield /> {t("SettingsModal.admin", "Admin")}
               </button>
             )}
           </nav>

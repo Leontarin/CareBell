@@ -195,6 +195,26 @@ export default function UserManager() {
     );
   }, [users, query]);
 
+  //Changing role
+  const handleRoleChange = async (u, newRole) => {
+    try {
+      setUsers((prev) =>
+        prev.map((usr) =>
+          usr._id === u._id ? { ...usr, roles: [newRole] } : usr
+        )
+      );
+  
+      await fetch(`${API}/admin/users/${u._id}/role`, {
+        method: "PATCH",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ role: newRole }),
+      });
+    } catch (err) {
+      console.error("Failed to update role:", err);
+    }
+  };
+
   // ────────────────────────────────
   //  Render
   // ────────────────────────────────
@@ -385,6 +405,20 @@ export default function UserManager() {
                           />
                           {t("Meals.diabeticFriendlyLabel")}
                         </label>
+                      </td>
+                      <td className="p-2">
+                        <label className="block text-xs font-semibold mb-1">
+                          {t("Admin.Users.role", "Role")}
+                        </label>
+                        <select
+                          name="role"
+                          value={u.roles?.[0] || "user"}
+                          onChange={(e) => handleRoleChange(u, e.target.value)}
+                          className="w-full rounded p-1 border bg-gray-100 dark:bg-gray-900 border-gray-300 dark:border-gray-700 text-gray-900 dark:text-gray-100"
+                        >
+                          <option value="user">{t("Admin.Users.roleUser", "User")}</option>
+                          <option value="superadmin">{t("Admin.Users.roleSuperadmin", "Superadmin")}</option>
+                        </select>
                       </td>
                       <td className="p-2 text-center">
                         <button

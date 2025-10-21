@@ -26,8 +26,23 @@ const userSchema = new mongoose.Schema({
   Diabetic: { type: Boolean, default: false },
 
   //user auth fields
-  username: { type: String, trim: true, lowercase: true, index: true, unique: false }, // optional
-  email: {type: String, trim: true, lowercase: true, index: true, unique: true, sparse: true, validate: { validator: (v) => !v || /^\S+@\S+\.\S+$/.test(v), message: "Invalid email format", }, },
+  username: {
+    type: String,
+    trim: true,
+    lowercase: true,
+    index: true,
+    // uniqueness handled by partial index below
+  },  
+  email: {
+    type: String,
+    trim: true,
+    lowercase: true,
+    sparse: true,
+    validate: {
+      validator: (v) => !v || /^\S+@\S+\.\S+$/.test(v),
+      message: "Invalid email format",
+    },
+  },
   passwordHash: { type: String, select: false },                  // only for local login
   googleId: { type: String, index: true },         // only for Google
   picture: { type: String },
@@ -71,6 +86,26 @@ userSchema.pre('validate', function ensureLanguageDefaults(next) {
   } catch (err) {
     next(err);
   }
+});
+
+// ────────────────────────────────
+//  Unique indexes (ignore null / empty)
+// ────────────────────────────────
+userSchema.index(
+  { email: 1 },
+  { unique: true, partialFilterExpression: { email: { $type: "string", $ne: "" } } }
+);
+userSchema.index(
+  { username: 1 },
+  { unique: true, partialFilterExpression: { username: { $type: "string", $ne: "" } } }
+);
+
+// Require at least one of the two for registration
+userSchema.pre("validate", function (next) {
+  if (!this.email && !this.username) {
+    return next(new Error("Either email or username is required"));
+  }
+  next();
 });
 
 module.exports = mongoose.model('User', userSchema);
