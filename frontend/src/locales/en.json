@@ -427,6 +427,34 @@
       "role": "Role",
       "roleUser": "User",
       "roleSuperadmin": "Superadmin"
+    },
+    "Foods": {
+      "title": "Food Manager",
+      "add": "+ Add New Food",
+      "modalTitle": "Add New Food",
+      "id": "ID",
+      "idNote": "Auto-incremented numeric ID",
+      "barcode": "Barcode",
+      "regen": "Regen",
+      "date": "Date",
+      "diabeticFriendly": "Diabetic Friendly",
+      "dish": "Dish Name",
+      "category": "Category",
+      "description": "Description",
+      "image": "Image",
+      "added": "✅ Added successfully",
+      "edit": "Edit",
+      "delete": "Delete",
+      "confirmDelete": "Delete this food?",
+      "validation": {
+        "missingEn": "English dish and category are required."
+      },
+      "languageTabs": {
+        "en": "English",
+        "de": "German",
+        "fi": "Finnish",
+        "he": "Hebrew"
+      }
     }
   }
 }

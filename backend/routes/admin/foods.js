@@ -1,6 +1,5 @@
+// backend/routes/admin/foods.js
 const express = require("express");
-const fs = require("fs");
-const path = require("path");
 const multer = require("multer");
 const mongoose = require("mongoose");
 
@@ -9,12 +8,13 @@ const Food = require("../../models/food");
 const isAdmin = require("../../middleware/isAdmin");
 
 // ──────────────────────────────────────────────────────────────────────────────
-// Admin guard on everything in this router
+// Admin guard
 // ──────────────────────────────────────────────────────────────────────────────
 router.use(isAdmin);
 
 // ──────────────────────────────────────────────────────────────────────────────
-/** Utilities */
+// Utilities
+// ──────────────────────────────────────────────────────────────────────────────
 function safeFoodQuery(idOrString) {
   if (!idOrString) return {};
   if (mongoose.Types.ObjectId.isValid(idOrString)) {
@@ -35,7 +35,7 @@ function parseArray(val) {
       const parsed = JSON.parse(s);
       if (Array.isArray(parsed)) return parsed;
     } catch (_) {
-      return s.split(",").map(v => v.trim()).filter(Boolean);
+      return s.split(",").map((v) => v.trim()).filter(Boolean);
     }
   }
   return [];
@@ -48,20 +48,12 @@ function parseBool(v) {
 }
 
 // ──────────────────────────────────────────────────────────────────────────────
-// Multer temp storage (we'll delete after reading file buffer)
+// Multer memory storage
 // ──────────────────────────────────────────────────────────────────────────────
-const tmpDir = path.join(__dirname, "..", "..", "tmp_uploads");
-if (!fs.existsSync(tmpDir)) fs.mkdirSync(tmpDir, { recursive: true });
-
-const storage = multer.diskStorage({
-  destination: (_req, _file, cb) => cb(null, tmpDir),
-  filename: (_req, file, cb) =>
-    cb(null, `upload_${Date.now()}_${Math.random().toString(36).slice(2)}${path.extname(file.originalname || "")}`),
-});
-const upload = multer({ storage });
+const upload = multer({ storage: multer.memoryStorage() });
 
 // ──────────────────────────────────────────────────────────────────────────────
-// GET /admin/foods  → list (with optional ?q= search on dish, barcode, category)
+// GET /admin/foods → list
 // ──────────────────────────────────────────────────────────────────────────────
 router.get("/", async (req, res) => {
   try {
@@ -70,45 +62,48 @@ router.get("/", async (req, res) => {
     if (q && String(q).trim()) {
       const rx = new RegExp(String(q).trim().replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "i");
       filter.$or = [
-        { dish: rx },
+        { "translations.en.dish": rx },
+        { "translations.en.category": rx },
+        { "translations.en.description": rx },
         { barcode: rx },
-        { category: rx },
-        { description: rx },
       ];
     }
-    const foods = await Food.find(filter).sort({ createdAt: -1 }).lean();
-    // hide binary blobs to reduce payload size
-    foods.forEach(f => delete f.image);
+    const foods = await Food.find(filter).sort({ id: -1 }).lean();
+    foods.forEach((f) => delete f.image);
     res.json(foods);
   } catch (e) {
+    console.error("GET /admin/foods error:", e);
     res.status(500).json({ message: e.message });
   }
 });
 
 // ──────────────────────────────────────────────────────────────────────────────
-// GET /admin/foods/:id/image → serve the stored image blob
+// GET /admin/foods/:id/image
 // ──────────────────────────────────────────────────────────────────────────────
 router.get("/:id/image", async (req, res) => {
   try {
-    const food = await Food.findOne(safeFoodQuery(req.params.id)).lean();
-    if (!food || !food.image || !food.image.data) {
+    // ⚠️ No `.lean()` — keep Buffer intact
+    const food = await Food.findOne(safeFoodQuery(req.params.id));
+    if (!food || !food.image?.data) {
       return res.status(404).send("Image not found");
     }
-    res.contentType(food.image.contentType || "image/png");
+
+    res.setHeader("Content-Type", food.image.contentType || "image/png");
+    res.setHeader("Cache-Control", "public, max-age=3600");
     res.send(food.image.data);
   } catch (e) {
+    console.error("Image retrieval error:", e);
     res.status(500).send("Error retrieving image");
   }
 });
 
 // ──────────────────────────────────────────────────────────────────────────────
-// POST /admin/foods → create new food (store image blob if provided)
+// POST /admin/foods → create new food
 // ──────────────────────────────────────────────────────────────────────────────
 router.post("/", upload.single("image"), async (req, res) => {
   try {
     const {
       barcode,
-      id,
       date,
       category,
       dish,
@@ -127,17 +122,35 @@ router.post("/", upload.single("image"), async (req, res) => {
       contains_Y,
     } = req.body;
 
-    if (!barcode || !id || !date || !category || !dish || typeof diabeticFriendly === "undefined") {
-      return res.status(400).json({ message: "Missing required fields (barcode, id, date, category, dish, diabeticFriendly)" });
+    if (!barcode || !date || !category || !dish || typeof diabeticFriendly === "undefined") {
+      return res.status(400).json({
+        message: "Missing required fields (barcode, date, category, dish, diabeticFriendly)",
+      });
     }
 
+    // Parse multilingual translations if provided
+    let translations = {};
+    try {
+      if (req.body.translations) {
+        const parsed = JSON.parse(req.body.translations);
+        if (typeof parsed === "object") translations = parsed;
+      }
+    } catch (e) {
+      console.warn("Invalid translations JSON:", e);
+    }
+
+    // Auto-generate next numeric id
+    const lastFood = await Food.findOne().sort({ id: -1 }).lean();
+    const numericId = (lastFood?.id || 0) + 1;
+
     const doc = new Food({
+      id: numericId,
       barcode: String(barcode),
-      id: Number(id),
       date: String(date),
       category: String(category),
       dish: String(dish),
       description: description ?? null,
+      translations,
       additives: parseArray(additives),
       allergens: parseArray(allergens),
       pictograms: parseArray(pictograms),
@@ -153,14 +166,11 @@ router.post("/", upload.single("image"), async (req, res) => {
       contains_Y: parseBool(contains_Y),
     });
 
-    // ── handle image blob
     if (req.file) {
-      const fileBuffer = fs.readFileSync(req.file.path);
       doc.image = {
-        data: fileBuffer,
+        data: req.file.buffer,
         contentType: req.file.mimetype || "image/png",
       };
-      fs.unlinkSync(req.file.path); // cleanup
     }
 
     await doc.save();
@@ -172,32 +182,47 @@ router.post("/", upload.single("image"), async (req, res) => {
 });
 
 // ──────────────────────────────────────────────────────────────────────────────
-// PUT /admin/foods/:id → update (supports multipart or JSON)
+// PUT /admin/foods/:id → update existing food
 // ──────────────────────────────────────────────────────────────────────────────
 router.put("/:id", upload.single("image"), async (req, res) => {
   try {
     const q = safeFoodQuery(req.params.id);
     const body = { ...req.body };
 
-    // Normalize fields
-    if (body.id != null) body.id = Number(body.id);
-    if (body.diabeticFriendly != null) body.diabeticFriendly = parseBool(body.diabeticFriendly);
+    // Parse translations if provided
+    try {
+      if (body.translations && typeof body.translations === "string") {
+        const parsed = JSON.parse(body.translations);
+        if (typeof parsed === "object") body.translations = parsed;
+      }
+    } catch (e) {
+      console.warn("Invalid translations JSON:", e);
+    }
+
+    if (body.diabeticFriendly != null)
+      body.diabeticFriendly = parseBool(body.diabeticFriendly);
     if (body.additives != null) body.additives = parseArray(body.additives);
     if (body.allergens != null) body.allergens = parseArray(body.allergens);
     if (body.pictograms != null) body.pictograms = parseArray(body.pictograms);
-    const bools = ["contains_R","contains_S","contains_G","contains_M","contains_A","contains_W","contains_K","contains_Y"];
+    const bools = [
+      "contains_R",
+      "contains_S",
+      "contains_G",
+      "contains_M",
+      "contains_A",
+      "contains_W",
+      "contains_K",
+      "contains_Y",
+    ];
     for (const k of bools) {
       if (k in body) body[k] = parseBool(body[k]);
     }
 
-    // handle new image blob
     if (req.file) {
-      const fileBuffer = fs.readFileSync(req.file.path);
       body.image = {
-        data: fileBuffer,
+        data: req.file.buffer,
         contentType: req.file.mimetype || "image/png",
       };
-      fs.unlinkSync(req.file.path);
     }
 
     const updated = await Food.findOneAndUpdate(q, body, { new: true });
@@ -210,7 +235,7 @@ router.put("/:id", upload.single("image"), async (req, res) => {
 });
 
 // ──────────────────────────────────────────────────────────────────────────────
-// DELETE /admin/foods/:id → delete single
+// DELETE /admin/foods/:id
 // ──────────────────────────────────────────────────────────────────────────────
 router.delete("/:id", async (req, res) => {
   try {
@@ -223,7 +248,7 @@ router.delete("/:id", async (req, res) => {
 });
 
 // ──────────────────────────────────────────────────────────────────────────────
-// POST /admin/foods/bulk-delete → delete many
+// POST /admin/foods/bulk-delete
 // ──────────────────────────────────────────────────────────────────────────────
 router.post("/bulk-delete", async (req, res) => {
   try {
@@ -232,7 +257,7 @@ router.post("/bulk-delete", async (req, res) => {
       return res.status(400).json({ message: "Provide ids: []" });
     }
 
-    const or = ids.map(v => {
+    const or = ids.map((v) => {
       if (mongoose.Types.ObjectId.isValid(v)) return { _id: v };
       const asNum = Number(v);
       if (!Number.isNaN(asNum)) return { id: asNum };

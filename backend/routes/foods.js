@@ -1,3 +1,4 @@
+//backend/routes/foods.js
 const express = require("express");
 const mongoose = require("mongoose");
 const Food = require("../models/food");

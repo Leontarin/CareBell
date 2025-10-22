@@ -1,28 +1,101 @@
-//frontend/src/features/admin/AddFoodModal.jsx
-import React, { useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { API } from "../../shared/config";
+import { useTranslation } from "react-i18next";
+import { LANG_LABELS } from "../../shared/constants";
 
-export default function AddFoodModal({ onClose }) {
-  const [form, setForm] = useState({
-    barcode: "",
-    id: "",
-    date: new Date().toISOString().slice(0, 10),
-    category: "",
-    dish: "",
-    description: "",
-    diabeticFriendly: false,
-    allergens: "",
-  });
+const ALLERGEN_KEYS = [
+  { key: "R", icon: "🥩" },
+  { key: "S", icon: "🐷" },
+  { key: "G", icon: "🐔" },
+  { key: "M", icon: "🥛" },
+  { key: "A", icon: "🍷" },
+  { key: "W", icon: "🌾" },
+  { key: "K", icon: "🧄" },
+  { key: "Y", icon: "🌱" },
+];
+
+const SUPPORTED_LANGS = ["en", "de", "fi", "he"];
+const safeLangLabel = (lang, t) =>
+  t(`Admin.Foods.languageTabs.${lang}`, LANG_LABELS?.[lang] || lang.toUpperCase());
+
+export default function AddFoodModal({ onClose, onAdded }) {
+  const { t } = useTranslation();
+  const [activeLang, setActiveLang] = useState("en");
   const [file, setFile] = useState(null);
   const [loading, setLoading] = useState(false);
   const [msg, setMsg] = useState(null);
 
+  const [form, setForm] = useState({
+    barcode: "",
+    date: new Date().toISOString().slice(0, 10),
+    diabeticFriendly: false,
+    // pictogram flags
+    R: false, S: false, G: false, M: false, A: false, W: false, K: false, Y: false,
+    // multilingual content
+    translations: {
+      en: { dish: "", description: "", category: "" },
+      de: { dish: "", description: "", category: "" },
+      fi: { dish: "", description: "", category: "" },
+      he: { dish: "", description: "", category: "" },
+    },
+  });
+
+  // ────────────────────────────────
+  //  Helpers
+  // ────────────────────────────────
+  const nextBarcode = () =>
+    String(Math.floor(100000 + Math.random() * 900000)); // 6-digit (ok for small dataset)
+
+  useEffect(() => {
+    setForm((f) => ({ ...f, barcode: nextBarcode() }));
+  }, []);
+
+  const langData = useMemo(() => form.translations[activeLang], [form.translations, activeLang]);
+
+  const setLangField = (lang, field, value) => {
+    setForm((f) => ({
+      ...f,
+      translations: {
+        ...f.translations,
+        [lang]: { ...f.translations[lang], [field]: value },
+      },
+    }));
+  };
+
+  // ────────────────────────────────
+  //  Submit
+  // ────────────────────────────────
   async function handleSubmit(e) {
     e.preventDefault();
     setLoading(true);
+    setMsg(null);
+
+    const en = form.translations.en || {};
+    if (!en.dish?.trim() || !en.category?.trim()) {
+      setMsg(t("Admin.Foods.validation.missingEn", "English dish and category are required."));
+      setLoading(false);
+      return;
+    }
+
     try {
       const fd = new FormData();
-      Object.entries(form).forEach(([k, v]) => fd.append(k, v));
+
+      // Core fields
+      fd.append("barcode", form.barcode);
+      fd.append("date", form.date);
+      fd.append("diabeticFriendly", String(!!form.diabeticFriendly));
+
+      // English fallback for backend validation
+      fd.append("dish", en.dish);
+      fd.append("category", en.category);
+      fd.append("description", en.description || "");
+
+      // pictograms (booleans)
+      ALLERGEN_KEYS.forEach(({ key }) => fd.append(`contains_${key}`, String(!!form[key])));
+
+      // full multilingual payload
+      fd.append("translations", JSON.stringify(form.translations));
+
       if (file) fd.append("image", file);
 
       const res = await fetch(`${API}/admin/foods`, {
@@ -30,10 +103,13 @@ export default function AddFoodModal({ onClose }) {
         credentials: "include",
         body: fd,
       });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.message || "Failed to add food");
-      setMsg("✅ Added successfully");
-      setTimeout(onClose, 1000);
+
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data?.message || `HTTP ${res.status}`);
+
+      setMsg(t("Admin.Foods.added", "✅ Added successfully"));
+      onAdded?.(data);
+      setTimeout(onClose, 700);
     } catch (err) {
       setMsg(`❌ ${err.message}`);
     } finally {
@@ -43,102 +119,167 @@ export default function AddFoodModal({ onClose }) {
 
   return (
     <div className="fixed inset-0 bg-black/50 flex justify-center items-center z-50">
-      <div className="bg-white dark:bg-gray-900 p-6 rounded-lg w-[90%] max-w-lg shadow-lg">
-        <h2 className="text-2xl font-bold mb-4">Add New Food</h2>
-        <form onSubmit={handleSubmit} className="space-y-3">
-          <input
-            placeholder="Barcode"
-            value={form.barcode}
-            onChange={(e) => setForm({ ...form, barcode: e.target.value })}
-            className="w-full px-3 py-2 rounded border dark:bg-gray-700"
-            required
-          />
-          <input
-            placeholder="ID (numeric)"
-            value={form.id}
-            onChange={(e) => setForm({ ...form, id: e.target.value })}
-            className="w-full px-3 py-2 rounded border dark:bg-gray-700"
-            required
-          />
-          <input
-            type="date"
-            value={form.date}
-            onChange={(e) => setForm({ ...form, date: e.target.value })}
-            className="w-full px-3 py-2 rounded border dark:bg-gray-700"
-            required
-          />
-          <input
-            placeholder="Category"
-            value={form.category}
-            onChange={(e) => setForm({ ...form, category: e.target.value })}
-            className="w-full px-3 py-2 rounded border dark:bg-gray-700"
-            required
-          />
-          <input
-            placeholder="Dish name"
-            value={form.dish}
-            onChange={(e) => setForm({ ...form, dish: e.target.value })}
-            className="w-full px-3 py-2 rounded border dark:bg-gray-700"
-            required
-          />
-          <textarea
-            placeholder="Description"
-            value={form.description}
-            onChange={(e) => setForm({ ...form, description: e.target.value })}
-            className="w-full px-3 py-2 rounded border dark:bg-gray-700"
-          />
-          <input
-            placeholder="Allergens (comma separated)"
-            value={form.allergens}
-            onChange={(e) => setForm({ ...form, allergens: e.target.value })}
-            className="w-full px-3 py-2 rounded border dark:bg-gray-700"
-          />
-          <label className="flex items-center gap-2">
-            <input
-              type="checkbox"
-              checked={form.diabeticFriendly}
-              onChange={(e) => setForm({ ...form, diabeticFriendly: e.target.checked })}
-            />
-            Diabetic Friendly
-          </label>
+      <div className="bg-white dark:bg-gray-900 p-6 rounded-lg w-[92%] max-w-2xl shadow-lg text-gray-900 dark:text-gray-100">
+        <h2 className="text-2xl font-bold mb-4">
+          {t("Admin.Foods.modalTitle", "Add New Food")}
+        </h2>
+
+        <form onSubmit={handleSubmit} className="space-y-4">
+          {/* Barcode (readonly) */}
           <div>
-            <p className="font-semibold mb-1">Contains Flags</p>
-            <div className="grid grid-cols-4 gap-2 text-sm">
-                {["R","S","G","M","A","W","K","Y"].map((c) => (
-                <label key={c} className="flex items-center gap-1">
-                    <input
-                    type="checkbox"
-                    checked={!!form[`contains_${c}`]}
-                    onChange={(e) =>
-                        setForm({ ...form, [`contains_${c}`]: e.target.checked })
-                    }
-                    />
-                    {c}
-                </label>
-                ))}
+            <label className="block text-sm mb-1">
+              {t("Admin.Foods.barcode", "Barcode")}
+            </label>
+            <div className="flex gap-2">
+              <input
+                value={form.barcode}
+                readOnly
+                className="w-full px-3 py-2 rounded border dark:bg-gray-800"
+              />
+              <button
+                type="button"
+                onClick={() => setForm((f) => ({ ...f, barcode: nextBarcode() }))}
+                className="px-3 py-2 rounded bg-gray-200 dark:bg-gray-700"
+              >
+                {t("Admin.Foods.regen", "Regen")}
+              </button>
             </div>
-           </div>
-          <input
-            type="file"
-            accept="image/*"
-            onChange={(e) => setFile(e.target.files[0])}
-            className="w-full"
-          />
-          {msg && <p className="text-center">{msg}</p>}
-          <div className="flex justify-end gap-2 mt-4">
+          </div>
+
+          {/* Date + Diabetic */}
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="block text-sm mb-1">{t("Calendar.date", "Date")}</label>
+              <input
+                type="date"
+                value={form.date}
+                onChange={(e) => setForm({ ...form, date: e.target.value })}
+                className="w-full px-3 py-2 rounded border dark:bg-gray-800"
+              />
+            </div>
+            <label className="flex items-center gap-2 mt-6">
+              <input
+                type="checkbox"
+                checked={form.diabeticFriendly}
+                onChange={(e) => setForm({ ...form, diabeticFriendly: e.target.checked })}
+              />
+              {t("Admin.Foods.diabeticFriendly", "Diabetic Friendly")}
+            </label>
+          </div>
+
+          {/* Pictograms */}
+          <div>
+            <p className="font-semibold mb-2">
+              {t("Meals.LegendHeadings.Pictograms", "Pictograms")}
+            </p>
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-sm">
+              {ALLERGEN_KEYS.map(({ key, icon }) => (
+                <label
+                  key={key}
+                  className="flex items-center gap-2 border border-gray-300 dark:border-gray-700 rounded p-2"
+                >
+                  <input
+                    type="checkbox"
+                    checked={!!form[key]}
+                    onChange={(e) => setForm({ ...form, [key]: e.target.checked })}
+                  />
+                  <span className="text-base">{icon}</span>
+                  <span>
+                    {t(`Meals.Legend.Pictograms.${key}`, key)}
+                    {" (" + key + ")"}
+                  </span>
+                </label>
+              ))}
+            </div>
+          </div>
+
+          {/* Language Tabs */}
+          <div>
+            <div className="flex gap-2 mb-2 flex-wrap">
+              {SUPPORTED_LANGS.map((lang) => (
+                <button
+                  type="button"
+                  key={lang}
+                  onClick={() => setActiveLang(lang)}
+                  className={`px-3 py-1 rounded ${
+                    activeLang === lang
+                      ? "bg-blue-600 text-white"
+                      : "bg-gray-200 dark:bg-gray-700"
+                  }`}
+                >
+                  {safeLangLabel(lang, t)}
+                </button>
+              ))}
+            </div>
+
+            <div className="grid grid-cols-1 gap-3">
+              <div>
+                <label className="block text-sm mb-1">
+                  {t("Admin.Foods.dish", "Dish Name")}
+                  {activeLang === "en" && <span className="text-red-500"> *</span>}
+                </label>
+                <input
+                  placeholder={t("Admin.Foods.dish", "Dish Name")}
+                  value={langData?.dish || ""}
+                  onChange={(e) => setLangField(activeLang, "dish", e.target.value)}
+                  className="w-full px-3 py-2 rounded border dark:bg-gray-800"
+                />
+              </div>
+              <div>
+                <label className="block text-sm mb-1">
+                  {t("Admin.Foods.category", "Category")}
+                  {activeLang === "en" && <span className="text-red-500"> *</span>}
+                </label>
+                <input
+                  placeholder={t("Admin.Foods.category", "Category")}
+                  value={langData?.category || ""}
+                  onChange={(e) => setLangField(activeLang, "category", e.target.value)}
+                  className="w-full px-3 py-2 rounded border dark:bg-gray-800"
+                />
+              </div>
+              <div>
+                <label className="block text-sm mb-1">
+                  {t("Admin.Foods.description", "Description")}
+                </label>
+                <textarea
+                  placeholder={t("Admin.Foods.description", "Description")}
+                  value={langData?.description || ""}
+                  onChange={(e) => setLangField(activeLang, "description", e.target.value)}
+                  className="w-full px-3 py-2 rounded border dark:bg-gray-800 min-h-[90px]"
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* Image */}
+          <div>
+            <label className="block text-sm mb-1">
+              {t("Meals.FoodInfo", "Food Information")} — {t("Admin.Foods.image", "Image")}
+            </label>
+            <input
+              type="file"
+              accept="image/*"
+              onChange={(e) => setFile(e.target.files?.[0] || null)}
+              className="w-full"
+            />
+          </div>
+
+          {msg && <p className="text-center text-sm">{msg}</p>}
+
+          <div className="flex justify-end gap-2">
             <button
               type="button"
               onClick={onClose}
               className="px-4 py-2 rounded bg-gray-500 text-white"
             >
-              Cancel
+              {t("Calendar.cancel", "Cancel")}
             </button>
             <button
               type="submit"
               disabled={loading}
               className="px-4 py-2 rounded bg-blue-600 hover:bg-blue-500 text-white"
             >
-              {loading ? "Saving..." : "Save"}
+              {loading ? t("Admin.Users.saving", "Saving…") : t("Calendar.save", "Save")}
             </button>
           </div>
         </form>
