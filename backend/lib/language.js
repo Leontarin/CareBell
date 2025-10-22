@@ -1,3 +1,4 @@
+//backend/lib/language.js
 const LANGUAGE_CODES = ["en", "de", "fi", "he"];
 const DEFAULT_LANGUAGE = "en";
 
@@ -121,11 +122,8 @@ function normalizeUserLanguage(doc = {}) {
       const fallback = config.default || config.languages[0] || DEFAULT_LANGUAGE;
       preferred = String(fallback).trim().toLowerCase();
     }
-  } else {
-    // If we do not support this country, drop it and compute based on preferred language only
-    if (rawCountry) {
-      doc.country = undefined;
-    }
+  } else if (rawCountry) {
+    doc.country = undefined;
   }
 
   let settings;
@@ -134,9 +132,16 @@ function normalizeUserLanguage(doc = {}) {
       country: config ? rawCountry : undefined,
       preferredLanguage: preferred,
     });
-  } catch (err) {
-    // As a final fallback, ignore country constraints and default to preferred / English
+  } catch {
     settings = computeLanguageSettings({ preferredLanguage: preferred });
+  }
+
+  // ✅ Runtime-only admin override (no DB modification)
+  if (doc.isAdmin || doc.role === "admin" || doc.role === "superadmin") {
+    settings = {
+      ...settings,
+      languages: [...LANGUAGE_CODES],
+    };
   }
 
   const changed =
@@ -144,9 +149,10 @@ function normalizeUserLanguage(doc = {}) {
     doc.language !== settings.language ||
     !languagesMatch(doc.languages, settings.languages);
 
+  // ⛔ Don’t overwrite DB with admin languages
   doc.country = settings.country;
   doc.language = settings.language;
-  doc.languages = settings.languages;
+  // keep doc.languages as-is (do NOT assign settings.languages)
 
   return { changed, settings };
 }

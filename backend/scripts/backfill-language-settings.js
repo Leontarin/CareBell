@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-
+//backend/scripts/backfill-language-settings.js
 const path = require("path");
 const fs = require("fs");
 const dotenv = require("dotenv");

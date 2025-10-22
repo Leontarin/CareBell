@@ -359,5 +359,86 @@
       "noMatch": "Salasanat eivät täsmää.",
       "missing": "Pakolliset kentät puuttuvat:"
     }
+  },
+    "Admin": {
+    "Panel": {
+      "title": "Ylläpitäjän paneeli",
+      "back": "Takaisin",
+      "users": "Käyttäjät",
+      "foods": "Ruoat"
+    },
+    "Users": {
+      "title": "Käyttäjähallinta",
+      "addUser": "+ Lisää uusi käyttäjä",
+      "search": "Etsi nimeä, käyttäjänimeä tai sähköpostia…",
+      "deleteSelected": "Poista valitut ({{count}})",
+      "refresh": "Päivitä",
+      "loading": "Ladataan käyttäjiä…",
+      "username": "Käyttäjänimi",
+      "email": "Sähköposti",
+      "fullName": "Koko nimi",
+      "gender": "Sukupuoli",
+      "country": "Maa",
+      "language": "Kieli",
+      "health": "Terveys",
+      "actions": "Toiminnot",
+      "selectCountry": "Valitse maa",
+      "selectLanguage": "Valitse kieli",
+      "edit": "Muokkaa",
+      "save": "Tallenna",
+      "cancel": "Peruuta",
+      "resetPassword": "Nollaa salasana",
+      "confirmDelete": "Vahvista poisto",
+      "confirmMessage": "Haluatko varmasti poistaa {{count}} käyttäjää? Tätä ei voi perua.",
+      "delete": "Poista",
+      "deleted": "🗑️ Poistettu {{count}} käyttäjää",
+      "saved": "✅ Tallennettu onnistuneesti",
+      "added": "✅ Käyttäjä lisätty onnistuneesti",
+      "passwordMismatch": "Salasanat eivät täsmää",
+      "fullNameRequired": "Koko nimi on pakollinen",
+      "saving": "Tallennetaan…",
+      "Reset": {
+        "title": "Nollaa salasana käyttäjälle {{name}}",
+        "newPassword": "Uusi salasana",
+        "confirmPassword": "Vahvista salasana",
+        "cancel": "Peruuta",
+        "saving": "Tallennetaan…",
+        "reset": "Nollaa salasana",
+        "success": "Salasana nollattu onnistuneesti ✅",
+        "errorMismatch": "Salasanat eivät täsmää",
+        "errorFailed": "Nollaus epäonnistui"
+      },
+      "role": "Rooli",
+      "roleUser": "Käyttäjä",
+      "roleSuperadmin": "Ylläpitäjä"
+    },
+    "Foods": {
+      "title": "Ruokahallinta",
+      "add": "+ Lisää uusi ruoka",
+      "modalTitle": "Lisää uusi ruoka",
+      "id": "ID",
+      "idNote": "Automaattisesti kasvava numeerinen ID",
+      "barcode": "Viivakoodi",
+      "regen": "Luo uudelleen",
+      "date": "Päivämäärä",
+      "diabeticFriendly": "Diabeetikkoystävällinen",
+      "dish": "Ruokalaji",
+      "category": "Kategoria",
+      "description": "Kuvaus",
+      "image": "Kuva",
+      "added": "✅ Lisätty onnistuneesti",
+      "edit": "Muokkaa",
+      "delete": "Poista",
+      "confirmDelete": "Poistetaanko tämä ruoka?",
+      "validation": {
+        "missingEn": "Englanninkielinen ruokalaji ja kategoria ovat pakollisia."
+      },
+      "languageTabs": {
+        "en": "Englanti",
+        "de": "Saksa",
+        "fi": "Suomi",
+        "he": "Heprea"
+      }
+    }
   }
 }

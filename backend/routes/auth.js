@@ -1,3 +1,4 @@
+//backend/routes/auth.js
 const express = require("express");
 const bcrypt = require("bcrypt");
 const { OAuth2Client } = require("google-auth-library");
@@ -216,6 +217,7 @@ router.get("/me", async (req, res) => {
     }
 
     // ✅ Admin check (only by ObjectId)
+   // ✅ Admin check (only by ObjectId)
     let isAdmin = false;
     try {
       if (user._id) {
@@ -225,7 +227,14 @@ router.get("/me", async (req, res) => {
       console.error("Admin check failed:", err);
     }
 
-    res.json({ ...user.toObject(), isAdmin });
+    const { LANGUAGE_CODES } = require("../lib/language");
+    let safeUser = user.toObject();
+
+    if (isAdmin) {
+      safeUser.languages = [...LANGUAGE_CODES];
+    }
+
+    res.json({ ...safeUser, isAdmin });
   } catch (err) {
     console.error("❌ /me error:", err);
     res.status(500).json({ message: "Internal error" });

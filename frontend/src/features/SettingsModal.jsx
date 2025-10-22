@@ -1,3 +1,4 @@
+//backend/src/features/SettingsModal.jsx
 import React, { useEffect, useState, useContext, useMemo } from "react";
 import {
   FaVolumeMute,
