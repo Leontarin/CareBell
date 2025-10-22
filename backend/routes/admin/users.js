@@ -1,3 +1,4 @@
+//backend/routes/admin/users.js
 const express = require("express");
 const router = express.Router();
 const User = require("../../models/user");
@@ -174,6 +175,25 @@ router.patch("/:id", async (req, res) => {
     });
 
     delete req.body.Allergens; // textual array removed
+
+    // ────────────────────────────────
+    //  Sanitize empty strings → null
+    // ────────────────────────────────
+    if (req.body.email !== undefined) {
+      if (!req.body.email || !req.body.email.trim()) {
+        req.body.email = null;
+      } else {
+        req.body.email = req.body.email.trim().toLowerCase();
+      }
+    }
+
+    if (req.body.username !== undefined) {
+      if (!req.body.username || !req.body.username.trim()) {
+        req.body.username = null;
+      } else {
+        req.body.username = req.body.username.trim().toLowerCase();
+      }
+    }
 
     // ────────────────────────────────
     //  Apply updates and save
