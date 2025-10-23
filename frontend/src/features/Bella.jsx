@@ -4,7 +4,7 @@ import React, { useEffect, useState, useRef, useContext } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import Vapi from '@vapi-ai/web';
 import { FaPhone, FaPhoneSlash, FaExpand, FaCompress } from 'react-icons/fa';
-import bella_img from '../resources/Grafik3a.png';
+import bella_img from '../resources/bella2_square.png';
 import { useTranslation } from 'react-i18next';
 import { AppContext } from '../shared/AppContext';
 import { API } from '../shared/config';
@@ -51,15 +51,23 @@ export default function Bella() {
     return { intent: 'chat', slot: null };
   }
 
-  // locale → assistant IDs
-  const assistantIdMap = {
-    en: import.meta.env.VITE_VAPI_ASSISTANT_ID_EN,
-    de: import.meta.env.VITE_VAPI_ASSISTANT_ID_DE,
-    he: import.meta.env.VITE_VAPI_ASSISTANT_ID_HE
+  // locale → [Public key, assistant ID]
+  const vapiLanguageMap = {
+    en: [import.meta.env.VITE_VAPI_PUBLIC_KEY_EN, import.meta.env.VITE_VAPI_ASSISTANT_ID_EN,],
+    de: [import.meta.env.VITE_VAPI_PUBLIC_KEY_DE, import.meta.env.VITE_VAPI_ASSISTANT_ID_DE,],
+    he: [import.meta.env.VITE_VAPI_PUBLIC_KEY_HE, import.meta.env.VITE_VAPI_ASSISTANT_ID_HE,],
   };
-  const getAssistantId = () => {
+
+  // locale → assistant ID
+  const getVapiLanguage = () => {
     const lang = i18n.language.split('-')[0];
-    return assistantIdMap[lang] || assistantIdMap.en;
+    return (vapiLanguageMap[lang])[1] || (vapiLanguageMap.en)[1];
+  };
+
+  // locale → Public Key
+  const getVapiPublicKey = () => {
+    const lang = i18n.language.split('-')[0];
+    return (vapiLanguageMap[lang])[0] || (vapiLanguageMap.en)[0];
   };
 
   // load & persist chat, auto-scroll
@@ -78,7 +86,7 @@ export default function Bella() {
 
   // init Vapi
   useEffect(() => {
-    const vapi = vapiRef.current = new Vapi(import.meta.env.VITE_VAPI_PUBLIC_KEY);
+    const vapi = vapiRef.current = new Vapi(getVapiPublicKey());
     // inject reminders
     vapi.on('call-start', async () => {
       setCallStatus('in-call');
@@ -284,7 +292,7 @@ if (rems.length > 0) {
   // call controls
   const startCall = () => {
     setCallStatus('calling');
-    vapiRef.current.start(getAssistantId(), {});
+    vapiRef.current.start(getVapiLanguage(), {});
   };
   const endCall    = () => vapiRef.current.stop();
   const toggleCall = () => callStatus==='ready' ? startCall() : endCall();
@@ -295,13 +303,15 @@ if (rems.length > 0) {
   : callStatus==='calling' ? t('Bella.calling')
   :                          t('Bella.stop');
 
-  const btnClass = `
-    inline-flex items-center justify-center
-    text-base border-2 border-blue-600 dark:border-yellow-300 rounded-xl
-    py-2 px-4 bg-blue-900 text-white font-semibold
-    hover:bg-blue-800 focus:outline-none focus:ring-2 focus:ring-white
-    transition
-  `;
+const btnClass = `
+  inline-flex items-center justify-center
+  text-base border-2 border-blue-600 dark:border-yellow-300 rounded-xl
+  py-2 px-4 bg-blue-900 text-white font-semibold
+  hover:bg-blue-800 focus:outline-none focus:ring-2 focus:ring-white
+  transition
+  min-w-fit max-w-full whitespace-normal break-words
+`;
+
   const chatBtnClass = `
     inline-flex items-center justify-center
     border-2 border-blue-600 dark:border-yellow-300 rounded-full

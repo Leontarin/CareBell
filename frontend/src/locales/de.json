@@ -3,7 +3,7 @@
     "greeting": "Hallo, Bella!",
     "closeChat": "Chat schließen",
     "openChat": "Chat öffnen",
-    "talk": "Mit Bella sprechen",
+    "talk": "Essen bestellen und Rückmeldung geben",
     "calling": "Rufe Bella an…",
     "stop": "Anruf beenden",
     "confirmSaved": "Okay, ich habe gespeichert: {{title}}.",
@@ -119,7 +119,7 @@
   },
   "LeftSide": {
     "home": "Startseite",
-    "meals": "Mahlzeiten",
+    "meals": "Speiseplan anzeigen",
     "medication": "Medikamente",
     "exercise": "Übungen",
     "calendar": "Kalender",

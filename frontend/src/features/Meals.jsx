@@ -227,9 +227,9 @@ export default function Meals() {
       {/* SINGLE MEAL VIEW */}
       {meal && (
         <div className="bg-green-50 p-8 mt-8 rounded-lg border-l-8 border-green-500 shadow-lg dark:border-yellow-400 dark:bg-slate-700">
-          {meal._id && (
+          {meal.id && (
             <img
-              src={`${API}/foods/${meal._id}/image`}
+              src={`${API}/foods/${meal.id}/image`}
               alt={meal.dish}
               className="w-full max-w-md mx-auto rounded-lg shadow-md mb-6"
             />
