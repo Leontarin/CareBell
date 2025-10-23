@@ -4,7 +4,7 @@ import React, { useEffect, useState, useRef, useContext } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import Vapi from '@vapi-ai/web';
 import { FaPhone, FaPhoneSlash, FaExpand, FaCompress } from 'react-icons/fa';
-import bella_img from '../resources/Grafik3a.png';
+import bella_img from '../resources/bella2.png';
 import { useTranslation } from 'react-i18next';
 import { AppContext } from '../shared/AppContext';
 import { API } from '../shared/config';
@@ -295,13 +295,15 @@ if (rems.length > 0) {
   : callStatus==='calling' ? t('Bella.calling')
   :                          t('Bella.stop');
 
-  const btnClass = `
-    inline-flex items-center justify-center
-    text-base border-2 border-blue-600 dark:border-yellow-300 rounded-xl
-    py-2 px-4 bg-blue-900 text-white font-semibold
-    hover:bg-blue-800 focus:outline-none focus:ring-2 focus:ring-white
-    transition
-  `;
+const btnClass = `
+  inline-flex items-center justify-center
+  text-base border-2 border-blue-600 dark:border-yellow-300 rounded-xl
+  py-2 px-4 bg-blue-900 text-white font-semibold
+  hover:bg-blue-800 focus:outline-none focus:ring-2 focus:ring-white
+  transition
+  min-w-fit max-w-full whitespace-normal break-words
+`;
+
   const chatBtnClass = `
     inline-flex items-center justify-center
     border-2 border-blue-600 dark:border-yellow-300 rounded-full

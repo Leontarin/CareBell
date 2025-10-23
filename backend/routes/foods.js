@@ -52,15 +52,20 @@ router.get("/:barcode", async (req, res) => {
  */
 router.get("/:id/image", async (req, res) => {
   try {
-    const food = await Food.findOne(safeFoodQuery(req.params.id)).lean();
-    if (!food || !food.image || !food.image.data) {
+    // ⚠️ No `.lean()` — keep Buffer intact
+    const food = await Food.findOne(safeFoodQuery(req.params.id));
+    if (!food || !food.image?.data) {
       return res.status(404).send("Image not found");
     }
-    res.contentType(food.image.contentType || "image/png");
+
+    res.setHeader("Content-Type", food.image.contentType || "image/png");
+    res.setHeader("Cache-Control", "public, max-age=3600");
     res.send(food.image.data);
   } catch (e) {
+    console.error("Image retrieval error:", e);
     res.status(500).send("Error retrieving image");
   }
 });
+
 
 module.exports = router;
