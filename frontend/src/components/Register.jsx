@@ -7,7 +7,8 @@ import { API } from "../shared/config";
 import NotificationModal from "./NotificationModal";
 import TopRightControls from "./TopRightControls";
 
-const LANG_LABELS = { en: "English", de: "German", he: "Hebrew", fi: "Finnish" };
+
+const LANG_LABELS = { en: "English", de: "German", he: "עברית", fi: "suomi" };
 const COUNTRIES = [
   { code: "DE", name: "Germany", languages: ["de", "en"], flag: "🇩🇪" },
   { code: "FI", name: "Finland", languages: ["fi", "en"], flag: "🇫🇮" },
@@ -15,6 +16,7 @@ const COUNTRIES = [
 ];
 
 function CountryWheelPicker({ open, onClose, onSelect }) {
+  const { t, i18n } = useTranslation();
   const [query, setQuery] = useState("");
   const list = useMemo(() => {
     if (!query.trim()) return COUNTRIES;
@@ -64,7 +66,7 @@ function CountryWheelPicker({ open, onClose, onSelect }) {
             onClick={onClose}
             className="rounded-xl px-4 py-2 bg-gray-200 hover:bg-gray-300"
           >
-            Close
+            {t("Auth.Register.close")}
           </button>
         </div>
       </div>
@@ -73,7 +75,7 @@ function CountryWheelPicker({ open, onClose, onSelect }) {
 }
 
 export default function Register() {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const navigate = useNavigate();
   const [step, setStep] = useState(1);
   const [email, setEmail] = useState("");
@@ -158,7 +160,7 @@ export default function Register() {
         <div className="flex flex-col items-center gap-2 mb-2">
           <img src={logo} alt="CareBells Logo" className="h-20 w-auto" />
           <h1 className="text-3xl font-bold text-blue-900 dark:text-gray-100 text-center">
-            Create your account
+            {t("Auth.Register.header")}
           </h1>
         </div>
 
@@ -171,18 +173,18 @@ export default function Register() {
           </div>
 
           <p className="text-center text-gray-700 dark:text-gray-300 mb-4">
-            Step {step} of 4
+            {t("Auth.Register.step")} {step} {t("Auth.Register.of4")}
           </p>
 
           <form onSubmit={submit} className="space-y-3">
             {step === 1 && (
               <div className="grid gap-4">
                 <p className="text-center font-bold text-xl text-gray-800 dark:text-gray-100 mb-1">
-                  Please provide either an email or a username to continue.
+                  {t("Auth.Register.oneOf")}
                 </p>
                 <LabeledInput
                   id="email"
-                  label="Email"
+                  label={t("Auth.Register.email")}
                   type="email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
@@ -191,7 +193,7 @@ export default function Register() {
                 />
                 <LabeledInput
                   id="username"
-                  label="Username"
+                  label={t("Auth.Register.username")}
                   value={username}
                   onChange={(e) => setUsername(e.target.value)}
                   placeholder="yourusername"
@@ -206,7 +208,7 @@ export default function Register() {
                       step1Valid ? "bg-yellow-600 hover:bg-yellow-700" : "bg-gray-300"
                     }`}
                   >
-                    Next →
+                    {t("Auth.Register.Next")}
                   </button>
                 </div>
               </div>
@@ -216,21 +218,21 @@ export default function Register() {
               <div className="grid gap-4">
                 <PasswordRow
                   id="password"
-                  label="Password *"
+                  label= {t("Auth.Register.password")}
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   show={showPassword}
                   setShow={setShowPassword}
-                  placeholder="At least 8 characters"
+                  placeholder={t("Auth.Register.8characters")}
                 />
                 <PasswordRow
                   id="confirmPassword"
-                  label="Verify password *"
+                  label={t("Auth.Register.verifyPassword")}
                   value={confirmPassword}
                   onChange={(e) => setConfirmPassword(e.target.value)}
                   show={showConfirm}
                   setShow={setShowConfirm}
-                  placeholder="Re-enter your password"
+                  placeholder={t("Auth.Register.verifyPasswordPh")}
                 />
                 <div className="flex justify-between pt-1">
                   <button
@@ -238,7 +240,7 @@ export default function Register() {
                     type="button"
                     className="px-6 py-3 rounded-xl bg-gray-200 hover:bg-gray-300 text-gray-800 font-semibold"
                   >
-                    ← Back
+                    {t("Auth.Register.back")}
                   </button>
                   <button
                     onClick={() => setStep(3)}
@@ -248,7 +250,7 @@ export default function Register() {
                       step2Valid ? "bg-yellow-600 hover:bg-yellow-700" : "bg-gray-300"
                     }`}
                   >
-                    Next →
+                    {t("Auth.Register.Next")}
                   </button>
                 </div>
               </div>
@@ -258,26 +260,26 @@ export default function Register() {
               <div className="grid gap-4">
                 <LabeledInput
                   id="fullName"
-                  label="Full name *"
+                  label={t("Auth.Register.fullName")}
                   value={fullName}
                   onChange={(e) => setFullName(e.target.value)}
-                  placeholder="Jane Doe"
+                  placeholder={t("Auth.Register.fullNamePh")}
                 />
                 <div>
-                  <label className="block text-2xl font-bold mb-1">Gender *</label>
+                  <label className="block text-2xl font-bold mb-1">{t("Auth.Register.gender")} *</label>
                   <select
                     value={gender}
                     onChange={(e) => setGender(e.target.value)}
                     className="w-full text-lg rounded-2xl border-2 border-yellow-400 px-4 py-3 bg-white dark:bg-gray-900 dark:text-white"
                   >
-                    <option value="other">Other</option>
-                    <option value="male">Male</option>
-                    <option value="female">Female</option>
+                    <option value="other">{t("Auth.Register.genderOther")}</option>
+                    <option value="male">{t("Auth.Register.genderMale")}</option>
+                    <option value="female">{t("Auth.Register.genderFemale")}</option>
                   </select>
                 </div>
                 <LabeledInput
                   id="phone"
-                  label="Phone number *"
+                  label={t("Auth.Register.phone")}
                   type="tel"
                   value={phone}
                   onChange={(e) => setPhone(e.target.value)}
@@ -290,7 +292,7 @@ export default function Register() {
                     type="button"
                     className="px-6 py-3 rounded-xl bg-gray-200 hover:bg-gray-300 text-gray-800 font-semibold"
                   >
-                    ← Back
+                    {t("Auth.Register.back")}
                   </button>
                   <button
                     onClick={() => setStep(4)}
@@ -300,7 +302,7 @@ export default function Register() {
                       step3Valid ? "bg-yellow-600 hover:bg-yellow-700" : "bg-gray-300"
                     }`}
                   >
-                    Next →
+                    {t("Auth.Register.Next")}
                   </button>
                 </div>
               </div>
@@ -309,21 +311,21 @@ export default function Register() {
             {step === 4 && (
               <div className="grid gap-4">
                 <div>
-                  <label className="block text-lg font-bold mb-1">Country *</label>
+                  <label className="block text-lg font-bold mb-1">{t("Auth.Register.country")} *</label>
                   <button
                     type="button"
                     onClick={() => setCountryOpen(true)}
                     className="w-full text-left text-lg rounded-2xl border-2 border-yellow-400 px-4 py-3 flex items-center justify-between bg-white dark:bg-gray-900 dark:text-white"
                   >
                     <span>
-                      {country ? `${country.flag} ${country.name}` : "Select country"}
+                      {country ? `${country.flag} ${country.name}` : t("Auth.Register.selectCountry")}
                     </span>
                     <ion-icon name="chevron-down" className="text-xl"></ion-icon>
                   </button>
                 </div>
                 <div>
                   <label className="block text-lg font-bold mb-1">
-                    Preferred language *
+                    {t("Auth.Register.language")} *
                   </label>
                   <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                     {(country?.languages || []).map((code) => (
@@ -348,7 +350,7 @@ export default function Register() {
                     type="button"
                     className="px-6 py-3 rounded-xl bg-gray-200 hover:bg-gray-300 text-gray-800 font-semibold"
                   >
-                    ← Back
+                    {t("Auth.Register.back")}
                   </button>
                   <button
                     type="submit"
@@ -359,7 +361,7 @@ export default function Register() {
                         : "bg-gray-300"
                     }`}
                   >
-                    {submitting ? "Creating..." : "Create account"}
+                    {submitting ? t("Auth.Register.creating") : t("Auth.Register.create")}
                   </button>
                 </div>
               </div>
@@ -369,12 +371,12 @@ export default function Register() {
           {/* ─────────── Already have an account line ─────────── */}
           <div className="mt-6 text-center">
             <p className="text-gray-700 dark:text-gray-300">
-              Already have an account?{" "}
+              {t("Auth.Register.haveAccount")}{" "}
               <Link
                 to="/.."
                 className="text-blue-700 dark:text-blue-400 underline font-bold hover:text-blue-800 dark:hover:text-blue-200"
               >
-                Login
+                {t("Auth.Register.login")}
               </Link>
             </p>
           </div>
@@ -402,6 +404,7 @@ function LabeledInput({ id, label, type = "text", placeholder = "", ...props }) 
 }
 
 function PasswordRow({ id, label, value, onChange, show, setShow, placeholder }) {
+  const { t, i18n } = useTranslation();
   const isInvalid = id === "password" && value.length > 0 && value.length < 8;
   return (
     <div>
@@ -427,7 +430,7 @@ function PasswordRow({ id, label, value, onChange, show, setShow, placeholder })
       </div>
       {isInvalid && (
         <p className="mt-3 text-yellow-600 font-bold text-xl text-center">
-          Password must be at least 8 characters long.
+          {t("Auth.Register.passwordRule")}
         </p>
       )}
     </div>
