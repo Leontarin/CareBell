@@ -1,4 +1,4 @@
-//backend/routes/users.js
+//backend/routes/user.js
 const express = require("express");
 const router = express.Router();
 const User = require("../models/user");
@@ -38,18 +38,7 @@ router.get("/:id", async (req, res) => {
     const user = await User.findOne(safeUserQuery(id)).select("-passwordHash");
     if (!user) return res.status(404).json({ message: "Not found" });
 
-    // ✅ Runtime admin language override (no DB change)
-    const Admin = require("../models/admin");
-    const adminRecord = await Admin.exists({ userId: user._id });
-
-    const safe = user.toObject();
-    if (adminRecord) {
-      const { LANGUAGE_CODES } = require("../lib/language");
-      safe.isAdmin = true;
-      safe.languages = [...LANGUAGE_CODES];
-    }
-
-    res.json(safe);
+    res.json(user);
   } catch (e) {
     console.error("GET /users/:id failed:", e);
     res.status(500).json({ message: e.message });

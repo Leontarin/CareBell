@@ -122,8 +122,11 @@ function normalizeUserLanguage(doc = {}) {
       const fallback = config.default || config.languages[0] || DEFAULT_LANGUAGE;
       preferred = String(fallback).trim().toLowerCase();
     }
-  } else if (rawCountry) {
-    doc.country = undefined;
+  } else {
+    // If we do not support this country, drop it and compute based on preferred language only
+    if (rawCountry) {
+      doc.country = undefined;
+    }
   }
 
   let settings;
@@ -132,16 +135,9 @@ function normalizeUserLanguage(doc = {}) {
       country: config ? rawCountry : undefined,
       preferredLanguage: preferred,
     });
-  } catch {
+  } catch (err) {
+    // As a final fallback, ignore country constraints and default to preferred / English
     settings = computeLanguageSettings({ preferredLanguage: preferred });
-  }
-
-  // ✅ Runtime-only admin override (no DB modification)
-  if (doc.isAdmin || doc.role === "admin" || doc.role === "superadmin") {
-    settings = {
-      ...settings,
-      languages: [...LANGUAGE_CODES],
-    };
   }
 
   const changed =
@@ -149,10 +145,9 @@ function normalizeUserLanguage(doc = {}) {
     doc.language !== settings.language ||
     !languagesMatch(doc.languages, settings.languages);
 
-  // ⛔ Don’t overwrite DB with admin languages
   doc.country = settings.country;
   doc.language = settings.language;
-  // keep doc.languages as-is (do NOT assign settings.languages)
+  doc.languages = settings.languages;
 
   return { changed, settings };
 }
