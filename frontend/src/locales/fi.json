@@ -357,7 +357,17 @@
       "login": "Kirjaudu sisään",
       "failed": "Rekisteröinti epäonnistui",
       "noMatch": "Salasanat eivät täsmää.",
-      "missing": "Pakolliset kentät puuttuvat:"
+      "missing": "Pakolliset kentät puuttuvat:",
+      "close": "Lähellä",
+      "step" : "Vaihe",
+      "of4": "vaihe 4",
+      "Next": "Seuraava →",
+      "back": "← Takaisin",
+      "country": "Maa",
+      "language": "Ensisijainen kieli",
+      "passwordRule": "Salasanan on oltava vähintään 8 merkkiä pitkä.",
+      "8characters": "Vähintään 8 merkkiä",
+      "selectCountry": "Valitse maa"
     }
   },
     "Admin": {
