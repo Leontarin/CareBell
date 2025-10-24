@@ -4,17 +4,8 @@ import { API } from "../../shared/config";
 import { useTranslation } from "react-i18next";
 import AddFoodModal from "./AddFoodModal";
 import { QRCodeCanvas } from "qrcode.react";
-
-const ALLERGEN_KEYS = [
-  { key: "R", icon: "🥩" },
-  { key: "S", icon: "🐷" },
-  { key: "G", icon: "🐔" },
-  { key: "M", icon: "🥛" },
-  { key: "A", icon: "🍷" },
-  { key: "W", icon: "🌾" },
-  { key: "K", icon: "🧄" },
-  { key: "Y", icon: "🌱" },
-];
+import AllergenCheckboxes from "../../components/AllergenCheckboxes.jsx";
+import { useMeta } from "../../shared/meta";
 const SUPPORTED_LANGS = ["en", "de", "fi", "he"];
 
 function getLocalized(food, lang) {
@@ -24,6 +15,7 @@ function getLocalized(food, lang) {
 
 export default function FoodManager() {
   const { t, i18n } = useTranslation();
+  const { pictograms: metaPictograms } = useMeta();
   const [foods, setFoods] = useState([]);
   const [query, setQuery] = useState("");
   const [addOpen, setAddOpen] = useState(false);
@@ -51,6 +43,23 @@ export default function FoodManager() {
     fetchFoods();
   }, []);
 
+  const pictogramMap = useMemo(() => {
+    return new Map((metaPictograms || []).map((p) => [p.key, p]));
+  }, [metaPictograms]);
+
+  const pictogramDefaults = useMemo(() => {
+    const defaults = {};
+    (metaPictograms || []).forEach(({ key }) => {
+      defaults[`contains_${key}`] = false;
+    });
+    return defaults;
+  }, [metaPictograms]);
+
+  useEffect(() => {
+    if (!editingId) return;
+    setEditForm((prev) => ({ ...pictogramDefaults, ...prev }));
+  }, [editingId, pictogramDefaults]);
+
   const filteredFoods = useMemo(() => {
     const q = query.trim().toLowerCase();
     if (!q) return foods;
@@ -64,14 +73,20 @@ export default function FoodManager() {
 
   function startEdit(food) {
     setEditingId(food.id);
-    const b = {};
-    ALLERGEN_KEYS.forEach(({ key }) => (b[key] = !!food[`contains_${key}`] || !!food[key]));
+    const toggleValues = { ...pictogramDefaults };
+    (metaPictograms || []).forEach(({ key }) => {
+      const prefixKey = `contains_${key}`;
+      const hasLegacy = !!food[`contains_${key}`] || !!food[key];
+      const hasExplicit = Array.isArray(food?.pictograms) && food.pictograms.includes(key);
+      const hasDerived = Array.isArray(food?.derivedPictograms) && food.derivedPictograms.includes(key);
+      toggleValues[prefixKey] = hasLegacy || hasExplicit || hasDerived;
+    });
     setEditForm({
       id: food.id,
       barcode: food.barcode || "",
       date: (food.date || "").slice?.(0, 10) || "",
       diabeticFriendly: !!food.diabeticFriendly,
-      ...b,
+      ...toggleValues,
       translations: {
         en: { dish: "", description: "", category: "", ...(food.translations?.en || {}) },
         de: { dish: "", description: "", category: "", ...(food.translations?.de || {}) },
@@ -102,7 +117,10 @@ export default function FoodManager() {
       fd.append("barcode", editForm.barcode || "");
       if (editForm.date) fd.append("date", editForm.date);
       fd.append("diabeticFriendly", String(!!editForm.diabeticFriendly));
-      ALLERGEN_KEYS.forEach(({ key }) => fd.append(`contains_${key}`, String(!!editForm[key])));
+      const selectedPictograms = (metaPictograms || [])
+        .filter(({ key }) => editForm[`contains_${key}`])
+        .map(({ key }) => key);
+      fd.append("pictograms", JSON.stringify(selectedPictograms));
       fd.append("translations", JSON.stringify(editForm.translations));
       if (editFile) fd.append("image", editFile);
 
@@ -243,18 +261,25 @@ export default function FoodManager() {
                       </td>
                       <td className="p-2">
                         <div className="flex flex-wrap gap-1">
-                          {ALLERGEN_KEYS.filter(({ key }) => f[`contains_${key}`] || f[key]).map(
-                            ({ key, icon }) => (
-                              <div
-                                key={key}
-                                className="w-8 h-8 flex flex-col items-center justify-center text-xs font-semibold border border-gray-400 dark:border-gray-600 rounded-md"
-                                title={t(`Meals.Legend.Pictograms.${key}`, key)}
-                              >
-                                <span className="text-base leading-none">{icon}</span>
-                                <span className="leading-none">{key}</span>
-                              </div>
-                            )
-                          )}
+                          {(metaPictograms || [])
+                            .filter(({ key }) => {
+                              if (Array.isArray(f?.pictograms) && f.pictograms.includes(key)) return true;
+                              if (Array.isArray(f?.derivedPictograms) && f.derivedPictograms.includes(key)) return true;
+                              return !!f[`contains_${key}`] || !!f[key];
+                            })
+                            .map(({ key }) => {
+                              const meta = pictogramMap.get(key) || { icon: key, tKey: key };
+                              return (
+                                <div
+                                  key={key}
+                                  className="w-8 h-8 flex flex-col items-center justify-center text-xs font-semibold border border-gray-400 dark:border-gray-600 rounded-md"
+                                  title={t(meta.tKey, key)}
+                                >
+                                  <span className="text-base leading-none">{meta.icon || key}</span>
+                                  <span className="leading-none">{key}</span>
+                                </div>
+                              );
+                            })}
                         </div>
                       </td>
                       <td className="p-2 text-center whitespace-nowrap">
@@ -371,24 +396,11 @@ export default function FoodManager() {
                         </label>
                       </td>
                       <td className="p-2">
-                        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs">
-                          {ALLERGEN_KEYS.map(({ key, icon }) => (
-                            <label
-                              key={key}
-                              className="flex items-center gap-1 border border-gray-300 dark:border-gray-700 rounded p-1"
-                            >
-                              <input
-                                type="checkbox"
-                                checked={!!editForm[key]}
-                                onChange={(e) =>
-                                  setEditForm((ef) => ({ ...ef, [key]: e.target.checked }))
-                                }
-                              />
-                              <span>{icon}</span>
-                              <span>{t(`Meals.Legend.Pictograms.${key}`, key)}</span>
-                            </label>
-                          ))}
-                        </div>
+                        <AllergenCheckboxes
+                          values={editForm}
+                          onChange={setEditForm}
+                          prefix="contains_"
+                        />
                       </td>
                       <td className="p-2 text-center whitespace-nowrap">
                         <button

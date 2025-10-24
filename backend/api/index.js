@@ -38,6 +38,7 @@ const reminderRoute      = require('../routes/reminders');
 const roomsRoute         = require('../routes/rooms');
 const ttsRoute           = require('../routes/tts');
 const authRoute          = require('../routes/auth');
+const metaRoute          = require('../routes/meta');
 const adminUsersRoute    = require("../routes/admin/users");
 const adminFoodsRoute = require("../routes/admin/foods");
 //const adminMealsRoute    = require("../routes/admin/meals");
@@ -149,6 +150,7 @@ app.use('/exercises',     exercisesRoute);
 app.use('/reminders',     reminderRoute);
 app.use('/rooms',         roomsRoute);
 app.use('/tts',           ttsRoute);
+app.use('/api/meta',      metaRoute);
 app.use("/admin/users", adminUsersRoute);
 app.use("/admin/foods", adminFoodsRoute);
 

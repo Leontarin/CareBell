@@ -6,6 +6,16 @@ const mongoose = require("mongoose");
 const router = express.Router();
 const Food = require("../../models/food");
 const isAdmin = require("../../middleware/isAdmin");
+const {
+  PICTOGRAMS,
+  ALLERGENS,
+  ADDITIVES,
+} = require("../../../shared/constants/meta");
+const { derivePictogramsFromAllergens } = require("../../../shared/utils/derivePictograms");
+
+const VALID_PICTOGRAMS = new Set(PICTOGRAMS.map((p) => p.key));
+const VALID_ALLERGENS = new Set(ALLERGENS.map((a) => a.code));
+const VALID_ADDITIVES = new Set(ADDITIVES.map((a) => a.code));
 
 // ──────────────────────────────────────────────────────────────────────────────
 // Admin guard
@@ -47,6 +57,32 @@ function parseBool(v) {
   return false;
 }
 
+function sanitizeCodes(values, validSet) {
+  if (!Array.isArray(values)) return [];
+  const result = [];
+  values.forEach((value) => {
+    if (value == null) return;
+    const normalized = typeof value === "string" ? value : String(value);
+    const trimmed = normalized.trim();
+    if (trimmed && validSet.has(trimmed) && !result.includes(trimmed)) {
+      result.push(trimmed);
+    }
+  });
+  return result;
+}
+
+function legacyPictogramFlags(source) {
+  if (!source) return [];
+  const keys = [];
+  PICTOGRAMS.forEach(({ key }) => {
+    const flagKey = `contains_${key}`;
+    if (flagKey in source && parseBool(source[flagKey])) {
+      keys.push(key);
+    }
+  });
+  return keys;
+}
+
 // ──────────────────────────────────────────────────────────────────────────────
 // Multer memory storage
 // ──────────────────────────────────────────────────────────────────────────────
@@ -68,7 +104,7 @@ router.get("/", async (req, res) => {
         { barcode: rx },
       ];
     }
-    const foods = await Food.find(filter).sort({ id: -1 }).lean();
+    const foods = await Food.find(filter).sort({ id: -1 }).lean({ virtuals: true });
     foods.forEach((f) => delete f.image);
     res.json(foods);
   } catch (e) {
@@ -102,25 +138,7 @@ router.get("/:id/image", async (req, res) => {
 // ──────────────────────────────────────────────────────────────────────────────
 router.post("/", upload.single("image"), async (req, res) => {
   try {
-    const {
-      barcode,
-      date,
-      category,
-      dish,
-      description,
-      additives,
-      allergens,
-      pictograms,
-      diabeticFriendly,
-      contains_R,
-      contains_S,
-      contains_G,
-      contains_M,
-      contains_A,
-      contains_W,
-      contains_K,
-      contains_Y,
-    } = req.body;
+    const { barcode, date, category, dish, description, diabeticFriendly } = req.body;
 
     if (!barcode || !date || !category || !dish || typeof diabeticFriendly === "undefined") {
       return res.status(400).json({
@@ -133,11 +151,20 @@ router.post("/", upload.single("image"), async (req, res) => {
     try {
       if (req.body.translations) {
         const parsed = JSON.parse(req.body.translations);
-        if (typeof parsed === "object") translations = parsed;
+        if (parsed && typeof parsed === "object") translations = parsed;
       }
     } catch (e) {
       console.warn("Invalid translations JSON:", e);
     }
+
+    const providedAllergens = sanitizeCodes(parseArray(req.body.allergens), VALID_ALLERGENS);
+    const providedAdditives = sanitizeCodes(parseArray(req.body.additives), VALID_ADDITIVES);
+    const providedPictograms = sanitizeCodes(parseArray(req.body.pictograms), VALID_PICTOGRAMS);
+    const legacyFlags = legacyPictogramFlags(req.body);
+    const derivedFromAllergens = derivePictogramsFromAllergens(providedAllergens, PICTOGRAMS);
+    const allPictograms = Array.from(
+      new Set([...providedPictograms, ...legacyFlags, ...derivedFromAllergens])
+    );
 
     // Auto-generate next numeric id
     const lastFood = await Food.findOne().sort({ id: -1 }).lean();
@@ -151,19 +178,10 @@ router.post("/", upload.single("image"), async (req, res) => {
       dish: String(dish),
       description: description ?? null,
       translations,
-      additives: parseArray(additives),
-      allergens: parseArray(allergens),
-      pictograms: parseArray(pictograms),
+      additives: providedAdditives,
+      allergens: providedAllergens,
+      pictograms: allPictograms,
       diabeticFriendly: parseBool(diabeticFriendly),
-
-      contains_R: parseBool(contains_R),
-      contains_S: parseBool(contains_S),
-      contains_G: parseBool(contains_G),
-      contains_M: parseBool(contains_M),
-      contains_A: parseBool(contains_A),
-      contains_W: parseBool(contains_W),
-      contains_K: parseBool(contains_K),
-      contains_Y: parseBool(contains_Y),
     });
 
     if (req.file) {
@@ -201,22 +219,41 @@ router.put("/:id", upload.single("image"), async (req, res) => {
 
     if (body.diabeticFriendly != null)
       body.diabeticFriendly = parseBool(body.diabeticFriendly);
-    if (body.additives != null) body.additives = parseArray(body.additives);
-    if (body.allergens != null) body.allergens = parseArray(body.allergens);
-    if (body.pictograms != null) body.pictograms = parseArray(body.pictograms);
-    const bools = [
-      "contains_R",
-      "contains_S",
-      "contains_G",
-      "contains_M",
-      "contains_A",
-      "contains_W",
-      "contains_K",
-      "contains_Y",
-    ];
-    for (const k of bools) {
-      if (k in body) body[k] = parseBool(body[k]);
+
+    let pictogramSet = null;
+
+    if (body.additives != null)
+      body.additives = sanitizeCodes(parseArray(body.additives), VALID_ADDITIVES);
+    if (body.allergens != null) {
+      body.allergens = sanitizeCodes(parseArray(body.allergens), VALID_ALLERGENS);
+      if (body.allergens.length) {
+        pictogramSet = pictogramSet || new Set();
+        derivePictogramsFromAllergens(body.allergens, PICTOGRAMS).forEach((key) =>
+          pictogramSet.add(key)
+        );
+      }
     }
+    if (body.pictograms != null) {
+      const provided = sanitizeCodes(parseArray(body.pictograms), VALID_PICTOGRAMS);
+      pictogramSet = pictogramSet || new Set();
+      provided.forEach((key) => pictogramSet.add(key));
+    }
+
+    const legacy = legacyPictogramFlags(body);
+    if (legacy.length) {
+      pictogramSet = pictogramSet || new Set();
+      legacy.forEach((key) => pictogramSet.add(key));
+    }
+
+    if (pictogramSet !== null) {
+      body.pictograms = Array.from(pictogramSet);
+    }
+
+    // Remove legacy flag keys to avoid storing stale data
+    PICTOGRAMS.forEach(({ key }) => {
+      const flagKey = `contains_${key}`;
+      if (flagKey in body) delete body[flagKey];
+    });
 
     if (req.file) {
       body.image = {

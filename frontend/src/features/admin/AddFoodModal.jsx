@@ -2,43 +2,47 @@ import React, { useEffect, useMemo, useState } from "react";
 import { API } from "../../shared/config";
 import { useTranslation } from "react-i18next";
 import { LANG_LABELS } from "../../shared/constants";
-
-const ALLERGEN_KEYS = [
-  { key: "R", icon: "🥩" },
-  { key: "S", icon: "🐷" },
-  { key: "G", icon: "🐔" },
-  { key: "M", icon: "🥛" },
-  { key: "A", icon: "🍷" },
-  { key: "W", icon: "🌾" },
-  { key: "K", icon: "🧄" },
-  { key: "Y", icon: "🌱" },
-];
+import AllergenCheckboxes from "../../components/AllergenCheckboxes.jsx";
+import { useMeta } from "../../shared/meta";
 
 const SUPPORTED_LANGS = ["en", "de", "fi", "he"];
 const safeLangLabel = (lang, t) =>
   t(`Admin.Foods.languageTabs.${lang}`, LANG_LABELS?.[lang] || lang.toUpperCase());
 
+const createEmptyTranslations = () => ({
+  en: { dish: "", description: "", category: "" },
+  de: { dish: "", description: "", category: "" },
+  fi: { dish: "", description: "", category: "" },
+  he: { dish: "", description: "", category: "" },
+});
+
 export default function AddFoodModal({ onClose, onAdded }) {
   const { t } = useTranslation();
+  const { pictograms: metaPictograms } = useMeta();
   const [activeLang, setActiveLang] = useState("en");
   const [file, setFile] = useState(null);
   const [loading, setLoading] = useState(false);
   const [msg, setMsg] = useState(null);
 
+  const pictogramDefaults = useMemo(() => {
+    const defaults = {};
+    (metaPictograms || []).forEach(({ key }) => {
+      defaults[key] = false;
+    });
+    return defaults;
+  }, [metaPictograms]);
+
   const [form, setForm] = useState({
     barcode: "",
     date: new Date().toISOString().slice(0, 10),
     diabeticFriendly: false,
-    // pictogram flags
-    R: false, S: false, G: false, M: false, A: false, W: false, K: false, Y: false,
-    // multilingual content
-    translations: {
-      en: { dish: "", description: "", category: "" },
-      de: { dish: "", description: "", category: "" },
-      fi: { dish: "", description: "", category: "" },
-      he: { dish: "", description: "", category: "" },
-    },
+    ...pictogramDefaults,
+    translations: createEmptyTranslations(),
   });
+
+  useEffect(() => {
+    setForm((prev) => ({ ...pictogramDefaults, ...prev }));
+  }, [pictogramDefaults]);
 
   // ────────────────────────────────
   //  Helpers
@@ -90,8 +94,10 @@ export default function AddFoodModal({ onClose, onAdded }) {
       fd.append("category", en.category);
       fd.append("description", en.description || "");
 
-      // pictograms (booleans)
-      ALLERGEN_KEYS.forEach(({ key }) => fd.append(`contains_${key}`, String(!!form[key])));
+      const selectedPictograms = (metaPictograms || [])
+        .filter(({ key }) => form[key])
+        .map(({ key }) => key);
+      fd.append("pictograms", JSON.stringify(selectedPictograms));
 
       // full multilingual payload
       fd.append("translations", JSON.stringify(form.translations));
@@ -172,25 +178,7 @@ export default function AddFoodModal({ onClose, onAdded }) {
             <p className="font-semibold mb-2">
               {t("Meals.LegendHeadings.Pictograms", "Pictograms")}
             </p>
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-sm">
-              {ALLERGEN_KEYS.map(({ key, icon }) => (
-                <label
-                  key={key}
-                  className="flex items-center gap-2 border border-gray-300 dark:border-gray-700 rounded p-2"
-                >
-                  <input
-                    type="checkbox"
-                    checked={!!form[key]}
-                    onChange={(e) => setForm({ ...form, [key]: e.target.checked })}
-                  />
-                  <span className="text-base">{icon}</span>
-                  <span>
-                    {t(`Meals.Legend.Pictograms.${key}`, key)}
-                    {" (" + key + ")"}
-                  </span>
-                </label>
-              ))}
-            </div>
+            <AllergenCheckboxes values={form} onChange={setForm} readOnly={loading} />
           </div>
 
           {/* Language Tabs */}

@@ -12,20 +12,12 @@ import ResetPasswordModal from "./ResetPasswordModal";
 import { useTranslation } from "react-i18next";
 import { useContext } from "react";
 import { AppContext } from "../../shared/AppContext";
+import AllergenCheckboxes from "../../components/AllergenCheckboxes.jsx";
+import { useMeta } from "../../shared/meta";
 
 export default function UserManager() {
   const { t } = useTranslation();
-
-  const ALLERGEN_KEYS = [
-    { key: "R", icon: "🥩" },
-    { key: "S", icon: "🐷" },
-    { key: "G", icon: "🐔" },
-    { key: "M", icon: "🥛" },
-    { key: "A", icon: "🍷" },
-    { key: "W", icon: "🌾" },
-    { key: "K", icon: "🧄" },
-    { key: "Y", icon: "🌱" },
-  ];
+  const { pictograms: metaPictograms } = useMeta();
 
   const [users, setUsers] = useState([]);
   const [editingId, setEditingId] = useState(null);
@@ -67,8 +59,23 @@ export default function UserManager() {
   // ────────────────────────────────
   //  Helpers
   // ────────────────────────────────
-  const pictogramLabel = (key) =>
-    t(`Meals.Legend.Pictograms.${key}`, key);
+  const pictogramMap = useMemo(
+    () => new Map((metaPictograms || []).map((p) => [p.key, p])),
+    [metaPictograms]
+  );
+
+  const pictogramDefaults = useMemo(() => {
+    const defaults = {};
+    (metaPictograms || []).forEach(({ key }) => {
+      defaults[key] = false;
+    });
+    return defaults;
+  }, [metaPictograms]);
+
+  const pictogramLabel = (key) => {
+    const meta = pictogramMap.get(key);
+    return meta ? t(meta.tKey, key) : t(`Meals.Legend.Pictograms.${key}`, key);
+  };
 
   // ────────────────────────────────
   //  Editing & Saving
@@ -76,6 +83,7 @@ export default function UserManager() {
   const startEdit = (u) => {
     setEditingId(u._id || u.id);
     setEditForm({
+      ...pictogramDefaults,
       fullName: u.fullName || "",
       username: u.username || "",
       email: u.email || "",
@@ -85,12 +93,17 @@ export default function UserManager() {
       country: u.country || "",
       language: u.language || "",
       Diabetic: u.Diabetic ?? false,
-      ...ALLERGEN_KEYS.reduce(
-        (acc, { key }) => ({ ...acc, [key]: !!u[key] }),
+      ...(metaPictograms || []).reduce(
+        (acc, { key }) => ({ ...acc, [key]: !!u?.[key] }),
         {}
       ),
     });
   };
+
+  useEffect(() => {
+    if (!editingId) return;
+    setEditForm((prev) => ({ ...pictogramDefaults, ...prev }));
+  }, [editingId, pictogramDefaults]);
 
   const cancelEdit = () => {
     setEditingId(null);
@@ -378,23 +391,11 @@ export default function UserManager() {
                         </select>
                       </td>
                       <td className="p-2">
-                        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs">
-                          {ALLERGEN_KEYS.map(({ key, icon }) => (
-                            <label
-                              key={key}
-                              className="flex items-center gap-1 border border-gray-300 dark:border-gray-700 rounded p-1"
-                            >
-                              <input
-                                type="checkbox"
-                                name={key}
-                                checked={!!editForm[key]}
-                                onChange={handleChange}
-                              />
-                              <span>{icon}</span>
-                              <span>{pictogramLabel(key)}</span>
-                            </label>
-                          ))}
-                        </div>
+                        <AllergenCheckboxes
+                          values={editForm}
+                          onChange={setEditForm}
+                          readOnly={loading}
+                        />
                         <label className="flex items-center text-xs mt-1">
                           <input
                             type="checkbox"
@@ -445,17 +446,22 @@ export default function UserManager() {
                       <td className="p-2">{u.country}</td>
                       <td className="p-2">{u.language}</td>
                       <td className="p-2">
-                       <div className="flex flex-wrap gap-1">
-                          {ALLERGEN_KEYS.filter(({ key }) => u[key]).map(({ key, icon }) => (
-                            <div
-                              key={key}
-                              className="w-8 h-8 flex flex-col items-center justify-center text-xs font-semibold border border-gray-400 dark:border-gray-600 rounded-md"
-                              title={pictogramLabel(key)}
-                            >
-                              <span className="text-base leading-none">{icon}</span>
-                              <span className="leading-none">{key}</span>
-                            </div>
-                          ))}
+                        <div className="flex flex-wrap gap-1">
+                          {(metaPictograms || [])
+                            .filter(({ key }) => u[key])
+                            .map(({ key }) => {
+                              const meta = pictogramMap.get(key) || { icon: key };
+                              return (
+                                <div
+                                  key={key}
+                                  className="w-8 h-8 flex flex-col items-center justify-center text-xs font-semibold border border-gray-400 dark:border-gray-600 rounded-md"
+                                  title={pictogramLabel(key)}
+                                >
+                                  <span className="text-base leading-none">{meta.icon || key}</span>
+                                  <span className="leading-none">{key}</span>
+                                </div>
+                              );
+                            })}
                         </div>
                         {u.Diabetic && (
                           <div className="text-xs text-red-600 dark:text-red-400 mt-1">

@@ -1,22 +1,21 @@
-import React, { useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { API } from "../../shared/config";
 import { COUNTRIES, AVAILABLE_LANGUAGES, LANG_LABELS } from "../../shared/constants";
+import AllergenCheckboxes from "../../components/AllergenCheckboxes.jsx";
+import { useMeta } from "../../shared/meta";
 
 export default function AddUserModal({ open, onClose, onAdded }) {
-  const { t, i18n } = useTranslation();
+  const { t } = useTranslation();
 
-  // Same pictogram keys used in UserManager
-  const ALLERGEN_KEYS = [
-    { key: "R", icon: "🥩" },
-    { key: "S", icon: "🐷" },
-    { key: "G", icon: "🐔" },
-    { key: "M", icon: "🥛" },
-    { key: "A", icon: "🍷" },
-    { key: "W", icon: "🌾" },
-    { key: "K", icon: "🧄" },
-    { key: "Y", icon: "🌱" },
-  ];
+  const { pictograms: metaPictograms } = useMeta();
+  const pictogramDefaults = useMemo(() => {
+    const defaults = {};
+    (metaPictograms || []).forEach(({ key }) => {
+      defaults[key] = false;
+    });
+    return defaults;
+  }, [metaPictograms]);
 
   const [form, setForm] = useState({
     fullName: "",
@@ -27,11 +26,15 @@ export default function AddUserModal({ open, onClose, onAdded }) {
     phoneNumber: "",
     dateOfBirth: "",
     gender: "other",
-    R: false, S: false, G: false, M: false, A: false, W: false, K: false, Y: false,
+    ...pictogramDefaults,
     Diabetic: false,
     country: "",
     language: "",
   });
+
+  useEffect(() => {
+    setForm((prev) => ({ ...pictogramDefaults, ...prev }));
+  }, [pictogramDefaults]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
@@ -69,18 +72,14 @@ export default function AddUserModal({ open, onClose, onAdded }) {
         phoneNumber: form.phoneNumber.trim() || undefined,
         dateOfBirth: form.dateOfBirth ? new Date(form.dateOfBirth) : undefined,
         gender: form.gender,
-        R: !!form.R,
-        S: !!form.S,
-        G: !!form.G,
-        M: !!form.M,
-        A: !!form.A,
-        W: !!form.W,
-        K: !!form.K,
-        Y: !!form.Y,
         Diabetic: !!form.Diabetic,
         country: form.country,
         language: form.language,
       };
+
+      (metaPictograms || []).forEach(({ key }) => {
+        payload[key] = !!form[key];
+      });
 
       const res = await fetch(`${API}/admin/users/add`, {
         method: "POST",
@@ -102,7 +101,7 @@ export default function AddUserModal({ open, onClose, onAdded }) {
         phoneNumber: "",
         dateOfBirth: "",
         gender: "other",
-        R: false, S: false, G: false, M: false, A: false, W: false, K: false, Y: false,
+        ...pictogramDefaults,
         Diabetic: false,
         country: "",
         language: "",
@@ -198,22 +197,7 @@ export default function AddUserModal({ open, onClose, onAdded }) {
             <div className="text-sm font-semibold mb-1 text-gray-800 dark:text-gray-200">
               {t("Admin.Users.health", "Health Flags")}
             </div>
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-              {ALLERGEN_KEYS.map(({ key, icon }) => (
-                <label key={key} className="flex items-center gap-2">
-                  <input
-                    type="checkbox"
-                    name={key}
-                    checked={!!form[key]}
-                    onChange={handleChange}
-                  />
-                  <span className="text-sm">
-                    {icon}{" "}
-                    {t(`Meals.Legend.Pictograms.${key}`, key)}
-                  </span>
-                </label>
-              ))}
-            </div>
+            <AllergenCheckboxes values={form} onChange={setForm} readOnly={loading} />
           </div>
 
           {/* Diabetic, Country, Language */}
