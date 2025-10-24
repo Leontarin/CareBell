@@ -130,6 +130,7 @@
     "friends": "Meet with friends"
   },
   "Meals": {
+    "exit": "Close",
     "back": "Back to scanner",
     "ingredientsLabel": "Ingredients:",
     "loadingLabel": "Loading...",

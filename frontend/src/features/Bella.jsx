@@ -309,7 +309,8 @@ const btnClass = `
   py-2 px-4 bg-blue-900 text-white font-semibold
   hover:bg-blue-800 focus:outline-none focus:ring-2 focus:ring-white
   transition
-  min-w-fit max-w-full whitespace-normal break-words
+  min-w-fit max-w-full
+  whitespace-nowrap overflow-hidden text-ellipsis
 `;
 
   const chatBtnClass = `

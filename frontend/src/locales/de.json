@@ -127,6 +127,7 @@
     "friends": "Freunde treffen"
   },
   "Meals": {
+    "exit": "Schließen",
     "back": "Zurück zum Scanner",
     "ingredientsLabel": "Zutaten:",
     "loadingLabel": "Wird geladen…",
@@ -298,7 +299,7 @@
     "callContacts": "Kontakte anrufen",
     "meetWithFriends": "Freunde treffen",
     "medicine": "Medikamente",
-    "meals": "Mahlzeiten",
+    "meals": "Speiseplan anzeigen",
     "news": "Nachrichten",
     "exercise": "Übungen",
     "back": "Zurück",
