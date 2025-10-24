@@ -4,17 +4,10 @@ import { API } from "../../shared/config";
 import { useTranslation } from "react-i18next";
 import AddFoodModal from "./AddFoodModal";
 import { QRCodeCanvas } from "qrcode.react";
-
-const ALLERGEN_KEYS = [
-  { key: "R", icon: "🥩" },
-  { key: "S", icon: "🐷" },
-  { key: "G", icon: "🐔" },
-  { key: "M", icon: "🥛" },
-  { key: "A", icon: "🍷" },
-  { key: "W", icon: "🌾" },
-  { key: "K", icon: "🧄" },
-  { key: "Y", icon: "🌱" },
-];
+import AllergenCheckboxes, {
+  extractSelectedPictograms,
+} from "../../components/AllergenCheckboxes.jsx";
+import { useMeta } from "../../shared/metaContext.jsx";
 const SUPPORTED_LANGS = ["en", "de", "fi", "he"];
 
 function getLocalized(food, lang) {
@@ -24,6 +17,7 @@ function getLocalized(food, lang) {
 
 export default function FoodManager() {
   const { t, i18n } = useTranslation();
+  const { pictograms: metaPictograms } = useMeta();
   const [foods, setFoods] = useState([]);
   const [query, setQuery] = useState("");
   const [addOpen, setAddOpen] = useState(false);
@@ -62,16 +56,43 @@ export default function FoodManager() {
     });
   }, [foods, query, i18n.language]);
 
+  const pictogramKeys = useMemo(
+    () => metaPictograms.map(({ key }) => key),
+    [metaPictograms]
+  );
+
+  const pictogramMap = useMemo(
+    () => new Map(metaPictograms.map((entry) => [entry.key, entry])),
+    [metaPictograms]
+  );
+
+  const resolvePictogramKeys = (food) => {
+    if (Array.isArray(food?.pictograms) && food.pictograms.length) {
+      return Array.from(new Set(food.pictograms.map((key) => String(key))));
+    }
+    if (Array.isArray(food?.derivedPictograms) && food.derivedPictograms.length) {
+      return Array.from(
+        new Set(food.derivedPictograms.map((key) => String(key)))
+      );
+    }
+    return pictogramKeys.filter(
+      (key) => food?.[`contains_${key}`] || food?.[key]
+    );
+  };
+
   function startEdit(food) {
     setEditingId(food.id);
-    const b = {};
-    ALLERGEN_KEYS.forEach(({ key }) => (b[key] = !!food[`contains_${key}`] || !!food[key]));
+    const baseFlags = {};
+    const selected = new Set(resolvePictogramKeys(food));
+    pictogramKeys.forEach((key) => {
+      baseFlags[`contains_${key}`] = selected.has(key);
+    });
     setEditForm({
       id: food.id,
       barcode: food.barcode || "",
       date: (food.date || "").slice?.(0, 10) || "",
       diabeticFriendly: !!food.diabeticFriendly,
-      ...b,
+      ...baseFlags,
       translations: {
         en: { dish: "", description: "", category: "", ...(food.translations?.en || {}) },
         de: { dish: "", description: "", category: "", ...(food.translations?.de || {}) },
@@ -102,7 +123,12 @@ export default function FoodManager() {
       fd.append("barcode", editForm.barcode || "");
       if (editForm.date) fd.append("date", editForm.date);
       fd.append("diabeticFriendly", String(!!editForm.diabeticFriendly));
-      ALLERGEN_KEYS.forEach(({ key }) => fd.append(`contains_${key}`, String(!!editForm[key])));
+      const selectedPictograms = extractSelectedPictograms(
+        editForm,
+        "contains_",
+        metaPictograms
+      );
+      fd.append("pictograms", JSON.stringify(selectedPictograms));
       fd.append("translations", JSON.stringify(editForm.translations));
       if (editFile) fd.append("image", editFile);
 
@@ -243,18 +269,19 @@ export default function FoodManager() {
                       </td>
                       <td className="p-2">
                         <div className="flex flex-wrap gap-1">
-                          {ALLERGEN_KEYS.filter(({ key }) => f[`contains_${key}`] || f[key]).map(
-                            ({ key, icon }) => (
+                          {resolvePictogramKeys(f).map((key) => {
+                            const meta = pictogramMap.get(key) || { icon: key, tKey: key };
+                            return (
                               <div
                                 key={key}
                                 className="w-8 h-8 flex flex-col items-center justify-center text-xs font-semibold border border-gray-400 dark:border-gray-600 rounded-md"
-                                title={t(`Meals.Legend.Pictograms.${key}`, key)}
+                                title={t(meta.tKey || key, key)}
                               >
-                                <span className="text-base leading-none">{icon}</span>
+                                <span className="text-base leading-none">{meta.icon || key}</span>
                                 <span className="leading-none">{key}</span>
                               </div>
-                            )
-                          )}
+                            );
+                          })}
                         </div>
                       </td>
                       <td className="p-2 text-center whitespace-nowrap">
@@ -371,24 +398,11 @@ export default function FoodManager() {
                         </label>
                       </td>
                       <td className="p-2">
-                        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs">
-                          {ALLERGEN_KEYS.map(({ key, icon }) => (
-                            <label
-                              key={key}
-                              className="flex items-center gap-1 border border-gray-300 dark:border-gray-700 rounded p-1"
-                            >
-                              <input
-                                type="checkbox"
-                                checked={!!editForm[key]}
-                                onChange={(e) =>
-                                  setEditForm((ef) => ({ ...ef, [key]: e.target.checked }))
-                                }
-                              />
-                              <span>{icon}</span>
-                              <span>{t(`Meals.Legend.Pictograms.${key}`, key)}</span>
-                            </label>
-                          ))}
-                        </div>
+                        <AllergenCheckboxes
+                          values={editForm}
+                          onChange={setEditForm}
+                          prefix="contains_"
+                        />
                       </td>
                       <td className="p-2 text-center whitespace-nowrap">
                         <button

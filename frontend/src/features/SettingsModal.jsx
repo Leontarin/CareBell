@@ -11,6 +11,8 @@ import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { AppContext } from "../shared/AppContext";
 import { API } from "../shared/config";
+import AllergenCheckboxes from "../components/AllergenCheckboxes.jsx";
+import { useMeta } from "../shared/metaContext.jsx";
 
 export default function SettingsModal({ onClose }) {
   const { t, i18n } = useTranslation();
@@ -24,20 +26,21 @@ export default function SettingsModal({ onClose }) {
   const [languageError, setLanguageError] = useState(null);
 
   /** ─────────────────────────── Health flags ─────────────────────────── **/
-  // Dynamically get available pictogram keys from i18n
-  const pictograms = t("Meals.Legend.Pictograms", { returnObjects: true });
-  const allergenKeys = Object.keys(pictograms || {});
+  const { pictograms: metaPictograms } = useMeta();
 
-  const [healthFlags, setHealthFlags] = useState(
-    allergenKeys.reduce((acc, k) => ({ ...acc, [k]: !!user?.[k] }), {})
-  );
+  const buildHealthFlags = useMemo(() => {
+    const entries = (metaPictograms || []).map(({ key }) => [key, !!user?.[key]]);
+    return Object.fromEntries(entries);
+  }, [metaPictograms, user]);
+
+  const [healthFlags, setHealthFlags] = useState(buildHealthFlags);
   const [diabetic, setDiabetic] = useState(!!user?.Diabetic);
 
   // Keep sync when user or language changes (so new translations reload)
   useEffect(() => {
-    setHealthFlags(allergenKeys.reduce((acc, k) => ({ ...acc, [k]: !!user?.[k] }), {}));
+    setHealthFlags(buildHealthFlags);
     setDiabetic(!!user?.Diabetic);
-  }, [user, i18n.language]);
+  }, [user, i18n.language, buildHealthFlags]);
 
   /** ─────────────────────────── Language logic ─────────────────────────── **/
   const LANGUAGE_LABELS = useMemo(
@@ -107,9 +110,6 @@ export default function SettingsModal({ onClose }) {
   };
 
   /** ─────────────────────────── Health toggle/save ─────────────────────────── **/
-  const toggleFlag = (key) =>
-    setHealthFlags((prev) => ({ ...prev, [key]: !prev[key] }));
-
   const saveHealth = async () => {
     if (!user) return;
     try {
@@ -317,21 +317,7 @@ export default function SettingsModal({ onClose }) {
                 {t("SettingsModal.health")}
               </h3>
 
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mb-4">
-                {allergenKeys.map((key) => (
-                  <label
-                    key={key}
-                    className="flex items-center gap-2 border border-gray-300 dark:border-gray-600 rounded p-2"
-                  >
-                    <input
-                      type="checkbox"
-                      checked={!!healthFlags[key]}
-                      onChange={() => toggleFlag(key)}
-                    />
-                    {pictograms[key]}
-                  </label>
-                ))}
-              </div>
+              <AllergenCheckboxes values={healthFlags} onChange={setHealthFlags} />
 
               <label className="flex items-center gap-2 block mt-2">
                 <input

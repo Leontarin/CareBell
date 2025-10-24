@@ -1,41 +1,50 @@
-import React, { useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { API } from "../../shared/config";
 import { COUNTRIES, AVAILABLE_LANGUAGES, LANG_LABELS } from "../../shared/constants";
+import AllergenCheckboxes from "../../components/AllergenCheckboxes.jsx";
+import { useMeta } from "../../shared/metaContext.jsx";
 
 export default function AddUserModal({ open, onClose, onAdded }) {
-  const { t, i18n } = useTranslation();
+  const { t } = useTranslation();
 
-  // Same pictogram keys used in UserManager
-  const ALLERGEN_KEYS = [
-    { key: "R", icon: "🥩" },
-    { key: "S", icon: "🐷" },
-    { key: "G", icon: "🐔" },
-    { key: "M", icon: "🥛" },
-    { key: "A", icon: "🍷" },
-    { key: "W", icon: "🌾" },
-    { key: "K", icon: "🧄" },
-    { key: "Y", icon: "🌱" },
-  ];
+  const { pictograms } = useMeta();
 
-  const [form, setForm] = useState({
-    fullName: "",
-    username: "",
-    email: "",
-    password: "",
-    confirmPassword: "",
-    phoneNumber: "",
-    dateOfBirth: "",
-    gender: "other",
-    R: false, S: false, G: false, M: false, A: false, W: false, K: false, Y: false,
-    Diabetic: false,
-    country: "",
-    language: "",
-  });
+  const baseForm = useMemo(() => {
+    const initial = {
+      fullName: "",
+      username: "",
+      email: "",
+      password: "",
+      confirmPassword: "",
+      phoneNumber: "",
+      dateOfBirth: "",
+      gender: "other",
+      Diabetic: false,
+      country: "",
+      language: "",
+    };
+    pictograms.forEach(({ key }) => {
+      initial[key] = false;
+    });
+    return initial;
+  }, [pictograms]);
+
+  const [form, setForm] = useState(baseForm);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
   if (!open) return null;
+
+  useEffect(() => {
+    setForm((prev) => {
+      const next = { ...prev };
+      pictograms.forEach(({ key }) => {
+        if (typeof next[key] !== "boolean") next[key] = false;
+      });
+      return next;
+    });
+  }, [pictograms]);
 
   const handleChange = (e) => {
     const { name, type, value, checked } = e.target;
@@ -57,6 +66,10 @@ export default function AddUserModal({ open, onClose, onAdded }) {
 
     setLoading(true);
     try {
+      const allergenFlags = Object.fromEntries(
+        pictograms.map(({ key }) => [key, !!form[key]])
+      );
+
       const payload = {
         id:
           typeof crypto !== "undefined" && crypto.randomUUID
@@ -69,14 +82,7 @@ export default function AddUserModal({ open, onClose, onAdded }) {
         phoneNumber: form.phoneNumber.trim() || undefined,
         dateOfBirth: form.dateOfBirth ? new Date(form.dateOfBirth) : undefined,
         gender: form.gender,
-        R: !!form.R,
-        S: !!form.S,
-        G: !!form.G,
-        M: !!form.M,
-        A: !!form.A,
-        W: !!form.W,
-        K: !!form.K,
-        Y: !!form.Y,
+        ...allergenFlags,
         Diabetic: !!form.Diabetic,
         country: form.country,
         language: form.language,
@@ -93,20 +99,7 @@ export default function AddUserModal({ open, onClose, onAdded }) {
 
       onAdded?.(data);
       onClose?.();
-      setForm({
-        fullName: "",
-        username: "",
-        email: "",
-        password: "",
-        confirmPassword: "",
-        phoneNumber: "",
-        dateOfBirth: "",
-        gender: "other",
-        R: false, S: false, G: false, M: false, A: false, W: false, K: false, Y: false,
-        Diabetic: false,
-        country: "",
-        language: "",
-      });
+      setForm({ ...baseForm });
     } catch (err) {
       setError(err.message);
     } finally {
@@ -198,22 +191,7 @@ export default function AddUserModal({ open, onClose, onAdded }) {
             <div className="text-sm font-semibold mb-1 text-gray-800 dark:text-gray-200">
               {t("Admin.Users.health", "Health Flags")}
             </div>
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-              {ALLERGEN_KEYS.map(({ key, icon }) => (
-                <label key={key} className="flex items-center gap-2">
-                  <input
-                    type="checkbox"
-                    name={key}
-                    checked={!!form[key]}
-                    onChange={handleChange}
-                  />
-                  <span className="text-sm">
-                    {icon}{" "}
-                    {t(`Meals.Legend.Pictograms.${key}`, key)}
-                  </span>
-                </label>
-              ))}
-            </div>
+            <AllergenCheckboxes values={form} onChange={setForm} />
           </div>
 
           {/* Diabetic, Country, Language */}

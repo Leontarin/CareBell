@@ -4,6 +4,7 @@ const router = express.Router();
 const User = require("../models/user");
 const { readSession } = require("../lib/session");
 const { safeUserQuery } = require("../lib/utils");
+const { PICTOGRAMS } = require("../../shared/constants/meta");
 
 const BLOCKED_UPDATE_FIELDS = new Set([
   "passwordHash",
@@ -108,9 +109,7 @@ router.patch("/:id/health", async (req, res) => {
     if (!isAdmin && currentUser.id !== id)
       return res.status(403).json({ message: "Forbidden" });
 
-    const allowedFields = [
-      "R", "S", "G", "M", "A", "W", "K", "Y", "Diabetic"
-    ];
+    const allowedFields = [...PICTOGRAMS.map((p) => p.key), "Diabetic"];
 
     // Pick only allowed fields
     const filtered = Object.fromEntries(

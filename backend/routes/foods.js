@@ -22,7 +22,7 @@ function safeFoodQuery(idOrString) {
  */
 router.get("/", async (_req, res) => {
   try {
-    const foods = await Food.find().sort({ createdAt: -1 }).lean();
+    const foods = await Food.find().sort({ createdAt: -1 }).lean({ virtuals: true });
     // Hide binary data to avoid sending megabytes
     foods.forEach(f => delete f.image);
     res.json(foods);
@@ -37,7 +37,7 @@ router.get("/", async (_req, res) => {
  */
 router.get("/:barcode", async (req, res) => {
   try {
-    const food = await Food.findOne({ barcode: req.params.barcode }).lean();
+    const food = await Food.findOne({ barcode: req.params.barcode }).lean({ virtuals: true });
     if (!food) return res.status(404).json({ message: "Not found" });
     delete food.image; // remove heavy blob
     res.json(food);

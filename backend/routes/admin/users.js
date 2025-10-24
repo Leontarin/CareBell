@@ -7,6 +7,7 @@ const isAdmin = require("../../middleware/isAdmin");
 const { safeUserQuery } = require("../../lib/utils");
 const bcrypt = require("bcrypt");
 const Admin = require("../../models/admin");
+const { PICTOGRAMS } = require("../../../shared/constants/meta");
 
 // Apply admin guard to every route here
 router.use(isAdmin);
@@ -19,20 +20,16 @@ router.get("/", async (req, res) => {
     // Always fetch fresh data, not cached docs
     const users = await User.find({}, { passwordHash: 0 }).lean({ getters: true });
 
-    // Normalize fields so checkboxes match backend
-    const normalized = users.map((u) => ({
-      ...u,
-      R: !!u.R,
-      S: !!u.S,
-      G: !!u.G,
-      M: !!u.M,
-      A: !!u.A,
-      W: !!u.W,
-      K: !!u.K,
-      Y: !!u.Y,
-      Diabetic: !!u.Diabetic,
-      // ⚠️ Drop textual allergens — localization handles text in frontend
-    }));
+    const normalized = users.map((u) => {
+      const pictogramFlags = Object.fromEntries(
+        PICTOGRAMS.map(({ key }) => [key, !!u[key]])
+      );
+      return {
+        ...u,
+        ...pictogramFlags,
+        Diabetic: !!u.Diabetic,
+      };
+    });
 
     res.json(normalized);
   } catch (e) {
@@ -92,9 +89,8 @@ router.post("/add", async (req, res) => {
     const hashed = password ? await bcrypt.hash(password, 10) : undefined;
 
     // Normalize allergen flags
-    const allergenKeys = ["R", "S", "G", "M", "A", "W", "K", "Y"];
     const allergenFlags = {};
-    allergenKeys.forEach((key) => {
+    PICTOGRAMS.forEach(({ key }) => {
       allergenFlags[key] = req.body[key] === "on" || req.body[key] === true;
     });
 

@@ -1,5 +1,32 @@
 // backend/models/food.js
 const mongoose = require("mongoose");
+const {
+  PICTOGRAMS,
+  ALLERGENS,
+  ADDITIVES,
+} = require("../../shared/constants/meta");
+const { derivePictogramsFromAllergens } = require("../../shared/utils/derivePictograms");
+
+const VALID_PICTOGRAMS = new Set(PICTOGRAMS.map((p) => p.key));
+const VALID_ALLERGENS = new Set(ALLERGENS.map((a) => a.code));
+const VALID_ADDITIVES = new Set(ADDITIVES.map((a) => a.code));
+
+function normalizeList(list, allowedSet) {
+  if (!Array.isArray(list)) {
+    if (list == null) return [];
+    list = [list];
+  }
+
+  const unique = new Set();
+  list.forEach((value) => {
+    const normalized = String(value).trim();
+    if (!normalized) return;
+    if (!allowedSet || allowedSet.has(normalized)) {
+      unique.add(normalized);
+    }
+  });
+  return Array.from(unique);
+}
 
 // ──────────────────────────────────────────────────────────────────────────────
 // Sub-schema for multilingual text
@@ -37,22 +64,45 @@ const foodSchema = new mongoose.Schema(
       default: {}, // e.g. { en: { dish, desc, category }, de: {...} }
     },
 
-    additives: [String],
-    allergens: [String],
-    pictograms: [String],
+    additives: {
+      type: [String],
+      default: [],
+      set: (vals) => normalizeList(vals, VALID_ADDITIVES),
+      validate: {
+        validator: (vals) => vals.every((val) => VALID_ADDITIVES.has(val)),
+        message: "Invalid additive code",
+      },
+    },
+    allergens: {
+      type: [String],
+      default: [],
+      set: (vals) => normalizeList(vals, VALID_ALLERGENS),
+      validate: {
+        validator: (vals) => vals.every((val) => VALID_ALLERGENS.has(val)),
+        message: "Invalid allergen code",
+      },
+    },
+    pictograms: {
+      type: [String],
+      default: [],
+      set: (vals) => normalizeList(vals, VALID_PICTOGRAMS),
+      validate: {
+        validator: (vals) => vals.every((val) => VALID_PICTOGRAMS.has(val)),
+        message: "Invalid pictogram key",
+      },
+    },
     diabeticFriendly: { type: Boolean, required: true },
-
-    contains_R: Boolean,
-    contains_S: Boolean,
-    contains_G: Boolean,
-    contains_M: Boolean,
-    contains_A: Boolean,
-    contains_W: Boolean,
-    contains_K: Boolean,
-    contains_Y: Boolean,
   },
   { timestamps: true }
 );
+
+foodSchema.set("toJSON", { virtuals: true });
+foodSchema.set("toObject", { virtuals: true });
+
+foodSchema.virtual("derivedPictograms").get(function derive() {
+  if (!Array.isArray(this.allergens)) return [];
+  return derivePictogramsFromAllergens(this.allergens, PICTOGRAMS);
+});
 
 // Indexes
 foodSchema.index({ barcode: 1 });

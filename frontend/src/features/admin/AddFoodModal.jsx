@@ -2,17 +2,10 @@ import React, { useEffect, useMemo, useState } from "react";
 import { API } from "../../shared/config";
 import { useTranslation } from "react-i18next";
 import { LANG_LABELS } from "../../shared/constants";
-
-const ALLERGEN_KEYS = [
-  { key: "R", icon: "🥩" },
-  { key: "S", icon: "🐷" },
-  { key: "G", icon: "🐔" },
-  { key: "M", icon: "🥛" },
-  { key: "A", icon: "🍷" },
-  { key: "W", icon: "🌾" },
-  { key: "K", icon: "🧄" },
-  { key: "Y", icon: "🌱" },
-];
+import AllergenCheckboxes, {
+  extractSelectedPictograms,
+} from "../../components/AllergenCheckboxes.jsx";
+import { useMeta } from "../../shared/metaContext.jsx";
 
 const SUPPORTED_LANGS = ["en", "de", "fi", "he"];
 const safeLangLabel = (lang, t) =>
@@ -20,6 +13,7 @@ const safeLangLabel = (lang, t) =>
 
 export default function AddFoodModal({ onClose, onAdded }) {
   const { t } = useTranslation();
+  const { pictograms } = useMeta();
   const [activeLang, setActiveLang] = useState("en");
   const [file, setFile] = useState(null);
   const [loading, setLoading] = useState(false);
@@ -29,8 +23,6 @@ export default function AddFoodModal({ onClose, onAdded }) {
     barcode: "",
     date: new Date().toISOString().slice(0, 10),
     diabeticFriendly: false,
-    // pictogram flags
-    R: false, S: false, G: false, M: false, A: false, W: false, K: false, Y: false,
     // multilingual content
     translations: {
       en: { dish: "", description: "", category: "" },
@@ -49,6 +41,20 @@ export default function AddFoodModal({ onClose, onAdded }) {
   useEffect(() => {
     setForm((f) => ({ ...f, barcode: nextBarcode() }));
   }, []);
+
+  useEffect(() => {
+    if (!Array.isArray(pictograms)) return;
+    setForm((prev) => {
+      const next = { ...prev };
+      pictograms.forEach(({ key }) => {
+        const field = `contains_${key}`;
+        if (typeof next[field] !== "boolean") {
+          next[field] = false;
+        }
+      });
+      return next;
+    });
+  }, [pictograms]);
 
   const langData = useMemo(() => form.translations[activeLang], [form.translations, activeLang]);
 
@@ -90,8 +96,12 @@ export default function AddFoodModal({ onClose, onAdded }) {
       fd.append("category", en.category);
       fd.append("description", en.description || "");
 
-      // pictograms (booleans)
-      ALLERGEN_KEYS.forEach(({ key }) => fd.append(`contains_${key}`, String(!!form[key])));
+      const selectedPictograms = extractSelectedPictograms(
+        form,
+        "contains_",
+        pictograms
+      );
+      fd.append("pictograms", JSON.stringify(selectedPictograms));
 
       // full multilingual payload
       fd.append("translations", JSON.stringify(form.translations));
@@ -172,25 +182,11 @@ export default function AddFoodModal({ onClose, onAdded }) {
             <p className="font-semibold mb-2">
               {t("Meals.LegendHeadings.Pictograms", "Pictograms")}
             </p>
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-sm">
-              {ALLERGEN_KEYS.map(({ key, icon }) => (
-                <label
-                  key={key}
-                  className="flex items-center gap-2 border border-gray-300 dark:border-gray-700 rounded p-2"
-                >
-                  <input
-                    type="checkbox"
-                    checked={!!form[key]}
-                    onChange={(e) => setForm({ ...form, [key]: e.target.checked })}
-                  />
-                  <span className="text-base">{icon}</span>
-                  <span>
-                    {t(`Meals.Legend.Pictograms.${key}`, key)}
-                    {" (" + key + ")"}
-                  </span>
-                </label>
-              ))}
-            </div>
+            <AllergenCheckboxes
+              values={form}
+              onChange={setForm}
+              prefix="contains_"
+            />
           </div>
 
           {/* Language Tabs */}
