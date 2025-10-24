@@ -13,7 +13,8 @@ RUN if ! npm ci; then \
       npm install; \
     fi
 
-COPY . .
+COPY ./frontend .
+COPY ./shared /shared
 
 ARG VITE_BACKEND_URL
 ENV VITE_BACKEND_URL=$VITE_BACKEND_URL

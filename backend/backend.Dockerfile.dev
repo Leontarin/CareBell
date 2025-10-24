@@ -11,7 +11,8 @@ RUN npm install    # dev image uses npm install (not ci) to allow quick edits
 RUN npm install -g nodemon
 
 # Copy the rest of the backend source
-COPY . .
+COPY backend/ ./
+COPY shared/ /shared
 
 ENV PORT=5174
 

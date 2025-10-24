@@ -71,8 +71,8 @@ services:
     profiles: ["prod"]
     restart: unless-stopped
     build:
-      context: ./backend
-      dockerfile: backend.Dockerfile
+      context: .
+      dockerfile: ./backend/backend.Dockerfile
     environment:
       DOCKER_ENV: "true"
       PORT: ${BACKEND_PORT}
@@ -97,6 +97,7 @@ services:
     volumes:
       - ./backend:/app
       - /app/node_modules
+      - ./shared:/shared:ro
     environment:
       DOCKER_ENV: "true"
       PORT: ${BACKEND_PORT}
@@ -117,8 +118,8 @@ services:
     profiles: ["prod"]
     restart: unless-stopped
     build:
-      context: ./frontend
-      dockerfile: frontend.Dockerfile
+      context: .
+      dockerfile: ./frontend/frontend.Dockerfile
       args:
         VITE_BACKEND_URL: https://api.carebells.org
     ports:
@@ -138,6 +139,7 @@ services:
     volumes:
       - ./frontend:/app
       - /app/node_modules
+      - ./shared:/shared:ro
     ports:
       - "${FRONTEND_PORT}:5173"
     environment:
