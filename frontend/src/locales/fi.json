@@ -203,6 +203,9 @@
         "8": "Fosfaatti",
         "9": "Makeutusaine",
         "16": "Sokeri+makeutusaine"
+      },
+      "AdditiveBubble": {
+        "1": "①", "3": "③", "5": "⑤", "7": "⑦", "8": "⑧", "9": "⑨", "16": "⑯"
       }
     }
   },
