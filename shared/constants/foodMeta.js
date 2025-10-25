@@ -1,3 +1,4 @@
+//./shared/constants/foodMeta.js
 // ─────────────────────────────────────────────
 //  CareBell Food Metadata (EU / DE Standards)
 //  Unified for backend + frontend
@@ -85,42 +86,6 @@ export const ADDITIVES = [
   { number: 9,  tKey: "Meals.Meta.Additives.9",  label: "Sweetener" },
   { number: 16, tKey: "Meals.Meta.Additives.16", label: "Sugar+sweetener" }  // Zucker(n) und Süßungsmittel(n)
 ];
-
-// ─────────────────────────────
-//  Helper functions
-// ─────────────────────────────
-/** Expand parent allergens (e.g. "A" → ["A","A1"…"A7"]) */
-export function expandAllergenGroups(codes = []) {
-  const expanded = new Set();
-  for (const c of codes) {
-    if (ALLERGEN_GROUPS[c]) {
-      ALLERGEN_GROUPS[c].forEach(sub => expanded.add(sub));
-      expanded.add(c);
-    } else expanded.add(c);
-  }
-  return [...expanded];
-}
-
-/** Normalize allergen selection before storing / comparing */
-export function normalizeAllergenSelection(codes = []) {
-  return expandAllergenGroups([...new Set(codes)]);
-}
-
-/** Map allergens → pictogram keys (unique) */
-export function derivePictogramsFromAllergens(codes = []) {
-  const pictos = new Set();
-  const all = expandAllergenGroups(codes);
-
-  for (const code of all) {
-    if (code.startsWith("A")) pictos.add("A");          // Gluten
-    if (code === "D") pictos.add("F");                  // Fish
-    if (code === "G") pictos.add("L");                  // Milk/lactose
-    if (code === "B" || code === "N") pictos.add("B");  // Shellfish/molluscs
-    if (code === "E" || code.startsWith("H")) pictos.add("H"); // Nuts/peanuts
-  }
-
-  return [...pictos];
-}
 
 // ─────────────────────────────
 //  Export bundle
