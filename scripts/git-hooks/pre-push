@@ -1,4 +1,0 @@
-#!/usr/bin/env node
-// simple node runner (cross-platform)
-import { spawnSync } from "child_process";
-spawnSync("node", ["scripts/bump-version.js"], { stdio: "inherit" });
