@@ -176,7 +176,7 @@ export default function FoodManager() {
 
       {loading && <div>{t("Meals.loadingLabel", "Loading...")}</div>}
 
-      <div className="overflow-x-auto w-full">
+      <div className="overflow-x-auto overflow-y-auto w-full">
         <table className="min-w-full text-sm border border-gray-400 dark:border-gray-700 rounded-lg text-left align-middle">
           <thead>
             <tr className="bg-gray-200 dark:bg-gray-800 text-gray-900 dark:text-gray-100">
