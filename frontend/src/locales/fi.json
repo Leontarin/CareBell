@@ -299,6 +299,8 @@
     "title": "Asetukset",
     "general": "Yleiset",
     "health": "Terveys",
+    "admin": "Ylläpitäjä",
+    "logout": "Kirjaudu ulos",
     "textSize": "Tekstin koko",
     "volume": "Äänenvoimakkuus",
     "speakingSpeed": "Puhenopeus",

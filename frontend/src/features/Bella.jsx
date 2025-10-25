@@ -56,6 +56,7 @@ export default function Bella() {
     en: [import.meta.env.VITE_VAPI_PUBLIC_KEY_EN, import.meta.env.VITE_VAPI_ASSISTANT_ID_EN,],
     de: [import.meta.env.VITE_VAPI_PUBLIC_KEY_DE, import.meta.env.VITE_VAPI_ASSISTANT_ID_DE,],
     he: [import.meta.env.VITE_VAPI_PUBLIC_KEY_HE, import.meta.env.VITE_VAPI_ASSISTANT_ID_HE,],
+    fi: [import.meta.env.VITE_VAPI_PUBLIC_KEY_EN, import.meta.env.VITE_VAPI_ASSISTANT_ID_EN,],
   };
 
   // locale → assistant ID
