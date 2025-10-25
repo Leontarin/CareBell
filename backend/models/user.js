@@ -1,9 +1,8 @@
 // ────────────────────────────────
 //  Imports
 // ────────────────────────────────
-import { derivePictogramsFromAllergens } from "../../shared/constants/foodMeta.utils.js";
-
 const mongoose = require('mongoose');
+const { derivePictogramsFromAllergens } = require("../../shared/constants/foodMeta.utils.js");
 const {
   LANGUAGE_CODES,
   DEFAULT_LANGUAGE,

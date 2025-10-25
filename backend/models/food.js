@@ -1,12 +1,12 @@
 // ──────────────────────────────────────────────────────────────────────────────
 //  Imports
 // ──────────────────────────────────────────────────────────────────────────────
-import {
+const mongoose = require("mongoose");
+
+const {
   derivePictogramsFromAllergens,
   isDiabeticFriendly,
-} from "../../shared/constants/foodMeta.utils.js";
-
-const mongoose = require("mongoose");
+} = require("../../shared/constants/foodMeta.utils.js");
 
 // ──────────────────────────────────────────────────────────────────────────────
 //  Sub-schema for multilingual text
