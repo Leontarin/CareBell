@@ -149,40 +149,38 @@ export default function SettingsModal({ onClose }) {
     <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
       <div className="w-[90%] max-w-4xl max-h-[90vh] overflow-y-auto bg-white dark:bg-gray-800 rounded-3xl shadow-xl p-6 relative flex flex-col md:flex-row">
         {/* Sidebar */}
-        <div className="w-full md:w-32 md:pr-4 border-b md:border-b-0 md:border-r border-gray-300 dark:border-gray-600 shrink-0">
-          <h2 className="text-3xl font-bold text-blue-800 dark:text-blue-200 mb-6">
+        <div
+          className="w-full md:w-auto md:min-w-[10rem] md:max-w-[16rem] md:pr-4 border-b md:border-b-0 md:border-r border-gray-300 dark:border-gray-600 flex-shrink-0"
+        >
+          <h2 className="text-3xl font-bold text-blue-800 dark:text-blue-200 mb-6 break-words text-center md:text-left leading-tight">
             {t("SettingsModal.title")}
           </h2>
-          <nav className="flex md:flex-col flex-row gap-2 justify-center">
-            <button
-              onClick={() => setActiveTab("general")}
-              className={`px-3 py-2 rounded ${
-                activeTab === "general"
-                  ? "bg-blue-600 text-white"
-                  : "bg-gray-200 dark:bg-gray-700"
-              }`}
-            >
-              {t("SettingsModal.general")}
-            </button>
-            <button
-              onClick={() => setActiveTab("health")}
-              className={`px-3 py-2 rounded ${
-                activeTab === "health"
-                  ? "bg-blue-600 text-white"
-                  : "bg-gray-200 dark:bg-gray-700"
-              }`}
-            >
-              {t("SettingsModal.health")}
-            </button>
+
+          <nav className="flex flex-wrap md:flex-col gap-2 justify-center md:justify-start items-stretch">
+            {["general", "health"].map((tab) => (
+              <button
+                key={tab}
+                onClick={() => setActiveTab(tab)}
+                className={`px-3 py-2 rounded text-center transition-colors duration-200 whitespace-nowrap ${
+                  activeTab === tab
+                    ? "bg-blue-600 text-white"
+                    : "bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600"
+                }`}
+              >
+                {t(`SettingsModal.${tab}`)}
+              </button>
+            ))}
+
             {user?.isAdmin && (
               <button
                 onClick={() => {
                   onClose?.();
                   navigate("/admin");
                 }}
-                className="px-3 py-2 rounded bg-yellow-500 hover:bg-yellow-400 text-white flex items-center justify-center gap-2"
+                className="px-3 py-2 rounded bg-yellow-500 hover:bg-yellow-400 text-white flex items-center justify-center gap-2 whitespace-nowrap"
               >
-                <FaUserShield /> {t("SettingsModal.admin", "Admin")}
+                <FaUserShield className="flex-shrink-0" />
+                <span>{t("SettingsModal.admin", "Admin")}</span>
               </button>
             )}
           </nav>
