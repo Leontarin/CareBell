@@ -37,11 +37,12 @@ const userSchema = new mongoose.Schema({
     type: String,
     trim: true,
     lowercase: true,
-    sparse: true,
-    validate: {
-      validator: (v) => !v || /^\S+@\S+\.\S+$/.test(v),
-      message: "Invalid email format",
-    },
+    // don't use sparse here; we enforce uniqueness via partial index
+    set: v => (v == null || String(v).trim() === "" ? undefined : String(v).trim().toLowerCase()),
+      validate: {
+        validator: v => !v || /^\S+@\S+\.\S+$/.test(v),
+        message: "Invalid email format",
+      },
   },
   passwordHash: { type: String, select: false },                  // only for local login
   googleId: { type: String, index: true },         // only for Google

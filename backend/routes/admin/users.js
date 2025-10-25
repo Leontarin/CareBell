@@ -180,25 +180,33 @@ router.patch("/:id", async (req, res) => {
     //  Sanitize empty strings → null
     // ────────────────────────────────
     if (req.body.email !== undefined) {
-      if (!req.body.email || !req.body.email.trim()) {
-        req.body.email = null;
+      const e = String(req.body.email).trim().toLowerCase();
+      if (!e) {
+        delete req.body.email; // omit instead of writing null
       } else {
-        req.body.email = req.body.email.trim().toLowerCase();
+        req.body.email = e;
       }
     }
 
     if (req.body.username !== undefined) {
-      if (!req.body.username || !req.body.username.trim()) {
-        req.body.username = null;
+      const e = String(req.body.username).trim().toLowerCase();
+      if (!e) {
+        delete req.body.username; // omit instead of writing null
       } else {
-        req.body.username = req.body.username.trim().toLowerCase();
+        req.body.username = e;
       }
     }
 
     // ────────────────────────────────
     //  Apply updates and save
     // ────────────────────────────────
+    // Apply updates and handle unsets for cleared identifiers
     Object.assign(user, req.body);
+
+    // Explicitly unset blank identifiers
+    if (!req.body.email) user.set("email", undefined);
+    if (!req.body.username) user.set("username", undefined);
+
     const saved = await user.save();
     const safe = saved.toObject();
     delete safe.passwordHash;
