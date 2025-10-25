@@ -77,20 +77,13 @@ export const ALLERGEN_GROUPS = {
 //  ADDITIVES (ZZulV legend 1–14)
 // ─────────────────────────────
 export const ADDITIVES = [
-  { number: 1, tKey: "Meals.Meta.Additives.1", label: "Contains colorant" },
-  { number: 2, tKey: "Meals.Meta.Additives.2", label: "Contains preservative" },
-  { number: 3, tKey: "Meals.Meta.Additives.3", label: "Contains antioxidant" },
-  { number: 4, tKey: "Meals.Meta.Additives.4", label: "Contains flavor enhancer" },
-  { number: 5, tKey: "Meals.Meta.Additives.5", label: "Sulphured" },
-  { number: 6, tKey: "Meals.Meta.Additives.6", label: "Blackened" },
-  { number: 7, tKey: "Meals.Meta.Additives.7", label: "Contains phosphate" },
-  { number: 8, tKey: "Meals.Meta.Additives.8", label: "Contains milk protein" },
-  { number: 9, tKey: "Meals.Meta.Additives.9", label: "Contains caffeine" },
-  { number: 10, tKey: "Meals.Meta.Additives.10", label: "Contains quinine" },
-  { number: 11, tKey: "Meals.Meta.Additives.11", label: "Wax coated" },
-  { number: 12, tKey: "Meals.Meta.Additives.12", label: "Contains sweetener" },
-  { number: 13, tKey: "Meals.Meta.Additives.13", label: "Contains a source of phenylalanine" },
-  { number: 14, tKey: "Meals.Meta.Additives.14", label: "Excessive consumption may have a laxative effect" },
+  { number: 1,  tKey: "Meals.Meta.Additives.1",  label: "Colorant" },
+  { number: 3,  tKey: "Meals.Meta.Additives.3",  label: "Antioxidant" },
+  { number: 5,  tKey: "Meals.Meta.Additives.5",  label: "Sulphured" },
+  { number: 7,  tKey: "Meals.Meta.Additives.7",  label: "Nitrite salt" },     // Nitritpökelsalz
+  { number: 8,  tKey: "Meals.Meta.Additives.8",  label: "Phosphate" },
+  { number: 9,  tKey: "Meals.Meta.Additives.9",  label: "Sweetener" },
+  { number: 16, tKey: "Meals.Meta.Additives.16", label: "Sugar+sweetener" }  // Zucker(n) und Süßungsmittel(n)
 ];
 
 // ─────────────────────────────
