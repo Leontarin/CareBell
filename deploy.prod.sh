@@ -26,7 +26,7 @@ done
 
 echo
 echo "📦 Installing backend deps…"
-( cd backend && npm ci )
+( cd backend && npm install --prefer-offline || npm install )
 
 echo
 echo "🌐 Checking Docker network..."
