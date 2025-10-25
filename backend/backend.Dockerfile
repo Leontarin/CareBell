@@ -8,7 +8,8 @@ COPY package*.json ./
 RUN npm ci
 
 # Copy rest of backend
-COPY . .
+COPY backend/ ./
+COPY shared/ /shared
 
 ENV PORT=5174
 
