@@ -1,4 +1,8 @@
-// ./models/user.js
+// ────────────────────────────────
+//  Imports
+// ────────────────────────────────
+import { derivePictogramsFromAllergens } from "../../shared/constants/foodMeta.utils.js";
+
 const mongoose = require('mongoose');
 const {
   LANGUAGE_CODES,
@@ -6,6 +10,9 @@ const {
   computeLanguageSettings,
 } = require('../lib/language');
 
+// ────────────────────────────────
+//  Schema
+// ────────────────────────────────
 const userSchema = new mongoose.Schema({
   //user fields
   id: { type: String, required: true, unique: true },
@@ -14,15 +21,10 @@ const userSchema = new mongoose.Schema({
   address: String,
   dateOfBirth: Date,
   gender: { type: String, enum: ['male', 'female', 'other'], default: 'other' },
-  R: { type: Boolean, default: false },
-  S: { type: Boolean, default: false },
-  G: { type: Boolean, default: false },
-  M: { type: Boolean, default: false },
-  A: { type: Boolean, default: false },
-  W: { type: Boolean, default: false },
-  K: { type: Boolean, default: false },
-  Y: { type: Boolean, default: false },
-  Allergens: { type: [String], default: [] },
+
+  //  Unified CareBell food meta fields
+  allergens: { type: [String], default: [] },
+  pictograms: { type: [String], default: [] },
   Diabetic: { type: Boolean, default: false },
 
   //user auth fields
@@ -37,15 +39,14 @@ const userSchema = new mongoose.Schema({
     type: String,
     trim: true,
     lowercase: true,
-    // don't use sparse here; we enforce uniqueness via partial index
     set: v => (v == null || String(v).trim() === "" ? undefined : String(v).trim().toLowerCase()),
-      validate: {
-        validator: v => !v || /^\S+@\S+\.\S+$/.test(v),
-        message: "Invalid email format",
-      },
+    validate: {
+      validator: v => !v || /^\S+@\S+\.\S+$/.test(v),
+      message: "Invalid email format",
+    },
   },
-  passwordHash: { type: String, select: false },                  // only for local login
-  googleId: { type: String, index: true },         // only for Google
+  passwordHash: { type: String, select: false },
+  googleId: { type: String, index: true },
   picture: { type: String },
 
   country: { type: String, uppercase: true, trim: true },
@@ -64,11 +65,21 @@ const userSchema = new mongoose.Schema({
   lastLoginAt: { type: Date },
 }, { timestamps: true });
 
+// ────────────────────────────────
+//  Hooks
+// ────────────────────────────────
+
+// Prevent accidental ID changes
 userSchema.pre("save", function (next) {
   if (this.isModified("id") && !this.isNew) {
-    // prevent accidental id changes
     this.id = this._previousId || this.id;
   }
+
+  // Derive pictograms from allergens
+  if (this.isModified("allergens")) {
+    this.pictograms = derivePictogramsFromAllergens(this.allergens || []);
+  }
+
   next();
 });
 

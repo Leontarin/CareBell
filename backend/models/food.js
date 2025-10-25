@@ -1,8 +1,15 @@
-// backend/models/food.js
+// ──────────────────────────────────────────────────────────────────────────────
+//  Imports
+// ──────────────────────────────────────────────────────────────────────────────
+import {
+  derivePictogramsFromAllergens,
+  isDiabeticFriendly,
+} from "../../shared/constants/foodMeta.utils.js";
+
 const mongoose = require("mongoose");
 
 // ──────────────────────────────────────────────────────────────────────────────
-// Sub-schema for multilingual text
+//  Sub-schema for multilingual text
 // ──────────────────────────────────────────────────────────────────────────────
 const translationSchema = new mongoose.Schema(
   {
@@ -14,7 +21,7 @@ const translationSchema = new mongoose.Schema(
 );
 
 // ──────────────────────────────────────────────────────────────────────────────
-// Main food schema
+//  Main food schema
 // ──────────────────────────────────────────────────────────────────────────────
 const foodSchema = new mongoose.Schema(
   {
@@ -23,39 +30,59 @@ const foodSchema = new mongoose.Schema(
       data: Buffer,
       contentType: String,
     },
-    imageURL: { type: String, default: null }, // keep for backward compat
+    imageURL: { type: String, default: null }, // legacy fallback
     id: { type: Number, required: true },
     date: { type: String, required: true },
+
+    // multilingual
     category: { type: String, required: true },
     dish: { type: String, required: true },
     description: { type: String, default: null },
-
-    // 🔹 New multilingual field
     translations: {
       type: Map,
       of: translationSchema,
       default: {}, // e.g. { en: { dish, desc, category }, de: {...} }
     },
 
-    additives: [String],
-    allergens: [String],
-    pictograms: [String],
-    diabeticFriendly: { type: Boolean, required: true },
-
-    contains_R: Boolean,
-    contains_S: Boolean,
-    contains_G: Boolean,
-    contains_M: Boolean,
-    contains_A: Boolean,
-    contains_W: Boolean,
-    contains_K: Boolean,
-    contains_Y: Boolean,
+    // ────────────────
+    //  CareBell meta
+    // ────────────────
+    allergens: { type: [String], default: [] },
+    additives: { type: [Number], default: [] },
+    pictograms: { type: [String], default: [] },
+    diabeticFriendly: { type: Boolean, default: true },
   },
   { timestamps: true }
 );
 
-// Indexes
+// ──────────────────────────────────────────────────────────────────────────────
+//  Indexes
+// ──────────────────────────────────────────────────────────────────────────────
 foodSchema.index({ barcode: 1 });
 foodSchema.index({ id: 1 }, { unique: true });
 
+// ──────────────────────────────────────────────────────────────────────────────
+//  Hooks
+// ──────────────────────────────────────────────────────────────────────────────
+foodSchema.pre("save", function (next) {
+  try {
+    // derive pictograms from allergens when allergens change
+    if (this.isModified("allergens")) {
+      this.pictograms = derivePictogramsFromAllergens(this.allergens || []);
+    }
+
+    // derive diabetic flag dynamically from additives
+    if (this.isModified("additives")) {
+      this.diabeticFriendly = isDiabeticFriendly(this.additives || []);
+    }
+
+    next();
+  } catch (err) {
+    next(err);
+  }
+});
+
+// ──────────────────────────────────────────────────────────────────────────────
+//  Export
+// ──────────────────────────────────────────────────────────────────────────────
 module.exports = mongoose.model("Food", foodSchema);

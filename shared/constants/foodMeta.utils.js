@@ -22,6 +22,23 @@ export const ADDITIVE_BY_NUM = Object.fromEntries(ADDITIVES.map(a => [a.number, 
 //  Core Logic Helpers
 // ─────────────────────────────
 
+/**
+ * Dynamically determine diabetic friendliness.
+ * A food is considered NOT diabetic-friendly if any additive label
+ * mentions "sweetener" or "sugar".
+ */
+export function isDiabeticFriendly(additives = []) {
+  if (!Array.isArray(additives)) return true;
+
+  // Build the list of "risky" additives dynamically from meta
+  const risky = ADDITIVES
+    .filter(a => /sweetener|sugar/i.test(a.label))
+    .map(a => a.number);
+
+  // If any additive number is in that risky list → not friendly
+  return !additives.some(num => risky.includes(num));
+}
+
 /** Expand parent allergens (e.g. "A" → ["A","A1"…"A7"]) */
 export function expandAllergenGroups(codes = []) {
   const expanded = new Set();
