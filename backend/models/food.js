@@ -48,7 +48,7 @@ const foodSchema = new mongoose.Schema(
     //  CareBell meta
     // ────────────────
     allergens: { type: [String], default: [] },
-    additives: { type: [Number], default: [] },
+    additives: { type: [String], default: [] },
     pictograms: { type: [String], default: [] },
     diabeticFriendly: { type: Boolean, default: true },
   },
