@@ -17,9 +17,6 @@ function safeUserQuery(idOrString) {
   return { id: idOrString };
 }
 
-// backend/lib/utils.js
-const mongoose = require("mongoose");
-
 /**
  * Safe query for both numeric ids and ObjectIds.
  * Works across all models (users, foods, etc.)

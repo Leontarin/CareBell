@@ -17,7 +17,7 @@ const {
 const {
   derivePictogramsFromAllergens,
   isDiabeticFriendly,
-} = require("../../../shared/foodMeta.utils.js");
+} = require("../../../shared/constants/foodMeta.utils.js");
 
 // ──────────────────────────────────────────────────────────────────────────────
 //  Admin guard
