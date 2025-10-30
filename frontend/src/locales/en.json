@@ -221,6 +221,20 @@
       "AdditiveBubble": {
         "1": "①", "3": "③", "5": "⑤", "7": "⑦", "8": "⑧", "9": "⑨", "16": "⑯"
       }
+    },
+    "MetaEditor": {
+      "title": "Edit Food Metadata",
+      "allergens": "Allergens",
+      "additives": "Additives",
+      "pictograms": "Pictograms",
+      "diabeticFriendly": "Diabetic Friendly",
+      "diabetic": "User Diabetic Status",
+      "cancel": "Cancel",
+      "save": "Save",
+      "isDiabetic": "Diabetic",
+      "notDiabetic": "Non-diabetic",
+      "friendly": "Diabetic-Friendly ✅",
+      "notFriendly": "Not Diabetic-Friendly ❌"
     }
   },
   "Medication": {

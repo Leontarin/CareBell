@@ -11,6 +11,7 @@ import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { AppContext } from "../shared/AppContext";
 import { API } from "../shared/config";
+import MetaEditorModal from "../components/MetaEditorModal";
 
 export default function SettingsModal({ onClose }) {
   const { t, i18n } = useTranslation();
@@ -315,61 +316,66 @@ export default function SettingsModal({ onClose }) {
                 {t("SettingsModal.health")}
               </h3>
 
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mb-4">
-                {allergenKeys.map((key) => (
-                  <label
-                    key={key}
-                    className="flex items-center gap-2 border border-gray-300 dark:border-gray-600 rounded p-2"
-                  >
-                    <input
-                      type="checkbox"
-                      checked={!!healthFlags[key]}
-                      onChange={() => toggleFlag(key)}
-                    />
-                    {pictograms[key]}
-                  </label>
-                ))}
+              {/* Display current info summary */}
+              <div className="mb-4">
+                <div className="flex flex-wrap gap-2 mb-2">
+                  {(user?.pictograms || []).map((p) => (
+                    <span key={p} className="text-2xl">{p}</span>
+                  ))}
+                </div>
+                <div className="text-lg">
+                  {t("Meals.MetaEditor.diabetic")}:{" "}
+                  <strong>{user?.Diabetic ? t("Meals.MetaEditor.isDiabetic") : t("Meals.MetaEditor.notDiabetic")}</strong>
+                </div>
               </div>
 
-              <label className="flex items-center gap-2 block mt-2">
-                <input
-                  type="checkbox"
-                  checked={diabetic}
-                  onChange={(e) => setDiabetic(e.target.checked)}
-                />
-                {t("SettingsModal.diabetic")}
-              </label>
+              {/* Edit button */}
+              <button
+                onClick={() => setMetaModalOpen(true)}
+                className="bg-blue-600 hover:bg-blue-500 text-white px-4 py-2 rounded"
+              >
+                {t("Meals.MetaEditor.title")}
+              </button>
 
-              {saveStatus === "success" && (
-                <p className="mt-2 text-black">{t("SettingsModal.saveSuccess")}</p>
-              )}
-              {saveStatus === "error" && (
-                <p className="mt-2 text-black">{t("SettingsModal.saveError")}</p>
-              )}
+              <MetaEditorModal
+                isOpen={isMetaModalOpen}
+                onClose={() => setMetaModalOpen(false)}
+                onSave={async (data) => {
+                  try {
+                    const res = await fetch(`${API}/users/${user.id}/health`, {
+                      method: "PATCH",
+                      headers: { "Content-Type": "application/json" },
+                      credentials: "include",
+                      body: JSON.stringify({
+                        allergens: data.allergens,
+                        additives: data.additives,
+                        Diabetic: data.diabetic,
+                      }),
+                    });
+                    if (res.ok) {
+                      const updated = await res.json();
+                      setUser(updated);
+                    }
+                  } catch (err) {
+                    console.error("Failed to save health info", err);
+                  }
+                }}
+                allergens={user?.allergens || []}
+                additives={user?.additives || []}
+                pictograms={user?.pictograms || []}
+                diabeticFriendly={user?.diabeticFriendly ?? true}
+                diabetic={user?.Diabetic ?? false}
 
-              <div className="flex flex-col md:flex-row justify-between mt-4 gap-2">
-                <button
-                  onClick={onClose}
-                  className="bg-gray-400 hover:bg-gray-300 dark:bg-teal-700 dark:hover:bg-teal-600 px-4 py-2 rounded text-white"
-                >
-                  {t("SettingsModal.close")}
-                </button>
-                <button
-                  onClick={saveHealth}
-                  className="bg-blue-600 hover:bg-blue-500 dark:bg-blue-800 dark:hover:bg-blue-700 text-white px-4 py-2 rounded"
-                >
-                  {t("SettingsModal.save")}
-                </button>
-              </div>
+                showAllergens
+                showAdditives
+                showPictograms
+                showDiabetic
+                showDiabeticFriendly={false}
 
-              <div className="mt-4 flex justify-end">
-                <button
-                  onClick={logout}
-                  className="bg-red-600 hover:bg-red-500 text-white px-4 py-2 rounded"
-                >
-                  Logout
-                </button>
-              </div>
+                editableAllergens
+                editableAdditives
+                editableDiabetic
+              />
             </section>
           )}
         </div>
