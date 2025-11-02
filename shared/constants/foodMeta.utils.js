@@ -63,7 +63,7 @@ export function derivePictogramsFromAllergens(codes = []) {
   const all = expandAllergenGroups(codes);
 
   for (const code of all) {
-    // Gluten group
+    // Gluten group (A + subs)
     if (code.startsWith("A")) pictos.add("A");
 
     // Milk/lactose
@@ -75,8 +75,8 @@ export function derivePictogramsFromAllergens(codes = []) {
     // Fish
     if (code === "D") pictos.add("F");
 
-    // Crustaceans or molluscs
-    if (code === "B" || code === "N") pictos.add("B");
+    // Crustaceans or molluscs (includes N and its children)
+    if (code === "B" || code === "N" || code.startsWith("N")) pictos.add("B");
 
     // Eggs → poultry
     if (code === "C") pictos.add("G");

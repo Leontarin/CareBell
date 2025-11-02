@@ -325,55 +325,91 @@ const fetchHealth = async (payload) => {
                 {t("SettingsModal.health")}
               </h3>
 
-              {/* Display current info summary */}
-              <div className="mb-4">
-                <div className="flex flex-wrap gap-2 mb-2">
-                  {(user?.pictograms || []).map((p) => (
-                    <span key={p} className="text-2xl">{p}</span>
+              {/* ─────────── HEALTH SUMMARY ─────────── */}
+              <section className="mb-6">
+                <div className="flex justify-between items-center mb-3">
+                  <h3 className="text-xl font-semibold">{t("SettingsModal.health")}</h3>
+                  <button
+                    onClick={() => setMetaModalOpen(true)}
+                    className="bg-blue-600 hover:bg-blue-500 text-white px-4 py-2 rounded"
+                  >
+                    {t("Meals.MetaEditor.title")}
+                  </button>
+                </div>
+
+                {/* ───── Pictograms Display ───── */}
+                <div className="flex flex-wrap gap-2 mb-3">
+                  {PICTOGRAMS.filter(p => user?.pictograms?.includes(p.key)).map((p) => (
+                    <div
+                      key={p.key}
+                      className="w-10 h-10 flex flex-col items-center justify-center text-xs font-semibold border border-gray-400 dark:border-gray-600 rounded-md"
+                      title={t(p.tKey, p.label)}
+                    >
+                      <span className="text-lg leading-none">{p.icon}</span>
+                      <span className="leading-none">{p.key}</span>
+                    </div>
                   ))}
                 </div>
-                <div className="text-lg">
-                  {t("Meals.MetaEditor.diabetic")}:{" "}
-                  <strong>{user?.Diabetic ? t("Meals.MetaEditor.isDiabetic") : t("Meals.MetaEditor.notDiabetic")}</strong>
+
+                {/* ───── Allergens Chips ───── */}
+                <div className="flex flex-wrap gap-2 mb-3">
+                  {(user?.allergens || []).map((code) => {
+                    const allergen = ALLERGENS.find(a => a.code === code);
+                    return (
+                      <span
+                        key={code}
+                        className="px-2 py-1 text-xs rounded-full bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-100 border border-blue-300 dark:border-blue-700"
+                      >
+                        {t(allergen?.tKey || `Meals.Meta.Allergens.${code}`, allergen?.label || code)}
+                      </span>
+                    );
+                  })}
+                  {(!user?.allergens || user.allergens.length === 0) && (
+                    <span className="text-gray-500 text-sm">
+                      {t("Meals.MetaEditor.noAllergens", "No allergens selected")}
+                    </span>
+                  )}
                 </div>
-              </div>
 
-              {/* Edit button */}
-              <button
-                onClick={() => setMetaModalOpen(true)}
-                className="bg-blue-600 hover:bg-blue-500 text-white px-4 py-2 rounded"
-              >
-                {t("Meals.MetaEditor.title")}
-              </button>
+                {/* ───── Diabetic Info ───── */}
+                <div className="text-sm font-medium">
+                  {t("Meals.MetaEditor.diabetic")}:{" "}
+                  <span
+                    className={
+                      user?.Diabetic
+                        ? "text-red-600 dark:text-red-400 font-semibold"
+                        : "text-green-600 dark:text-green-400 font-semibold"
+                    }
+                  >
+                    {user?.Diabetic
+                      ? t("Meals.MetaEditor.isDiabetic")
+                      : t("Meals.MetaEditor.notDiabetic")}
+                  </span>
+                </div>
 
-              <MetaEditorModal
-                isOpen={isMetaModalOpen}
-                onClose={() => setMetaModalOpen(false)}
-                onSave={async (data) => {
-                  try {
-                    await fetchHealth({
-                      allergens: data.allergens,
-                      Diabetic: data.diabetic,
-                    });
-                    setMetaModalOpen(false);
-                  } catch (err) {
-                    console.error("❌ Failed to save health info:", err);
-                  }
-                }}
-                allergens={user?.allergens || []}
-                additives={user?.additives || []}
-                pictograms={user?.pictograms || []}
-                diabeticFriendly={user?.diabeticFriendly ?? true}
-                diabetic={user?.Diabetic ?? false}
-                showAllergens
-                showAdditives
-                showPictograms
-                showDiabetic
-                showDiabeticFriendly={false}
-                editableAllergens
-                editableAdditives
-                editableDiabetic
-              />
+                {/* MetaEditorModal */}
+                <MetaEditorModal
+                  isOpen={isMetaModalOpen}
+                  onClose={() => setMetaModalOpen(false)}
+                  onSave={async (data) => {
+                    try {
+                      await fetchHealth({
+                        allergens: data.allergens,
+                        Diabetic: data.diabetic,
+                      });
+                      setMetaModalOpen(false);
+                    } catch (err) {
+                      console.error("❌ Failed to save health info:", err);
+                    }
+                  }}
+                  allergens={user?.allergens || []}
+                  additives={user?.additives || []}
+                  pictograms={user?.pictograms || []}
+                  diabetic={user?.Diabetic ?? false}
+                  showDiabetic={true}
+                  editableDiabetic={true}
+                />
+              </section>
             </section>
           )}
         </div>

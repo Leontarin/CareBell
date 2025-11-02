@@ -223,7 +223,7 @@
       }
     },
     "MetaEditor": {
-      "title": "Edit Food Metadata",
+      "title": "Edit Health Values",
       "allergens": "Allergens",
       "additives": "Additives",
       "pictograms": "Pictograms",
@@ -234,7 +234,8 @@
       "isDiabetic": "Diabetic",
       "notDiabetic": "Non-diabetic",
       "friendly": "Diabetic-Friendly ✅",
-      "notFriendly": "Not Diabetic-Friendly ❌"
+      "notFriendly": "Not Diabetic-Friendly ❌",
+      "otherAllergens": "Other Allergens"
     }
   },
   "Medication": {
@@ -349,7 +350,10 @@
     "close": "Close",
     "language": "Language",
     "User": "Change User",
-    "loading": "Loading users..."
+    "loading": "Loading users...",
+    "noPictograms": "No pictograms assigned",
+    "noAllergens": "No allergens selected"
+
   },
   "Auth": {
     "Login": {

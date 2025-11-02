@@ -53,6 +53,12 @@ export const ALLERGENS = [
   { code: "H7", tKey: "Meals.Meta.Allergens.H7", label: "Pistachios" },
   { code: "H8", tKey: "Meals.Meta.Allergens.H8", label: "Macadamia / Queensland nuts" },
 
+  // N* – molluscs
+  { code: "N1", tKey: "Meals.Meta.Allergens.N1", label: "Mussels / clams" },
+  { code: "N2", tKey: "Meals.Meta.Allergens.N2", label: "Oysters" },
+  { code: "N3", tKey: "Meals.Meta.Allergens.N3", label: "Squid / calamari" },
+  { code: "N4", tKey: "Meals.Meta.Allergens.N4", label: "Snails" },
+
   // Remaining LMIV allergens
   { code: "B", tKey: "Meals.Meta.Allergens.B", label: "Crustaceans" },
   { code: "C", tKey: "Meals.Meta.Allergens.C", label: "Eggs" },
@@ -67,11 +73,10 @@ export const ALLERGENS = [
   { code: "M", tKey: "Meals.Meta.Allergens.M", label: "Lupin" },
 ];
 
-//  Group membership (parents → children)
 export const ALLERGEN_GROUPS = {
   A: ["A1", "A2", "A3", "A4", "A5", "A6", "A7"],
   H: ["H1", "H2", "H3", "H4", "H5", "H6", "H7", "H8"],
-  // N has no sub-codes
+  N: ["N1", "N2", "N3", "N4"],
 };
 
 // ─────────────────────────────
