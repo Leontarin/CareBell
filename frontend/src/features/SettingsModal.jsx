@@ -12,7 +12,7 @@ import { useTranslation } from "react-i18next";
 import { AppContext } from "../shared/AppContext";
 import { API } from "../shared/config";
 import MetaEditorModal from "../components/MetaEditorModal";
-import {PICTOGRAMS,ALLERGENS,ADDITIVES} from "../../../shared/constants/foodMeta.utils.js";
+import {PICTOGRAMS,ALLERGENS,ADDITIVES} from "../../../shared/constants/foodMeta.js";
 
 export default function SettingsModal({ onClose }) {
   const { t, i18n } = useTranslation();
@@ -107,32 +107,41 @@ export default function SettingsModal({ onClose }) {
     }
   };
 
+  // ─────────────────────────── Health Fetch ───────────────────────────
+const fetchHealth = async (payload) => {
+  if (!user) return;
+  try {
+    const res = await fetch(`${API}/users/${user.id}/health`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      credentials: "include",
+      body: JSON.stringify(payload),
+    });
+
+    if (!res.ok) throw new Error(`Health update failed (${res.status})`);
+
+    const updated = await res.json();
+    setUser(updated);
+    console.log("✅ Health updated:", updated);
+    return updated;
+  } catch (err) {
+    console.error("❌ fetchHealth error:", err);
+    throw err;
+  }
+};
+
   /** ─────────────────────────── Health toggle/save ─────────────────────────── **/
   const toggleFlag = (key) =>
     setHealthFlags((prev) => ({ ...prev, [key]: !prev[key] }));
 
   const saveHealth = async () => {
-    if (!user) return;
     try {
-      const payload = { ...healthFlags, Diabetic: diabetic };
-      const res = await fetch(`${API}/users/${user.id}/health`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
-        body: JSON.stringify(payload),
-      });
-
-      if (res.ok) {
-        const updated = await res.json();
-        setUser(updated);
-        setSaveStatus("success");
-      } else {
-        setSaveStatus("error");
-      }
-      setTimeout(() => setSaveStatus(null), 3000);
-    } catch (err) {
-      console.error("Error saving health info", err);
+      await fetchHealth({ ...healthFlags, Diabetic: diabetic });
+      setSaveStatus("success");
+    } catch {
       setSaveStatus("error");
+    } finally {
+      setTimeout(() => setSaveStatus(null), 3000);
     }
   };
 
@@ -342,22 +351,13 @@ export default function SettingsModal({ onClose }) {
                 onClose={() => setMetaModalOpen(false)}
                 onSave={async (data) => {
                   try {
-                    const res = await fetch(`${API}/users/${user.id}/health`, {
-                      method: "PATCH",
-                      headers: { "Content-Type": "application/json" },
-                      credentials: "include",
-                      body: JSON.stringify({
-                        allergens: data.allergens,
-                        additives: data.additives,
-                        Diabetic: data.diabetic,
-                      }),
+                    await fetchHealth({
+                      allergens: data.allergens,
+                      Diabetic: data.diabetic,
                     });
-                    if (res.ok) {
-                      const updated = await res.json();
-                      setUser(updated);
-                    }
+                    setMetaModalOpen(false);
                   } catch (err) {
-                    console.error("Failed to save health info", err);
+                    console.error("❌ Failed to save health info:", err);
                   }
                 }}
                 allergens={user?.allergens || []}
@@ -365,13 +365,11 @@ export default function SettingsModal({ onClose }) {
                 pictograms={user?.pictograms || []}
                 diabeticFriendly={user?.diabeticFriendly ?? true}
                 diabetic={user?.Diabetic ?? false}
-
                 showAllergens
                 showAdditives
                 showPictograms
                 showDiabetic
                 showDiabeticFriendly={false}
-
                 editableAllergens
                 editableAdditives
                 editableDiabetic

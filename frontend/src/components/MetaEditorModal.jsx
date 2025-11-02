@@ -1,11 +1,10 @@
-// frontend/src/components/MetaEditorModal.jsx
 import React, { useState, useEffect } from "react";
 import { useTranslation } from "react-i18next";
 import {
-  PICTOGRAMS,
   ALLERGENS,
   ADDITIVES,
-} from "../../../shared/constants/foodMeta.utils.js";
+  ALLERGEN_GROUPS,
+} from "../../../shared/constants/foodMeta.js";
 
 /**
  * Universal metadata editor modal for CareBell
@@ -17,14 +16,13 @@ export default function MetaEditorModal({
   onSave,
   allergens = [],
   additives = [],
-  pictograms = [],
   diabeticFriendly = true,
   diabetic = false,
 
   // visibility
   showAllergens = true,
   showAdditives = true,
-  showPictograms = false,
+  showPictograms = false, // obsolete (kept for backward compatibility)
   showDiabeticFriendly = false,
   showDiabetic = false,
 
@@ -46,6 +44,7 @@ export default function MetaEditorModal({
     }
   }, [isOpen, allergens, additives, diabetic]);
 
+  /** ──────────────── Allergen logic ──────────────── **/
   const toggleAllergen = (code) => {
     if (!editableAllergens) return;
     setSelAllergens((prev) =>
@@ -55,6 +54,29 @@ export default function MetaEditorModal({
     );
   };
 
+  const toggleGroup = (groupKey) => {
+    if (!editableAllergens) return;
+    const children = ALLERGEN_GROUPS[groupKey] || [];
+    const allSelected = children.every((c) => selAllergens.includes(c));
+    setSelAllergens((prev) => {
+      const filtered = prev.filter((a) => !children.includes(a));
+      return allSelected
+        ? filtered // uncheck all
+        : [...filtered, ...children]; // check all
+    });
+  };
+
+  const isGroupFullySelected = (groupKey) => {
+    const children = ALLERGEN_GROUPS[groupKey] || [];
+    return children.length && children.every((c) => selAllergens.includes(c));
+  };
+
+  const isGroupPartiallySelected = (groupKey) => {
+    const children = ALLERGEN_GROUPS[groupKey] || [];
+    return children.some((c) => selAllergens.includes(c)) && !isGroupFullySelected(groupKey);
+  };
+
+  /** ──────────────── Additive logic ──────────────── **/
   const toggleAdditive = (num) => {
     if (!editableAdditives) return;
     setSelAdditives((prev) =>
@@ -64,16 +86,27 @@ export default function MetaEditorModal({
     );
   };
 
+  /** ──────────────── Save handler ──────────────── **/
   const handleSave = () => {
-    onSave({
-      allergens: selAllergens,
-      additives: selAdditives,
-      pictograms,
-      diabeticFriendly,
-      diabetic: isDiabetic,
-    });
+    const payload = {};
+
+    if (showAllergens) payload.allergens = selAllergens;
+    if (showAdditives) payload.additives = selAdditives;
+    if (showDiabetic) payload.diabetic = isDiabetic;
+    if (showDiabeticFriendly) payload.diabeticFriendly = diabeticFriendly;
+
+    onSave(payload);
     onClose();
   };
+
+  /** ──────────────── Derive allergen rendering ──────────────── **/
+  const groupKeys = Object.keys(ALLERGEN_GROUPS);
+  const groupAllergens = groupKeys.map((k) =>
+    ALLERGENS.find((a) => a.code === k)
+  );
+  const standaloneAllergens = ALLERGENS.filter(
+    (a) => !groupKeys.includes(a.code) && !Object.values(ALLERGEN_GROUPS).flat().includes(a.code)
+  );
 
   if (!isOpen) return null;
 
@@ -85,29 +118,88 @@ export default function MetaEditorModal({
         </h2>
 
         <div className="space-y-6">
-          {/* ───────── Allergens ───────── */}
+          {/* ───────── Allergen Groups ───────── */}
           {showAllergens && (
-            <section>
-              <h3 className="text-lg font-semibold mb-2">
-                {t("Meals.MetaEditor.allergens")}
-              </h3>
-              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2">
-                {ALLERGENS.map((a) => (
-                  <button
-                    key={a.code}
-                    onClick={() => toggleAllergen(a.code)}
-                    disabled={!editableAllergens}
-                    className={`border rounded-xl px-3 py-2 text-sm transition-all ${
-                      selAllergens.includes(a.code)
-                        ? "bg-red-600 text-white border-red-700"
-                        : "bg-gray-100 dark:bg-gray-800 text-gray-800 dark:text-gray-200"
-                    }`}
-                  >
-                    {a.label}
-                  </button>
-                ))}
-              </div>
-            </section>
+            <>
+              <section>
+                <h3 className="text-lg font-semibold mb-2">
+                  {t("Meals.MetaEditor.allergens")}
+                </h3>
+
+                {groupAllergens.map((parent) => {
+                  if (!parent) return null;
+                  const children = ALLERGEN_GROUPS[parent.code] || [];
+                  return (
+                    <div key={parent.code} className="mb-4">
+                      {/* Parent checkbox */}
+                      <div className="flex items-center gap-2 mb-2">
+                        <input
+                          type="checkbox"
+                          checked={isGroupFullySelected(parent.code)}
+                          ref={(el) => {
+                            if (el)
+                              el.indeterminate = isGroupPartiallySelected(parent.code);
+                          }}
+                          onChange={() => toggleGroup(parent.code)}
+                          disabled={!editableAllergens}
+                          className="w-5 h-5 accent-blue-600"
+                        />
+                        <span className="font-semibold">
+                          {parent.label}
+                        </span>
+                      </div>
+
+                      {/* Children */}
+                      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2 ml-6">
+                        {children.map((code) => {
+                          const allergen = ALLERGENS.find((a) => a.code === code);
+                          if (!allergen) return null;
+                          return (
+                            <button
+                              key={allergen.code}
+                              onClick={() => toggleAllergen(allergen.code)}
+                              disabled={!editableAllergens}
+                              className={`border rounded-xl px-3 py-2 text-sm transition-all ${
+                                selAllergens.includes(allergen.code)
+                                  ? "bg-red-600 text-white border-red-700"
+                                  : "bg-gray-100 dark:bg-gray-800 text-gray-800 dark:text-gray-200"
+                              }`}
+                            >
+                              {allergen.label}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  );
+                })}
+
+                {/* Standalone allergens */}
+                {standaloneAllergens.length > 0 && (
+                  <div className="mt-6">
+                    <h4 className="font-semibold mb-2">
+                      {t("Meals.MetaEditor.otherAllergens")}
+                    </h4>
+                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2">
+                      {standaloneAllergens.map((a) => (
+                        <button
+                          key={a.code}
+                          onClick={() => toggleAllergen(a.code)}
+                          disabled={!editableAllergens}
+                          className={`border rounded-xl px-3 py-2 text-sm transition-all ${
+                            selAllergens.includes(a.code)
+                              ? "bg-red-600 text-white border-red-700"
+                              : "bg-gray-100 dark:bg-gray-800 text-gray-800 dark:text-gray-200"
+                          }`}
+                        >
+                          {a.label}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </section>
+            </>
           )}
 
           {/* ───────── Additives ───────── */}
@@ -130,30 +222,6 @@ export default function MetaEditorModal({
                   >
                     ({a.number}) {a.label}
                   </button>
-                ))}
-              </div>
-            </section>
-          )}
-
-          {/* ───────── Pictograms (read-only) ───────── */}
-          {showPictograms && (
-            <section>
-              <h3 className="text-lg font-semibold mb-2">
-                {t("Meals.MetaEditor.pictograms")}
-              </h3>
-              <div className="flex flex-wrap gap-2">
-                {PICTOGRAMS.map((p) => (
-                  <div
-                    key={p.key}
-                    className={`flex items-center gap-1 border rounded-xl px-3 py-1 text-lg ${
-                      pictograms.includes(p.key)
-                        ? "bg-green-600 text-white border-green-700"
-                        : "bg-gray-200 dark:bg-gray-700 text-gray-500"
-                    }`}
-                  >
-                    <span>{p.icon}</span>
-                    <span className="text-sm">{p.label}</span>
-                  </div>
                 ))}
               </div>
             </section>

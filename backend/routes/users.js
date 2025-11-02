@@ -92,6 +92,7 @@ router.put("/:id", async (req, res) => {
 
 // ────────────────────────────────
 //  PATCH: Update Health (self or admin)
+//  Flow: Frontend sends allergens + Diabetic → backend expands groups → derives pictograms → saves in Mongo
 // ────────────────────────────────
 router.patch("/:id/health", async (req, res) => {
   try {
@@ -100,6 +101,8 @@ router.patch("/:id/health", async (req, res) => {
       return res.status(401).json({ message: "Not authenticated" });
 
     const { id } = req.params;
+
+    // ───── Verify user authorization ─────
     const currentUser = await User.findOne({ id: session.uid });
     if (!currentUser)
       return res.status(404).json({ message: "Current user not found" });
@@ -108,34 +111,32 @@ router.patch("/:id/health", async (req, res) => {
     if (!isAdmin && currentUser.id !== id)
       return res.status(403).json({ message: "Forbidden" });
 
-    const allowedFields = [
-      "R", "S", "G", "M", "A", "W", "K", "Y", "Diabetic"
-    ];
+    // ───── Load shared utils ─────
+    const { parseArray, parseBool } = require("../lib/utils");
+    const {
+      expandAllergenGroups,
+      derivePictogramsFromAllergens,
+    } = require("../../shared/constants/foodMeta.utils.js");
 
-    // Pick only allowed fields
-    const filtered = Object.fromEntries(
-      Object.entries(req.body).filter(([k]) => allowedFields.includes(k))
-    );
+    // ───── Parse incoming data ─────
+    const allergensRaw = parseArray(req.body.allergens);
+    const allergens = expandAllergenGroups(allergensRaw); // expand groups (A, H, N)
+    const Diabetic = parseBool(req.body.Diabetic);
 
-    // Normalize to boolean flags
-    for (const key of allowedFields) {
-      if (typeof filtered[key] !== "undefined") {
-        const val = filtered[key];
-        filtered[key] = val === "on" || val === true;
-      }
-    }
+    // ───── Derive pictograms ─────
+    const pictograms = derivePictogramsFromAllergens(allergens);
 
-    // Remove any legacy "Allergens" field entirely
-    delete filtered.Allergens;
-
+    // ───── Save to Mongo ─────
     const updatedUser = await User.findOneAndUpdate(
       safeUserQuery(id),
-      filtered,
+      { allergens, pictograms, Diabetic },
       { new: true }
     );
+
     if (!updatedUser)
       return res.status(404).json({ message: "User not found" });
 
+    // ───── Enrich frontend response ─────
     const Admin = require("../models/admin");
     const adminRecord = await Admin.exists({ userId: updatedUser._id });
 

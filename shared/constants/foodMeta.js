@@ -95,6 +95,6 @@ export default { PICTOGRAMS, ALLERGENS, ADDITIVES };
 // Optional CommonJS shim (for require support in Express)
 try {
   if (typeof module !== "undefined") {
-    module.exports = { PICTOGRAMS, ALLERGENS, ADDITIVES, expandAllergenGroups, normalizeAllergenSelection, derivePictogramsFromAllergens };
+    module.exports = { PICTOGRAMS, ALLERGENS, ADDITIVES, ALLERGEN_GROUPS };
   }
 } catch (_) {}

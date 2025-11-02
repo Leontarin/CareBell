@@ -1,3 +1,4 @@
+//shared/constants/foodMeta.utils.js
 // ─────────────────────────────────────────────
 //  CareBell Food Metadata Utilities
 //  Layer built on top of foodMeta.js
@@ -56,17 +57,35 @@ export function normalizeAllergenSelection(codes = []) {
   return expandAllergenGroups([...new Set(codes)]);
 }
 
-/** Map allergens → pictogram keys (unique) */
+/** Map allergens → pictogram keys (unique, DEHOGA/DGE aligned) */
 export function derivePictogramsFromAllergens(codes = []) {
   const pictos = new Set();
   const all = expandAllergenGroups(codes);
 
   for (const code of all) {
-    if (code.startsWith("A")) pictos.add("A");          // Gluten
-    if (code === "D") pictos.add("F");                  // Fish
-    if (code === "G") pictos.add("L");                  // Milk/lactose
-    if (code === "B" || code === "N") pictos.add("B");  // Shellfish/molluscs
-    if (code === "E" || code.startsWith("H")) pictos.add("H"); // Nuts/peanuts
+    // Gluten group
+    if (code.startsWith("A")) pictos.add("A");
+
+    // Milk/lactose
+    if (code === "G") pictos.add("L");
+
+    // Tree nuts or peanuts
+    if (code.startsWith("H") || code === "E") pictos.add("H");
+
+    // Fish
+    if (code === "D") pictos.add("F");
+
+    // Crustaceans or molluscs
+    if (code === "B" || code === "N") pictos.add("B");
+
+    // Eggs → poultry
+    if (code === "C") pictos.add("G");
+
+    // Soybeans → vegan/soy
+    if (code === "F") pictos.add("Y");
+
+    // Celery, mustard, sesame, sulphites, lupin → spice/plant mix
+    if (["I", "J", "K", "L", "M"].includes(code)) pictos.add("K");
   }
 
   return [...pictos];
