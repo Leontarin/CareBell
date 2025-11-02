@@ -12,6 +12,7 @@ import { useTranslation } from "react-i18next";
 import { AppContext } from "../shared/AppContext";
 import { API } from "../shared/config";
 import MetaEditorModal from "../components/MetaEditorModal";
+import {PICTOGRAMS,ALLERGENS,ADDITIVES} from "../../../shared/constants/foodMeta.utils.js";
 
 export default function SettingsModal({ onClose }) {
   const { t, i18n } = useTranslation();
@@ -28,12 +29,11 @@ export default function SettingsModal({ onClose }) {
   // Dynamically get available pictogram keys from i18n
   const pictograms = t("Meals.Legend.Pictograms", { returnObjects: true });
   const allergenKeys = Object.keys(pictograms || {});
-
   const [healthFlags, setHealthFlags] = useState(
     allergenKeys.reduce((acc, k) => ({ ...acc, [k]: !!user?.[k] }), {})
   );
   const [diabetic, setDiabetic] = useState(!!user?.Diabetic);
-
+  const [isMetaModalOpen, setMetaModalOpen] = useState(false);
   // Keep sync when user or language changes (so new translations reload)
   useEffect(() => {
     setHealthFlags(allergenKeys.reduce((acc, k) => ({ ...acc, [k]: !!user?.[k] }), {}));
