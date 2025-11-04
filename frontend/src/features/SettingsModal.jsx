@@ -410,7 +410,22 @@ const fetchHealth = async (payload) => {
                   editableDiabetic={true}
                 />
               </section>
+              <div className="flex flex-col md:flex-row justify-between mt-6 gap-2">
+                <button
+                  onClick={onClose}
+                  className="bg-gray-400 hover:bg-gray-300 dark:bg-teal-700 dark:hover:bg-teal-600 px-4 py-2 rounded text-white"
+                >
+                  {t("SettingsModal.close")}
+                </button>
+                <button
+                  onClick={logout}
+                  className="bg-red-600 hover:bg-red-500 text-white px-4 py-2 rounded"
+                >
+                  <span>{t("SettingsModal.logout", "Logout")}</span>
+                </button>
+              </div>
             </section>
+            
           )}
         </div>
       </div>
