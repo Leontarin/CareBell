@@ -7,7 +7,7 @@ import {
   LANG_LABELS,
   AVAILABLE_LANGUAGES,
 } from "../../shared/constants";
-import { PICTO_BY_KEY } from "../../../../shared/constants/foodMeta.utils.js";
+import { PICTO_BY_KEY,derivePictogramsFromAllergens } from "../../../../shared/constants/foodMeta.utils.js";
 import MetaEditorModal from "../../components/MetaEditorModal";
 import NotificationModal from "../../components/NotificationModal";
 import AddUserModal from "./AddUserModal";
@@ -176,12 +176,19 @@ export default function UserManager() {
 
   // 🧬 Meta modal “Save” now updates local form only
   const handleSaveMeta = (data) => {
+    // Derive pictograms from updated allergens if empty
+    const derivedPictos =
+      (data.pictograms && data.pictograms.length > 0)
+        ? data.pictograms
+        : derivePictogramsFromAllergens(data.allergens || []);
+  
     setEditForm((prev) => ({
       ...prev,
       allergens: data.allergens || [],
-      pictograms: data.pictograms || [],
+      pictograms: derivedPictos,
       Diabetic: data.diabetic ?? prev.Diabetic,
     }));
+  
     setMetaOpen(false);
     setMetaUser(null);
   };
@@ -378,35 +385,51 @@ export default function UserManager() {
                       {/* Health meta preview */}
                       <td className="p-2 align-top">
                         <div className="flex flex-col gap-1">
+                          {/* Pictograms with live preview (icon + letter) */}
                           <div className="flex flex-wrap gap-1">
-                            {display.pictograms?.map((key) => {
+                            {(metaUser || editForm.pictograms?.length
+                              ? editForm.pictograms
+                              : display.pictograms
+                            )?.map((key) => {
                               const p = PICTO_BY_KEY[key];
                               return (
                                 <div
                                   key={key}
-                                  className="w-8 h-8 flex flex-col items-center justify-center text-xs font-semibold border border-gray-400 dark:border-gray-600 rounded-md"
+                                  className="w-10 h-10 flex flex-col items-center justify-center text-xs font-semibold border border-gray-400 dark:border-gray-600 rounded-md transition-opacity duration-200"
                                   title={t(p?.tKey, p?.label || key)}
                                 >
-                                  <span className="text-base leading-none">
-                                    {p?.icon || key}
-                                  </span>
+                                  <span className="text-lg leading-none">{p?.icon || key}</span>
+                                  <span className="leading-none">{p?.key || key}</span>
                                 </div>
                               );
                             })}
                           </div>
-                          {display.allergens?.length > 0 && (
+
+                          {/* Allergen codes */}
+                          {(editForm.allergens?.length || display.allergens?.length) > 0 && (
                             <div className="text-[0.7rem] text-gray-500 dark:text-gray-400">
-                              {display.allergens.join(", ")}
+                              {(editForm.allergens?.length
+                                ? editForm.allergens
+                                : display.allergens
+                              ).join(", ")}
                             </div>
                           )}
-                          {display.Diabetic && (
+
+                          {/* Diabetic status */}
+                          {(editForm.Diabetic || display.Diabetic) && (
                             <div className="text-xs text-red-600 dark:text-red-400 font-medium">
                               {t("Meals.MetaEditor.isDiabetic")}
                             </div>
                           )}
+
+                          {/* Open MetaEditor button */}
                           <button
                             onClick={() => {
-                              setMetaUser(display);
+                              setMetaUser({
+                                allergens: editForm.allergens || [],
+                                pictograms: editForm.pictograms || [],
+                                Diabetic: editForm.Diabetic ?? false,
+                              });
                               setMetaOpen(true);
                             }}
                             className="mt-2 px-2 py-1 text-xs rounded bg-blue-600 hover:bg-blue-500 text-white self-start"
@@ -444,27 +467,31 @@ export default function UserManager() {
                       <td className="p-2">{u.language}</td>
                       <td className="p-2">
                         <div className="flex flex-col gap-1">
+                          {/* Pictograms with letters (like SettingsModal) */}
                           <div className="flex flex-wrap gap-1">
                             {u.pictograms?.map((key) => {
                               const p = PICTO_BY_KEY[key];
                               return (
                                 <div
                                   key={key}
-                                  className="w-8 h-8 flex flex-col items-center justify-center text-xs font-semibold border border-gray-400 dark:border-gray-600 rounded-md"
+                                  className="w-10 h-10 flex flex-col items-center justify-center text-xs font-semibold border border-gray-400 dark:border-gray-600 rounded-md"
                                   title={t(p?.tKey, p?.label || key)}
                                 >
-                                  <span className="text-base leading-none">
-                                    {p?.icon || key}
-                                  </span>
+                                  <span className="text-lg leading-none">{p?.icon || key}</span>
+                                  <span className="leading-none">{p?.key || key}</span>
                                 </div>
                               );
                             })}
                           </div>
+
+                          {/* Allergen codes */}
                           {u.allergens?.length > 0 && (
                             <div className="text-[0.7rem] text-gray-500 dark:text-gray-400">
                               {u.allergens.join(", ")}
                             </div>
                           )}
+
+                          {/* Diabetic */}
                           {u.Diabetic && (
                             <div className="text-xs text-red-600 dark:text-red-400 font-medium">
                               {t("Meals.MetaEditor.isDiabetic")}
