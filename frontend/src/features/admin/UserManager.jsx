@@ -1,31 +1,22 @@
-//frontend/src/features/admin/UserManager.jsx
-import React, { useEffect, useMemo, useState } from "react";
+// frontend/src/features/admin/UserManager.jsx
+import React, { useEffect, useMemo, useState, useContext } from "react";
+import { useTranslation } from "react-i18next";
 import { API } from "../../shared/config";
 import {
   COUNTRIES,
   LANG_LABELS,
   AVAILABLE_LANGUAGES,
 } from "../../shared/constants";
+import { PICTO_BY_KEY } from "../../../../shared/constants/foodMeta.utils.js";
+import MetaEditorModal from "../../components/MetaEditorModal";
 import NotificationModal from "../../components/NotificationModal";
 import AddUserModal from "./AddUserModal";
 import ResetPasswordModal from "./ResetPasswordModal";
-import { useTranslation } from "react-i18next";
-import { useContext } from "react";
 import { AppContext } from "../../shared/AppContext";
 
 export default function UserManager() {
   const { t } = useTranslation();
-
-  const ALLERGEN_KEYS = [
-    { key: "R", icon: "🥩" },
-    { key: "S", icon: "🐷" },
-    { key: "G", icon: "🐔" },
-    { key: "M", icon: "🥛" },
-    { key: "A", icon: "🍷" },
-    { key: "W", icon: "🌾" },
-    { key: "K", icon: "🧄" },
-    { key: "Y", icon: "🌱" },
-  ];
+  const { user, setUser } = useContext(AppContext);
 
   const [users, setUsers] = useState([]);
   const [editingId, setEditingId] = useState(null);
@@ -38,7 +29,8 @@ export default function UserManager() {
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [addOpen, setAddOpen] = useState(false);
   const [resetTarget, setResetTarget] = useState(null);
-  const { user, setUser } = useContext(AppContext);
+  const [metaOpen, setMetaOpen] = useState(false);
+  const [metaUser, setMetaUser] = useState(null);
 
   // ────────────────────────────────
   //  Load all users
@@ -67,12 +59,40 @@ export default function UserManager() {
   // ────────────────────────────────
   //  Helpers
   // ────────────────────────────────
-  const pictogramLabel = (key) =>
-    t(`Meals.Legend.Pictograms.${key}`, key);
+  const filteredUsers = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    if (!q) return users;
+    return users.filter((u) =>
+      [u.fullName, u.username, u.email].some((v) =>
+        (v || "").toLowerCase().includes(q)
+      )
+    );
+  }, [users, query]);
 
-  // ────────────────────────────────
-  //  Editing & Saving
-  // ────────────────────────────────
+  const toggleSelect = (id) => {
+    const copy = new Set(selected);
+    copy.has(id) ? copy.delete(id) : copy.add(id);
+    setSelected(copy);
+  };
+
+  const handleRoleChange = async (u, newRole) => {
+    try {
+      setUsers((prev) =>
+        prev.map((usr) =>
+          usr._id === u._id ? { ...usr, roles: [newRole] } : usr
+        )
+      );
+      await fetch(`${API}/admin/users/${u._id}/role`, {
+        method: "PATCH",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ role: newRole }),
+      });
+    } catch (err) {
+      console.error("Failed to update role:", err);
+    }
+  };
+
   const startEdit = (u) => {
     setEditingId(u._id || u.id);
     setEditForm({
@@ -85,16 +105,31 @@ export default function UserManager() {
       country: u.country || "",
       language: u.language || "",
       Diabetic: u.Diabetic ?? false,
-      ...ALLERGEN_KEYS.reduce(
-        (acc, { key }) => ({ ...acc, [key]: !!u[key] }),
-        {}
-      ),
+      allergens: u.allergens || [],
+      pictograms: u.pictograms || [],
     });
   };
 
   const cancelEdit = () => {
+    const original = users.find(
+      (u) => u._id === editingId || u.id === editingId
+    );
+    if (original) {
+      setEditForm({
+        fullName: original.fullName || "",
+        username: original.username || "",
+        email: original.email || "",
+        phoneNumber: original.phoneNumber || "",
+        address: original.address || "",
+        gender: original.gender || "other",
+        country: original.country || "",
+        language: original.language || "",
+        Diabetic: original.Diabetic ?? false,
+        allergens: original.allergens || [],
+        pictograms: original.pictograms || [],
+      });
+    }
     setEditingId(null);
-    setEditForm({});
     setSaveMsg(null);
   };
 
@@ -108,39 +143,29 @@ export default function UserManager() {
 
   const saveEdit = async (u) => {
     try {
-      // clone form
-      const payload = { ...editForm };
-  
-      // 🔒 Safety check — only split if Allergens field exists
-      if (typeof payload.Allergens === "string") {
-        payload.Allergens = payload.Allergens
-          .split(",")
-          .map((a) => a.trim())
-          .filter((a) => a);
-      }
-  
-      // if the Allergens text field doesn't exist in edit mode, ensure it's an array
-      if (!payload.Allergens) {
-        payload.Allergens = [];
-      }
-  
+      const payload = {
+        ...editForm,
+        allergens: editForm.allergens || [],
+        pictograms: editForm.pictograms || [],
+        Diabetic: !!editForm.Diabetic,
+      };
+
       const res = await fetch(`${API}/admin/users/${u._id || u.id}`, {
         method: "PATCH",
         credentials: "include",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
       });
-  
       const data = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(data?.message || `Save failed (${res.status})`);
+      if (!res.ok)
+        throw new Error(data?.message || `Save failed (${res.status})`);
       if (editingId && user && (user._id === editingId || user.id === editingId)) {
-        // If admin edited their own profile, sync context too
         setUser((prev) => ({ ...prev, ...payload }));
       }
       setSaveMsg("✅ Saved");
       setEditingId(null);
       setEditForm({});
-      await fetchUsers(); // 🔥 force refresh from backend to get up-to-date values
+      await fetchUsers();
     } catch (err) {
       console.error(err);
       setSaveMsg(`❌ ${err.message}`);
@@ -149,13 +174,16 @@ export default function UserManager() {
     }
   };
 
-  // ────────────────────────────────
-  //  Selection & Bulk Delete
-  // ────────────────────────────────
-  const toggleSelect = (id) => {
-    const copy = new Set(selected);
-    copy.has(id) ? copy.delete(id) : copy.add(id);
-    setSelected(copy);
+  // 🧬 Meta modal “Save” now updates local form only
+  const handleSaveMeta = (data) => {
+    setEditForm((prev) => ({
+      ...prev,
+      allergens: data.allergens || [],
+      pictograms: data.pictograms || [],
+      Diabetic: data.diabetic ?? prev.Diabetic,
+    }));
+    setMetaOpen(false);
+    setMetaUser(null);
   };
 
   const handleDeleteSelected = async () => setConfirmOpen(true);
@@ -176,42 +204,15 @@ export default function UserManager() {
       setUsers((prev) => prev.filter((u) => !selected.has(u._id)));
       setSelected(new Set());
       setSaveMsg(
-        t("Admin.Users.deleted", { count: ids.length, defaultValue: "🗑️ Deleted {{count}} user(s)" })
+        t("Admin.Users.deleted", {
+          count: ids.length,
+          defaultValue: "🗑️ Deleted {{count}} user(s)",
+        })
       );
       setTimeout(() => setSaveMsg(null), 2500);
     } catch (err) {
       console.error(err);
       setSaveMsg(`❌ ${err.message}`);
-    }
-  };
-
-  const filteredUsers = useMemo(() => {
-    const q = query.trim().toLowerCase();
-    if (!q) return users;
-    return users.filter((u) =>
-      [u.fullName, u.username, u.email].some((v) =>
-        (v || "").toLowerCase().includes(q)
-      )
-    );
-  }, [users, query]);
-
-  //Changing role
-  const handleRoleChange = async (u, newRole) => {
-    try {
-      setUsers((prev) =>
-        prev.map((usr) =>
-          usr._id === u._id ? { ...usr, roles: [newRole] } : usr
-        )
-      );
-  
-      await fetch(`${API}/admin/users/${u._id}/role`, {
-        method: "PATCH",
-        credentials: "include",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ role: newRole }),
-      });
-    } catch (err) {
-      console.error("Failed to update role:", err);
     }
   };
 
@@ -235,7 +236,7 @@ export default function UserManager() {
             type="text"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder={t("Admin.Users.search", "Search name, username, or email…")}
+            placeholder={t("Admin.Users.search")}
             className="px-3 py-1 rounded-xl border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100"
           />
           {selected.size > 0 && (
@@ -263,7 +264,7 @@ export default function UserManager() {
         </div>
       </div>
 
-      {loading && <div>{t("Admin.Users.loading", "Loading users…")}</div>}
+      {loading && <div>{t("Admin.Users.loading")}</div>}
       {error && (
         <div className="p-2 rounded bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200">
           {error}
@@ -276,20 +277,22 @@ export default function UserManager() {
           <thead>
             <tr className="bg-gray-200 dark:bg-gray-800 text-gray-900 dark:text-gray-100">
               <th className="p-2"></th>
-              <th className="p-2">{t("Admin.Users.username", "Username")}</th>
-              <th className="p-2">{t("Admin.Users.email", "Email")}</th>
-              <th className="p-2">{t("Admin.Users.fullName", "Full Name")}</th>
-              <th className="p-2">{t("Admin.Users.gender", "Gender")}</th>
-              <th className="p-2">{t("Admin.Users.country", "Country")}</th>
-              <th className="p-2">{t("Admin.Users.language", "Language")}</th>
-              <th className="p-2">{t("Admin.Users.health", "Health")}</th>
-              <th className="p-2 text-center">{t("Admin.Users.actions", "Actions")}</th>
+              <th className="p-2">{t("Admin.Users.username")}</th>
+              <th className="p-2">{t("Admin.Users.email")}</th>
+              <th className="p-2">{t("Admin.Users.fullName")}</th>
+              <th className="p-2">{t("Admin.Users.gender")}</th>
+              <th className="p-2">{t("Admin.Users.country")}</th>
+              <th className="p-2">{t("Admin.Users.language")}</th>
+              <th className="p-2">{t("Admin.Users.health")}</th>
+              <th className="p-2 text-center">{t("Admin.Users.actions")}</th>
             </tr>
           </thead>
 
           <tbody>
             {filteredUsers.map((u) => {
               const isEditing = editingId === (u._id || u.id);
+              const display = isEditing ? editForm : u;
+
               return (
                 <tr key={u._id || u.id}>
                   <td className="p-2">
@@ -302,7 +305,7 @@ export default function UserManager() {
 
                   {isEditing ? (
                     <>
-                      {/* Edit mode */}
+                      {/* Editable cells */}
                       <td className="p-2">
                         <input
                           name="username"
@@ -346,9 +349,7 @@ export default function UserManager() {
                           onChange={handleChange}
                           className="w-full rounded border bg-gray-100 dark:bg-gray-900"
                         >
-                          <option value="">
-                            {t("Admin.Users.selectCountry", "Select Country")}
-                          </option>
+                          <option value="">{t("Admin.Users.selectCountry")}</option>
                           {COUNTRIES.map((c) => (
                             <option key={c.code} value={c.code}>
                               {c.flag} {c.name}
@@ -363,13 +364,9 @@ export default function UserManager() {
                           onChange={handleChange}
                           className="w-full rounded border bg-gray-100 dark:bg-gray-900"
                         >
-                          <option value="">
-                            {t("Admin.Users.selectLanguage", "Select Language")}
-                          </option>
-                          {(
-                            COUNTRIES.find(
-                              (c) => c.code === editForm.country
-                            )?.languages || AVAILABLE_LANGUAGES
+                          <option value="">{t("Admin.Users.selectLanguage")}</option>
+                          {(COUNTRIES.find((c) => c.code === editForm.country)?.languages ||
+                            AVAILABLE_LANGUAGES
                           ).map((lang) => (
                             <option key={lang} value={lang}>
                               {LANG_LABELS[lang]}
@@ -377,62 +374,63 @@ export default function UserManager() {
                           ))}
                         </select>
                       </td>
-                      <td className="p-2">
-                        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs">
-                          {ALLERGEN_KEYS.map(({ key, icon }) => (
-                            <label
-                              key={key}
-                              className="flex items-center gap-1 border border-gray-300 dark:border-gray-700 rounded p-1"
-                            >
-                              <input
-                                type="checkbox"
-                                name={key}
-                                checked={!!editForm[key]}
-                                onChange={handleChange}
-                              />
-                              <span>{icon}</span>
-                              <span>{pictogramLabel(key)}</span>
-                            </label>
-                          ))}
+
+                      {/* Health meta preview */}
+                      <td className="p-2 align-top">
+                        <div className="flex flex-col gap-1">
+                          <div className="flex flex-wrap gap-1">
+                            {display.pictograms?.map((key) => {
+                              const p = PICTO_BY_KEY[key];
+                              return (
+                                <div
+                                  key={key}
+                                  className="w-8 h-8 flex flex-col items-center justify-center text-xs font-semibold border border-gray-400 dark:border-gray-600 rounded-md"
+                                  title={t(p?.tKey, p?.label || key)}
+                                >
+                                  <span className="text-base leading-none">
+                                    {p?.icon || key}
+                                  </span>
+                                </div>
+                              );
+                            })}
+                          </div>
+                          {display.allergens?.length > 0 && (
+                            <div className="text-[0.7rem] text-gray-500 dark:text-gray-400">
+                              {display.allergens.join(", ")}
+                            </div>
+                          )}
+                          {display.Diabetic && (
+                            <div className="text-xs text-red-600 dark:text-red-400 font-medium">
+                              {t("Meals.MetaEditor.isDiabetic")}
+                            </div>
+                          )}
+                          <button
+                            onClick={() => {
+                              setMetaUser(display);
+                              setMetaOpen(true);
+                            }}
+                            className="mt-2 px-2 py-1 text-xs rounded bg-blue-600 hover:bg-blue-500 text-white self-start"
+                          >
+                            🧬 {t("Meals.MetaEditor.title")}
+                          </button>
                         </div>
-                        <label className="flex items-center text-xs mt-1">
-                          <input
-                            type="checkbox"
-                            name="Diabetic"
-                            checked={editForm.Diabetic}
-                            onChange={handleChange}
-                            className="mr-1"
-                          />
-                          {t("Meals.diabeticFriendlyLabel")}
-                        </label>
                       </td>
-                      <td className="p-2">
-                        <label className="block text-xs font-semibold mb-1">
-                          {t("Admin.Users.role", "Role")}
-                        </label>
-                        <select
-                          name="role"
-                          value={u.roles?.[0] || "user"}
-                          onChange={(e) => handleRoleChange(u, e.target.value)}
-                          className="w-full rounded p-1 border bg-gray-100 dark:bg-gray-900 border-gray-300 dark:border-gray-700 text-gray-900 dark:text-gray-100"
-                        >
-                          <option value="user">{t("Admin.Users.roleUser", "User")}</option>
-                          <option value="superadmin">{t("Admin.Users.roleSuperadmin", "Superadmin")}</option>
-                        </select>
-                      </td>
+
                       <td className="p-2 text-center">
-                        <button
-                          onClick={() => saveEdit(u)}
-                          className="bg-green-600 hover:bg-green-500 text-white px-3 py-1 rounded mr-1"
-                        >
-                          {t("Admin.Users.save", "Save")}
-                        </button>
-                        <button
-                          onClick={cancelEdit}
-                          className="bg-gray-500 hover:bg-gray-400 text-white px-3 py-1 rounded"
-                        >
-                          {t("Admin.Users.cancel", "Cancel")}
-                        </button>
+                        <div className="mt-2">
+                          <button
+                            onClick={() => saveEdit(u)}
+                            className="bg-green-600 hover:bg-green-500 text-white px-3 py-1 rounded mr-1"
+                          >
+                            {t("Admin.Users.save")}
+                          </button>
+                          <button
+                            onClick={cancelEdit}
+                            className="bg-gray-500 hover:bg-gray-400 text-white px-3 py-1 rounded"
+                          >
+                            {t("Admin.Users.cancel")}
+                          </button>
+                        </div>
                       </td>
                     </>
                   ) : (
@@ -445,36 +443,47 @@ export default function UserManager() {
                       <td className="p-2">{u.country}</td>
                       <td className="p-2">{u.language}</td>
                       <td className="p-2">
-                       <div className="flex flex-wrap gap-1">
-                          {ALLERGEN_KEYS.filter(({ key }) => u[key]).map(({ key, icon }) => (
-                            <div
-                              key={key}
-                              className="w-8 h-8 flex flex-col items-center justify-center text-xs font-semibold border border-gray-400 dark:border-gray-600 rounded-md"
-                              title={pictogramLabel(key)}
-                            >
-                              <span className="text-base leading-none">{icon}</span>
-                              <span className="leading-none">{key}</span>
-                            </div>
-                          ))}
-                        </div>
-                        {u.Diabetic && (
-                          <div className="text-xs text-red-600 dark:text-red-400 mt-1">
-                            {t("Meals.diabeticFriendlyLabel")}
+                        <div className="flex flex-col gap-1">
+                          <div className="flex flex-wrap gap-1">
+                            {u.pictograms?.map((key) => {
+                              const p = PICTO_BY_KEY[key];
+                              return (
+                                <div
+                                  key={key}
+                                  className="w-8 h-8 flex flex-col items-center justify-center text-xs font-semibold border border-gray-400 dark:border-gray-600 rounded-md"
+                                  title={t(p?.tKey, p?.label || key)}
+                                >
+                                  <span className="text-base leading-none">
+                                    {p?.icon || key}
+                                  </span>
+                                </div>
+                              );
+                            })}
                           </div>
-                        )}
+                          {u.allergens?.length > 0 && (
+                            <div className="text-[0.7rem] text-gray-500 dark:text-gray-400">
+                              {u.allergens.join(", ")}
+                            </div>
+                          )}
+                          {u.Diabetic && (
+                            <div className="text-xs text-red-600 dark:text-red-400 font-medium">
+                              {t("Meals.MetaEditor.isDiabetic")}
+                            </div>
+                          )}
+                        </div>
                       </td>
                       <td className="p-2 text-center">
                         <button
                           onClick={() => startEdit(u)}
                           className="text-blue-600 dark:text-blue-400 hover:underline"
                         >
-                          {t("Admin.Users.edit", "Edit")}
+                          {t("Admin.Users.edit")}
                         </button>
                         <button
                           onClick={() => setResetTarget(u)}
                           className="text-red-600 dark:text-red-400 hover:underline ml-2"
                         >
-                          {t("Admin.Users.resetPassword", "Reset Password")}
+                          {t("Admin.Users.resetPassword")}
                         </button>
                       </td>
                     </>
@@ -492,6 +501,7 @@ export default function UserManager() {
         </div>
       )}
 
+      {/* Modals */}
       <ResetPasswordModal
         open={!!resetTarget}
         user={resetTarget}
@@ -502,22 +512,31 @@ export default function UserManager() {
         onClose={() => setAddOpen(false)}
         onAdded={(newUser) => {
           setUsers((prev) => [newUser, ...prev]);
-          setSaveMsg(t("Admin.Users.added", "✅ User added successfully"));
+          setSaveMsg(t("Admin.Users.added"));
           setTimeout(() => setSaveMsg(null), 2500);
         }}
       />
       <NotificationModal
         open={confirmOpen}
-        title={t("Admin.Users.confirmDelete", "Confirm deletion")}
+        title={t("Admin.Users.confirmDelete")}
         message={t("Admin.Users.confirmMessage", {
           count: selected.size,
-          defaultValue:
-            "Are you sure you want to delete {{count}} selected user(s)? This cannot be undone.",
         })}
         onClose={() => setConfirmOpen(false)}
         onConfirm={confirmDelete}
-        confirmText={t("Admin.Users.delete", "Delete")}
-        cancelText={t("Admin.Users.cancel", "Cancel")}
+        confirmText={t("Admin.Users.delete")}
+        cancelText={t("Admin.Users.cancel")}
+      />
+      <MetaEditorModal
+        isOpen={metaOpen}
+        onClose={() => setMetaOpen(false)}
+        onSave={handleSaveMeta}
+        allergens={metaUser?.allergens || []}
+        additives={metaUser?.additives || []}
+        pictograms={metaUser?.pictograms || []}
+        diabetic={metaUser?.Diabetic ?? false}
+        showDiabetic={true}
+        editableDiabetic={true}
       />
     </div>
   );

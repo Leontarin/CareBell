@@ -114,6 +114,7 @@ export const api = {
   get: (path, init) => fetchJsonAuth(path, { method: "GET", ...init }),
   post: (path, body, init) => fetchJsonAuth(path, { method: "POST", body, ...init }),
   put: (path, body, init) => fetchJsonAuth(path, { method: "PUT", body, ...init }),
+  patch: (path, body, init) => fetchJsonAuth(path, { method: "PATCH", body, ...init }),
   del: (path, init) => fetchJsonAuth(path, { method: "DELETE", ...init }),
 };
 
