@@ -4,7 +4,8 @@ const router = express.Router();
 const User = require("../../models/user");
 const AdminBackup = require("../../models/adminBackup");
 const isAdmin = require("../../middleware/isAdmin");
-const { safeUserQuery } = require("../../lib/utils");
+const { safeUserQuery, parseArray } = require("../../lib/utils");
+const { derivePictogramsFromAllergens } = require("../../../shared/constants/foodMeta.utils.js");
 const bcrypt = require("bcrypt");
 const Admin = require("../../models/admin");
 
@@ -12,26 +13,19 @@ const Admin = require("../../models/admin");
 router.use(isAdmin);
 
 // ────────────────────────────────
-//  GET: List all users
+//  GET: List all users (derived pictograms)
 // ────────────────────────────────
 router.get("/", async (req, res) => {
   try {
-    // Always fetch fresh data, not cached docs
     const users = await User.find({}, { passwordHash: 0 }).lean({ getters: true });
 
-    // Normalize fields so checkboxes match backend
     const normalized = users.map((u) => ({
       ...u,
-      R: !!u.R,
-      S: !!u.S,
-      G: !!u.G,
-      M: !!u.M,
-      A: !!u.A,
-      W: !!u.W,
-      K: !!u.K,
-      Y: !!u.Y,
+      allergens: Array.isArray(u.allergens) ? u.allergens : [],
+      pictograms: Array.isArray(u.pictograms)
+        ? u.pictograms
+        : derivePictogramsFromAllergens(u.allergens || []),
       Diabetic: !!u.Diabetic,
-      // ⚠️ Drop textual allergens — localization handles text in frontend
     }));
 
     res.json(normalized);
@@ -42,7 +36,7 @@ router.get("/", async (req, res) => {
 });
 
 // ────────────────────────────────
-//  POST: Add new user
+//  POST: Add new user (array-based allergens)
 // ────────────────────────────────
 router.post("/add", async (req, res) => {
   try {
@@ -56,59 +50,46 @@ router.post("/add", async (req, res) => {
       address,
       dateOfBirth,
       gender,
-      R,
-      S,
-      G,
-      M,
-      A,
-      W,
-      K,
-      Y,
-      Diabetic,
+      allergens,
+      pictograms,
+      Diabetic = false,
     } = req.body;
 
     if (!fullName)
       return res.status(400).json({ message: "Missing required field: fullName" });
-    
-    if (!email && !username) {
-      return res
-        .status(400)
-        .json({ message: "Either email or username is required" });
-    }
+    if (!email && !username)
+      return res.status(400).json({ message: "Either email or username is required" });
 
     const query = [
       ...(id ? [{ id }] : []),
       ...(username ? [{ username }] : []),
       ...(email ? [{ email }] : []),
     ];
-    
     const existing = query.length ? await User.findOne({ $or: query }) : null;
-    
     if (existing)
-      return res
-        .status(409)
-        .json({ message: "User with this ID, username, or email already exists" });
+      return res.status(409).json({ message: "User already exists" });
 
     const hashed = password ? await bcrypt.hash(password, 10) : undefined;
 
-    // Normalize allergen flags
-    const allergenKeys = ["R", "S", "G", "M", "A", "W", "K", "Y"];
-    const allergenFlags = {};
-    allergenKeys.forEach((key) => {
-      allergenFlags[key] = req.body[key] === "on" || req.body[key] === true;
-    });
+    // Normalize and derive
+    const parsedAllergens = parseArray(allergens);
+    let parsedPictos = parseArray(pictograms);
+    if ((!parsedPictos || parsedPictos.length === 0) && parsedAllergens.length > 0) {
+      parsedPictos = derivePictogramsFromAllergens(parsedAllergens);
+    }
 
     const newUser = new User({
       id: id || crypto.randomUUID(),
-      fullName,
-      username,
-      email,
+      fullName: fullName.trim(),
+      username: username?.trim() || undefined,
+      email: email?.trim() || undefined,
       phoneNumber,
       address,
       dateOfBirth,
       gender,
-      ...allergenFlags,
-      Diabetic: Diabetic ?? false,
+      allergens: parsedAllergens,
+      pictograms: parsedPictos,
+      Diabetic,
       ...(hashed && { passwordHash: hashed }),
     });
 
@@ -116,10 +97,11 @@ router.post("/add", async (req, res) => {
     const { passwordHash, ...safe } = saved.toObject();
     res.status(201).json(safe);
   } catch (e) {
-    console.error(e);
+    console.error("Admin add user failed:", e);
     res.status(400).json({ message: e.message });
   }
 });
+
 
 // ────────────────────────────────
 //  PATCH: Update a user (with backup, safe duplicate handling)
@@ -165,16 +147,18 @@ router.patch("/:id", async (req, res) => {
       }
     }
 
-    // ────────────────────────────────
-    //  Normalize allergen flags only (no textual array)
-    // ────────────────────────────────
-    const allergenKeys = ["R", "S", "G", "M", "A", "W", "K", "Y"];
-    allergenKeys.forEach((key) => {
-      const val = req.body[key];
-      req.body[key] = val === "on" || val === true;
-    });
+    // Normalize arrays from request
+    const parsedAllergens = parseArray(req.body.allergens);
+    let parsedPictos = parseArray(req.body.pictograms);
 
-    delete req.body.Allergens; // textual array removed
+    // Derive pictograms if empty
+    if ((!parsedPictos || parsedPictos.length === 0) && parsedAllergens.length > 0) {
+      parsedPictos = derivePictogramsFromAllergens(parsedAllergens);
+    }
+
+    req.body.allergens = parsedAllergens;
+    req.body.pictograms = parsedPictos;
+    req.body.Diabetic = !!req.body.Diabetic;
 
     // ────────────────────────────────
     //  Sanitize empty strings → null

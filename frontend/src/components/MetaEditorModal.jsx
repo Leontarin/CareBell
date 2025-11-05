@@ -42,7 +42,7 @@ export default function MetaEditorModal({
       setSelAdditives(additives || []);
       setIsDiabetic(!!diabetic);
     }
-  }, [isOpen, allergens, additives, diabetic]);
+  }, [isOpen]);
 
   // ───────────────── allergen grouping ─────────────────
   const PARENTS = ["A", "H", "N"]; // gluten, tree nuts, molluscs

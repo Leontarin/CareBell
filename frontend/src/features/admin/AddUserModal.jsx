@@ -2,21 +2,11 @@ import React, { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { API } from "../../shared/config";
 import { COUNTRIES, AVAILABLE_LANGUAGES, LANG_LABELS } from "../../shared/constants";
+import MetaEditorModal from "../../components/MetaEditorModal";
+import { PICTO_BY_KEY, derivePictogramsFromAllergens } from "../../../../shared/constants/foodMeta.utils.js";
 
 export default function AddUserModal({ open, onClose, onAdded }) {
-  const { t, i18n } = useTranslation();
-
-  // Same pictogram keys used in UserManager
-  const ALLERGEN_KEYS = [
-    { key: "R", icon: "🥩" },
-    { key: "S", icon: "🐷" },
-    { key: "G", icon: "🐔" },
-    { key: "M", icon: "🥛" },
-    { key: "A", icon: "🍷" },
-    { key: "W", icon: "🌾" },
-    { key: "K", icon: "🧄" },
-    { key: "Y", icon: "🌱" },
-  ];
+  const { t } = useTranslation();
 
   const [form, setForm] = useState({
     fullName: "",
@@ -27,13 +17,16 @@ export default function AddUserModal({ open, onClose, onAdded }) {
     phoneNumber: "",
     dateOfBirth: "",
     gender: "other",
-    R: false, S: false, G: false, M: false, A: false, W: false, K: false, Y: false,
+    allergens: [],
+    pictograms: [],
     Diabetic: false,
     country: "",
     language: "",
   });
+
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+  const [metaOpen, setMetaOpen] = useState(false);
 
   if (!open) return null;
 
@@ -42,6 +35,19 @@ export default function AddUserModal({ open, onClose, onAdded }) {
     setForm((f) => ({ ...f, [name]: type === "checkbox" ? checked : value }));
   };
 
+  // 🧬 handle save from MetaEditor
+  const handleSaveMeta = (data) => {
+    const derivedPictos = derivePictogramsFromAllergens(data.allergens || []);
+    setForm((prev) => ({
+      ...prev,
+      allergens: data.allergens || [],
+      pictograms: derivedPictos,
+      Diabetic: data.diabetic ?? prev.Diabetic,
+    }));
+    setMetaOpen(false);
+  };
+
+  // 🧾 send to backend only when pressing Add
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError(null);
@@ -69,17 +75,11 @@ export default function AddUserModal({ open, onClose, onAdded }) {
         phoneNumber: form.phoneNumber.trim() || undefined,
         dateOfBirth: form.dateOfBirth ? new Date(form.dateOfBirth) : undefined,
         gender: form.gender,
-        R: !!form.R,
-        S: !!form.S,
-        G: !!form.G,
-        M: !!form.M,
-        A: !!form.A,
-        W: !!form.W,
-        K: !!form.K,
-        Y: !!form.Y,
-        Diabetic: !!form.Diabetic,
         country: form.country,
         language: form.language,
+        allergens: form.allergens || [],
+        pictograms: form.pictograms || [],
+        Diabetic: !!form.Diabetic,
       };
 
       const res = await fetch(`${API}/admin/users/add`, {
@@ -88,11 +88,14 @@ export default function AddUserModal({ open, onClose, onAdded }) {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
       });
+
       const data = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(data?.message || `Failed (${res.status})`);
 
       onAdded?.(data);
       onClose?.();
+
+      // reset form
       setForm({
         fullName: "",
         username: "",
@@ -102,7 +105,8 @@ export default function AddUserModal({ open, onClose, onAdded }) {
         phoneNumber: "",
         dateOfBirth: "",
         gender: "other",
-        R: false, S: false, G: false, M: false, A: false, W: false, K: false, Y: false,
+        allergens: [],
+        pictograms: [],
         Diabetic: false,
         country: "",
         language: "",
@@ -114,6 +118,9 @@ export default function AddUserModal({ open, onClose, onAdded }) {
     }
   };
 
+  // ────────────────────────────────
+  //  Render
+  // ────────────────────────────────
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
       <div className="w-[92%] max-w-xl bg-white dark:bg-gray-800 rounded-2xl shadow-2xl p-6">
@@ -122,7 +129,7 @@ export default function AddUserModal({ open, onClose, onAdded }) {
         </h3>
 
         <form onSubmit={handleSubmit} className="space-y-3">
-          {/* Login credentials */}
+          {/* Credentials */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
             <input
               name="username"
@@ -193,43 +200,58 @@ export default function AddUserModal({ open, onClose, onAdded }) {
             </select>
           </div>
 
-          {/* Health flags / allergens */}
-          <div>
-            <div className="text-sm font-semibold mb-1 text-gray-800 dark:text-gray-200">
-              {t("Admin.Users.health", "Health Flags")}
+          {/* ─────────────── Health Section ─────────────── */}
+          <div className="mt-2">
+            <div className="flex justify-between items-center mb-2">
+              <span className="text-sm font-semibold text-gray-800 dark:text-gray-200">
+                {t("Admin.Users.health", "Health")}
+              </span>
+              <button
+                type="button"
+                onClick={() => setMetaOpen(true)}
+                className="px-3 py-1 text-xs rounded bg-blue-600 hover:bg-blue-500 text-white"
+              >
+                🧬 {t("Meals.MetaEditor.title", "Edit Health Values")}
+              </button>
             </div>
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-              {ALLERGEN_KEYS.map(({ key, icon }) => (
-                <label key={key} className="flex items-center gap-2">
-                  <input
-                    type="checkbox"
-                    name={key}
-                    checked={!!form[key]}
-                    onChange={handleChange}
-                  />
-                  <span className="text-sm">
-                    {icon}{" "}
-                    {t(`Meals.Legend.Pictograms.${key}`, key)}
-                  </span>
-                </label>
-              ))}
+
+            {/* Live preview (draft before saving) */}
+            <div className="flex flex-col gap-1">
+              {/* Pictograms */}
+              <div className="flex flex-wrap gap-1">
+                {(Array.isArray(form.pictograms) ? form.pictograms : []).map((key) => {
+                  const p = PICTO_BY_KEY[key];
+                  return (
+                    <div
+                      key={key}
+                      className="w-10 h-10 flex flex-col items-center justify-center text-xs font-semibold border border-gray-400 dark:border-gray-600 rounded-md"
+                      title={t(p?.tKey, p?.label || key)}
+                    >
+                      <span className="text-lg leading-none">{p?.icon || key}</span>
+                      <span className="leading-none">{p?.key || key}</span>
+                    </div>
+                  );
+                })}
+              </div>
+
+              {/* Allergen codes */}
+              {Array.isArray(form.allergens) && form.allergens.length > 0 && (
+                <div className="text-[0.7rem] text-gray-500 dark:text-gray-400">
+                  {form.allergens.join(", ")}
+                </div>
+              )}
+
+              {/* Diabetic flag */}
+              {form.Diabetic && (
+                <div className="text-xs text-red-600 dark:text-red-400 font-medium">
+                  {t("Meals.MetaEditor.isDiabetic")}
+                </div>
+              )}
             </div>
           </div>
 
-          {/* Diabetic, Country, Language */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-            <label className="flex items-center gap-2">
-              <input
-                type="checkbox"
-                name="Diabetic"
-                checked={form.Diabetic}
-                onChange={handleChange}
-              />
-              <span className="text-sm">
-                {t("SettingsModal.diabetic", "Diabetic")}
-              </span>
-            </label>
-            <br/>
+          {/* Country + Language */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mt-2">
             <select
               name="country"
               value={form.country}
@@ -288,6 +310,19 @@ export default function AddUserModal({ open, onClose, onAdded }) {
             </button>
           </div>
         </form>
+
+        {/* 🧬 MetaEditorModal */}
+        <MetaEditorModal
+          isOpen={metaOpen}
+          onClose={() => setMetaOpen(false)}
+          onSave={handleSaveMeta}
+          allergens={form.allergens}
+          diabetic={form.Diabetic}
+          showAllergens={true}
+          showDiabetic={true}
+          editableAllergens={true}
+          editableDiabetic={true}
+        />
       </div>
     </div>
   );
