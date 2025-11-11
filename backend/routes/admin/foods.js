@@ -167,7 +167,13 @@ router.put(
     body.additives = additives;
     body.allergens = allergens;
     body.pictograms = derivePictogramsFromAllergens(allergens);
-    body.diabeticFriendly = isDiabeticFriendly(additives);
+    // Diabetic-friendly logic — honor explicit toggle, else derive
+    if (body.hasOwnProperty("diabeticFriendly")) {
+      body.diabeticFriendly =
+        body.diabeticFriendly === "true" || body.diabeticFriendly === true;
+    } else {
+      body.diabeticFriendly = isDiabeticFriendly(additives);
+    }
 
     if (req.file) {
       body.image = {

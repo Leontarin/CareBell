@@ -145,9 +145,11 @@ export default function FoodManager() {
           ? editForm.pictograms
           : derivePictogramsFromAllergens(allergens);
 
-      // Diabetic-friendly — rule: true if (modal toggled true) OR (safe by additives)
+      // ✅ Prefer manual toggle; fallback to additive-based safety
       const diabeticFriendly =
-        (editForm.diabeticFriendly === true) || isDiabeticFriendly(additives);
+        typeof editForm.diabeticFriendly === "boolean"
+          ? editForm.diabeticFriendly
+          : isDiabeticFriendly(additives);
 
       // Append unified meta
       fd.append("allergens", JSON.stringify(allergens));
@@ -171,6 +173,29 @@ export default function FoodManager() {
       if (!res.ok) throw new Error(data?.message || `HTTP ${res.status}`);
 
       setSaveMsg(t("Admin.Users.saved", "✅ Saved successfully"));
+
+      
+    // Merge updated food into the local list immediately
+    setFoods((prev) =>
+      prev.map((food) =>
+        food.id === editForm.id
+          ? {
+              ...food,
+              allergens: editForm.allergens,
+              additives: editForm.additives,
+              pictograms: editForm.pictograms,
+              diabeticFriendly: editForm.diabeticFriendly,
+              translations: editForm.translations,
+              barcode: editForm.barcode,
+              date: editForm.date,
+              category: editForm.translations?.en?.category || food.category,
+              dish: editForm.translations?.en?.dish || food.dish,
+              description: editForm.translations?.en?.description || food.description,
+            }
+          : food
+      )
+    );
+
       setEditingId(null);
       setEditForm({});
       setEditFile(null);
@@ -229,8 +254,9 @@ export default function FoodManager() {
           ? !!payload.diabetic
           : next.diabeticFriendly;
 
-      // Final diabeticFriendly: true if user explicitly toggled OR safe by additives
-      next.diabeticFriendly = modalToggle || safeByAdditives;
+      // Respect manual toggle first, fallback to additive logic
+      next.diabeticFriendly =
+      typeof modalToggle === "boolean" ? modalToggle : safeByAdditives;
 
       return next;
     });
@@ -382,11 +408,11 @@ export default function FoodManager() {
                             ))}
                           </div>
 
-                          {/* Diabetic Friendly (live) */}
+                          {/* DiabeticFriendly */}
                           <div className="text-xs font-medium">
                             {t("Meals.MetaEditor.diabeticFriendly", "Diabetic Friendly")}:{" "}
                             <span className="font-semibold">
-                              {editForm.diabeticFriendly
+                              {diabetic
                                 ? t("Meals.MetaEditor.friendly", "Diabetic-Friendly ✅")
                                 : t("Meals.MetaEditor.notFriendly", "Not Diabetic-Friendly ❌")}
                             </span>
@@ -573,11 +599,11 @@ export default function FoodManager() {
                             })}
                           </div>
 
-                          {/* Diabetic Friendly*/}
+                          {/* DiabeticFriendly (edit) */}
                           <div className="text-xs font-medium">
                             {t("Meals.MetaEditor.diabeticFriendly", "Diabetic Friendly")}:{" "}
                             <span className="font-semibold">
-                              {editForm.diabeticFriendly
+                              {diabetic
                                 ? t("Meals.MetaEditor.friendly", "Diabetic-Friendly ✅")
                                 : t("Meals.MetaEditor.notFriendly", "Not Diabetic-Friendly ❌")}
                             </span>
