@@ -334,6 +334,17 @@ export default function FoodManager() {
                       className="w-14 h-14 object-cover rounded border border-gray-300 dark:border-gray-700"
                       onError={(e) => (e.currentTarget.style.visibility = "hidden")}
                     />
+                    {isEditing && (
+                      <div className="mt-2">
+                        <label className="block text-xs mb-1">{t("Admin.Foods.image", "Image")}</label>
+                        <input
+                          type="file"
+                          accept="image/*"
+                          onChange={(e) => setEditFile(e.target.files?.[0] || null)}
+                          className="text-xs"
+                        />
+                      </div>
+                    )}
                   </td>
 
                   {!isEditing ? (
@@ -537,14 +548,6 @@ export default function FoodManager() {
                           className="mt-2 w-full rounded bg-gray-100 dark:bg-gray-900 border p-1 min-h-[60px]"
                           placeholder={t("Admin.Foods.description", "Description")}
                         />
-                        <div className="mt-2">
-                          <label className="block text-xs mb-1">{t("Admin.Foods.image", "Image")}</label>
-                          <input
-                            type="file"
-                            accept="image/*"
-                            onChange={(e) => setEditFile(e.target.files?.[0] || null)}
-                          />
-                        </div>
                       </td>
 
                       {/* Date (keep + placeholder note) */}
