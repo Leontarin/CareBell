@@ -126,6 +126,18 @@ export function formatAdditiveBubble(n, t) {
   if (!val || val === key) return `(${n})`;
   return val;
 }
+/**
+ * Format additive tag (rectangle style)
+ * @param {number} n - additive number
+ * @param {function} t - i18n translation function
+ * @returns {object} { number, label, display }
+ */
+export function formatAdditiveTag(n, t) {
+  const base = ADDITIVE_BY_NUM[n];
+  const label = t?.(base?.tKey || `Meals.Meta.Additives.${n}`, base?.label || String(n));
+  const display = `${formatAdditiveBubble(n, t)} ${label}`;
+  return { number: n, label, display };
+}
 
 /** Fixed subset of DEHOGA/DGE additives used in CareBell */
 export const ADDITIVE_SUBSET = [1, 3, 5, 7, 8, 9, 16];

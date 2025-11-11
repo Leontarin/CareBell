@@ -4,17 +4,19 @@ import { API } from "../../shared/config";
 import { useTranslation } from "react-i18next";
 import AddFoodModal from "./AddFoodModal";
 import { QRCodeCanvas } from "qrcode.react";
+import MetaEditorModal from "../../components/MetaEditorModal";
 
-const ALLERGEN_KEYS = [
-  { key: "R", icon: "🥩" },
-  { key: "S", icon: "🐷" },
-  { key: "G", icon: "🐔" },
-  { key: "M", icon: "🥛" },
-  { key: "A", icon: "🍷" },
-  { key: "W", icon: "🌾" },
-  { key: "K", icon: "🧄" },
-  { key: "Y", icon: "🌱" },
-];
+// Shared meta utils (single source of truth)
+import {
+  PICTO_BY_KEY,
+  derivePictogramsFromAllergens,
+  isDiabeticFriendly,
+  formatAdditiveBubble,
+  formatAdditiveTag,
+  PICTOGRAM_ORDER,
+} from "../../../../shared/constants/foodMeta.utils.js";
+
+// Supported UI languages for inline translation editing
 const SUPPORTED_LANGS = ["en", "de", "fi", "he"];
 
 function getLocalized(food, lang) {
@@ -22,8 +24,15 @@ function getLocalized(food, lang) {
   return t[lang] || t.en || t[Object.keys(t)[0]] || { dish: "", description: "", category: "" };
 }
 
+// Normalize additives to numbers (schema may contain strings from legacy)
+const normalizeAdditives = (arr) =>
+  (Array.isArray(arr) ? arr : [])
+    .map((v) => (typeof v === "string" ? Number(v) : v))
+    .filter((v) => !Number.isNaN(v));
+
 export default function FoodManager() {
   const { t, i18n } = useTranslation();
+
   const [foods, setFoods] = useState([]);
   const [query, setQuery] = useState("");
   const [addOpen, setAddOpen] = useState(false);
@@ -34,6 +43,10 @@ export default function FoodManager() {
   const [saveMsg, setSaveMsg] = useState(null);
   const [loading, setLoading] = useState(false);
 
+  // Meta modal state (draft editing like in UserManager)
+  const [metaOpen, setMetaOpen] = useState(false);
+
+  // ───────────────── Data loading ─────────────────
   async function fetchFoods() {
     setLoading(true);
     try {
@@ -62,23 +75,41 @@ export default function FoodManager() {
     });
   }, [foods, query, i18n.language]);
 
+  // ───────────────── Editing helpers ─────────────────
   function startEdit(food) {
     setEditingId(food.id);
-    const b = {};
-    ALLERGEN_KEYS.forEach(({ key }) => (b[key] = !!food[`contains_${key}`] || !!food[key]));
+    const uiLang = SUPPORTED_LANGS.includes(i18n.language) ? i18n.language : "en";
+
+    // Normalize additives to numbers; keep allergens/pictograms as arrays of strings
+    const additives = normalizeAdditives(food.additives);
+
     setEditForm({
       id: food.id,
       barcode: food.barcode || "",
       date: (food.date || "").slice?.(0, 10) || "",
-      diabeticFriendly: !!food.diabeticFriendly,
-      ...b,
+
+      // unified meta fields
+      allergens: Array.isArray(food.allergens) ? [...food.allergens] : [],
+      additives,
+      pictograms:
+        Array.isArray(food.pictograms) && food.pictograms.length > 0
+          ? [...food.pictograms]
+          : derivePictogramsFromAllergens(Array.isArray(food.allergens) ? food.allergens : []),
+
+      // diabeticFriendly as a *draft* value (computed OR stored)
+      diabeticFriendly:
+        typeof food.diabeticFriendly === "boolean"
+          ? food.diabeticFriendly
+          : isDiabeticFriendly(additives),
+
+      // translations
       translations: {
         en: { dish: "", description: "", category: "", ...(food.translations?.en || {}) },
         de: { dish: "", description: "", category: "", ...(food.translations?.de || {}) },
         fi: { dish: "", description: "", category: "", ...(food.translations?.fi || {}) },
         he: { dish: "", description: "", category: "", ...(food.translations?.he || {}) },
       },
-      uiLang: SUPPORTED_LANGS.includes(i18n.language) ? i18n.language : "en",
+      uiLang,
     });
     setEditFile(null);
   }
@@ -90,6 +121,7 @@ export default function FoodManager() {
     setSaveMsg(null);
   }
 
+  // Save (PUT) — sends unified meta fields and translations/image
   async function saveEdit() {
     try {
       const en = editForm.translations?.en || {};
@@ -98,12 +130,35 @@ export default function FoodManager() {
         return;
       }
 
+      // Prepare FormData (keep your existing pattern)
       const fd = new FormData();
       fd.append("barcode", editForm.barcode || "");
       if (editForm.date) fd.append("date", editForm.date);
-      fd.append("diabeticFriendly", String(!!editForm.diabeticFriendly));
-      ALLERGEN_KEYS.forEach(({ key }) => fd.append(`contains_${key}`, String(!!editForm[key])));
+
+      // Meta payload
+      const allergens = Array.isArray(editForm.allergens) ? editForm.allergens : [];
+      const additives = normalizeAdditives(editForm.additives);
+
+      // If pictograms not explicitly set, derive from allergens
+      const pictograms =
+        Array.isArray(editForm.pictograms) && editForm.pictograms.length
+          ? editForm.pictograms
+          : derivePictogramsFromAllergens(allergens);
+
+      // Diabetic-friendly — rule: true if (modal toggled true) OR (safe by additives)
+      const diabeticFriendly =
+        (editForm.diabeticFriendly === true) || isDiabeticFriendly(additives);
+
+      // Append unified meta
+      fd.append("allergens", JSON.stringify(allergens));
+      fd.append("additives", JSON.stringify(additives));
+      fd.append("pictograms", JSON.stringify(pictograms));
+      fd.append("diabeticFriendly", JSON.stringify(!!diabeticFriendly));
+
+      // Translations
       fd.append("translations", JSON.stringify(editForm.translations));
+
+      // Image
       if (editFile) fd.append("image", editFile);
 
       const res = await fetch(`${API}/admin/foods/${editForm.id}`, {
@@ -145,6 +200,44 @@ export default function FoodManager() {
     }
   }
 
+  // Meta editor save (draft only — mirrors UserManager pattern)
+  const handleSaveMeta = (payload) => {
+    // payload: { allergens?, additives?, diabetic? }
+    setEditForm((prev) => {
+      const next = { ...prev };
+
+      if (payload.allergens) {
+        next.allergens = [...payload.allergens];
+      }
+      if (payload.additives) {
+        next.additives = normalizeAdditives(payload.additives);
+      }
+
+      // Always re-derive pictograms from allergens for draft display
+      const allergenSrc = payload.allergens ? payload.allergens : next.allergens || [];
+      next.pictograms = derivePictogramsFromAllergens(allergenSrc);
+
+      // Diabetic-friendly (draft rule):
+      // true if user toggled "friendly" (payload.diabetic === true) OR safe by additives
+      const addSrc = payload.additives ? normalizeAdditives(payload.additives) : next.additives;
+      const safeByAdditives = isDiabeticFriendly(addSrc);
+      // Determine source of truth for diabeticFriendly
+      const modalToggle =
+        payload.hasOwnProperty("diabeticFriendly")
+          ? !!payload.diabeticFriendly
+          : payload.hasOwnProperty("diabetic")
+          ? !!payload.diabetic
+          : next.diabeticFriendly;
+
+      // Final diabeticFriendly: true if user explicitly toggled OR safe by additives
+      next.diabeticFriendly = modalToggle || safeByAdditives;
+
+      return next;
+    });
+
+    setMetaOpen(false);
+  };
+
   const imageUrl = (id) => `${API}/admin/foods/${id}/image`;
 
   return (
@@ -185,15 +278,25 @@ export default function FoodManager() {
               <th className="p-2">{t("Admin.Foods.dish", "Dish Name")}</th>
               <th className="p-2">{t("Admin.Foods.barcode", "Barcode")}</th>
               <th className="p-2">{t("Admin.Foods.category", "Category")}</th>
-              <th className="p-2">{t("Meals.diabeticFriendlyLabel", "Diabetic friendly")}</th>
-              <th className="p-2">{t("Meals.LegendHeadings.Pictograms", "Pictograms")}</th>
+              <th className="p-2">{t("Admin.Foods.date", "Date")}</th>
+              <th className="p-2">{t("Admin.Users.health", "Health")}</th>
               <th className="p-2 text-center">{t("Admin.Users.actions", "Actions")}</th>
             </tr>
           </thead>
+
           <tbody>
             {filteredFoods.map((f) => {
               const isEditing = editingId === f.id;
               const loc = getLocalized(isEditing ? editForm : f, i18n.language);
+
+              // Calculate row display values
+              const additives = isEditing ? editForm.additives : normalizeAdditives(f.additives);
+              const pictos = isEditing
+                ? editForm.pictograms
+                : (Array.isArray(f.pictograms) && f.pictograms.length
+                    ? f.pictograms
+                    : derivePictogramsFromAllergens(f.allergens || []));
+              const diabetic = isEditing ? editForm.diabeticFriendly : f.diabeticFriendly;
 
               return (
                 <tr key={f.id}>
@@ -206,57 +309,92 @@ export default function FoodManager() {
                       onError={(e) => (e.currentTarget.style.visibility = "hidden")}
                     />
                   </td>
+
                   {!isEditing ? (
                     <>
+                      {/* Dish (read-only) */}
                       <td className="p-2">{loc.dish || "—"}</td>
 
+                      {/* Barcode (with QR) */}
                       <td className="p-2">
-                      <div className="flex flex-col items-start gap-1">
-                        <span className="font-mono text-xs">{f.barcode || "—"}</span>
-                        {f.barcode && (
-                          <QRCodeCanvas
-                            value={f.barcode}
-                            size={70}
-                            bgColor="white"
-                            fgColor="black"
-                            includeMargin={true}
-                            style={{ cursor: "pointer", border: "1px solid #ccc", borderRadius: "4px" }}
-                            onClick={(e) => {
-                              // auto-download on click
-                              const canvas = e.target;
-                              const url = canvas.toDataURL("image/png");
-                              const a = document.createElement("a");
-                              a.href = url;
-                              a.download = `barcode-${f.barcode}.png`;
-                              a.click();
-                            }}
-                          />
-                        )}
-                      </div>
-                    </td>
-
-                      <td className="p-2">{loc.category || "—"}</td>
-                      <td className="p-2">
-                        {f.diabeticFriendly
-                          ? t("Meals.diabeticFriendlyYes", "Yes")
-                          : t("Meals.diabeticFriendlyNo", "No")}
-                      </td>
-                      <td className="p-2">
-                        <div className="flex flex-wrap gap-1">
-                          {ALLERGEN_KEYS.filter(({ key }) => f[`contains_${key}`] || f[key]).map(
-                            ({ key, icon }) => (
-                              <div
-                                key={key}
-                                className="w-8 h-8 flex flex-col items-center justify-center text-xs font-semibold border border-gray-400 dark:border-gray-600 rounded-md"
-                                title={t(`Meals.Legend.Pictograms.${key}`, key)}
-                              >
-                                <span className="text-base leading-none">{icon}</span>
-                                <span className="leading-none">{key}</span>
-                              </div>
-                            )
+                        <div className="flex flex-col items-start gap-1">
+                          <span className="font-mono text-xs">{f.barcode || "—"}</span>
+                          {f.barcode && (
+                            <QRCodeCanvas
+                              value={f.barcode}
+                              size={70}
+                              bgColor="white"
+                              fgColor="black"
+                              includeMargin={true}
+                              style={{ cursor: "pointer", border: "1px solid #ccc", borderRadius: "4px" }}
+                              onClick={(e) => {
+                                // auto-download on click
+                                const canvas = e.target;
+                                const url = canvas.toDataURL("image/png");
+                                const a = document.createElement("a");
+                                a.href = url;
+                                a.download = `barcode-${f.barcode}.png`;
+                                a.click();
+                              }}
+                            />
                           )}
                         </div>
                       </td>
+
+                      {/* Category */}
+                      <td className="p-2">{loc.category || "—"}</td>
+
+                      {/* Date (keep + placeholder note) */}
+                      <td className="p-2">
+                        <div>{f.date?.slice?.(0, 10) || "—"}</div>
+                        <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">🕒 To be implemented</div>
+                      </td>
+
+                      {/* Health (READ ONLY): pictograms + additives bubbles + diabetic label */}
+                      <td className="p-2">
+                        <div className="flex flex-col gap-1">
+                          {/* Pictograms */}
+                          <div className="flex flex-wrap gap-1">
+                            {pictos
+                              ?.slice()
+                              .sort((a, b) => PICTOGRAM_ORDER.indexOf(a) - PICTOGRAM_ORDER.indexOf(b))
+                              .map((key) => {
+                                const p = PICTO_BY_KEY[key];
+                                return (
+                                  <div
+                                    key={key}
+                                    className="w-8 h-8 flex flex-col items-center justify-center text-xs font-semibold border border-gray-400 dark:border-gray-600 rounded-md"
+                                    title={t(p?.tKey, p?.label || key)}
+                                  >
+                                    <span className="text-base leading-none">{p?.icon || key}</span>
+                                    <span className="leading-none">{p?.key || key}</span>
+                                  </div>
+                                );
+                              })}
+                          </div>
+
+                          {/* Additives — Option A (compact bubbles) */}
+                          <div className="flex flex-wrap gap-1 text-xs">
+                            {additives?.map((n) => (
+                              <span key={n} className="px-1">
+                                {formatAdditiveBubble(n, t)}
+                              </span>
+                            ))}
+                          </div>
+
+                          {/* Diabetic Friendly (live) */}
+                          <div className="text-xs font-medium">
+                            {t("Meals.MetaEditor.diabeticFriendly", "Diabetic Friendly")}:{" "}
+                            <span className="font-semibold">
+                              {editForm.diabeticFriendly
+                                ? t("Meals.MetaEditor.friendly", "Diabetic-Friendly ✅")
+                                : t("Meals.MetaEditor.notFriendly", "Not Diabetic-Friendly ❌")}
+                            </span>
+                          </div>
+                        </div>
+                      </td>
+
+                      {/* Actions */}
                       <td className="p-2 text-center whitespace-nowrap">
                         <button
                           onClick={() => startEdit(f)}
@@ -274,6 +412,7 @@ export default function FoodManager() {
                     </>
                   ) : (
                     <>
+                      {/* Dish + translations (EDIT) */}
                       <td className="p-2">
                         <div className="flex gap-2 mb-2 flex-wrap">
                           {SUPPORTED_LANGS.map((lang) => (
@@ -311,6 +450,32 @@ export default function FoodManager() {
                           placeholder={t("Admin.Foods.dish", "Dish Name")}
                         />
                       </td>
+
+                      {/* Barcode + QR (unchanged) */}
+                      <td className="p-2">
+                        <div className="flex flex-col items-start gap-1">
+                          <input
+                            value={editForm.barcode || ""}
+                            onChange={(e) =>
+                              setEditForm((ef) => ({ ...ef, barcode: e.target.value }))
+                            }
+                            className="w-full rounded bg-gray-100 dark:bg-gray-900 border p-1"
+                            placeholder={t("Admin.Foods.barcode", "Barcode")}
+                          />
+                          {editForm.barcode && (
+                            <QRCodeCanvas
+                              value={editForm.barcode}
+                              size={70}
+                              bgColor="white"
+                              fgColor="black"
+                              includeMargin={true}
+                              style={{ border: "1px solid #ccc", borderRadius: "4px" }}
+                            />
+                          )}
+                        </div>
+                      </td>
+
+                      {/* Category + description + image */}
                       <td className="p-2">
                         <input
                           value={editForm.translations?.[editForm.uiLang]?.category || ""}
@@ -355,41 +520,80 @@ export default function FoodManager() {
                           />
                         </div>
                       </td>
+
+                      {/* Date (keep + placeholder note) */}
                       <td className="p-2">
-                        <label className="flex items-center gap-2">
-                          <input
-                            type="checkbox"
-                            checked={!!editForm.diabeticFriendly}
-                            onChange={(e) =>
-                              setEditForm((ef) => ({
-                                ...ef,
-                                diabeticFriendly: e.target.checked,
-                              }))
-                            }
-                          />
-                          {t("Meals.diabeticFriendlyLabel")}
-                        </label>
+                        <input
+                          type="date"
+                          value={editForm.date || ""}
+                          onChange={(e) =>
+                            setEditForm((ef) => ({ ...ef, date: e.target.value }))
+                          }
+                          className="w-full rounded bg-gray-100 dark:bg-gray-900 border p-1"
+                        />
+                        <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">🕒 To be implemented</div>
                       </td>
-                      <td className="p-2">
-                        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs">
-                          {ALLERGEN_KEYS.map(({ key, icon }) => (
-                            <label
-                              key={key}
-                              className="flex items-center gap-1 border border-gray-300 dark:border-gray-700 rounded p-1"
-                            >
-                              <input
-                                type="checkbox"
-                                checked={!!editForm[key]}
-                                onChange={(e) =>
-                                  setEditForm((ef) => ({ ...ef, [key]: e.target.checked }))
-                                }
-                              />
-                              <span>{icon}</span>
-                              <span>{t(`Meals.Legend.Pictograms.${key}`, key)}</span>
-                            </label>
-                          ))}
+
+                      {/* Health (EDIT): pictograms + additives tags + diabetic label + Edit button */}
+                      <td className="p-2 align-top">
+                        <div className="flex flex-col gap-2">
+                          {/* Pictograms live preview */}
+                          <div className="flex flex-wrap gap-1">
+                            {editForm.pictograms
+                              ?.slice()
+                              .sort((a, b) => PICTOGRAM_ORDER.indexOf(a) - PICTOGRAM_ORDER.indexOf(b))
+                              .map((key) => {
+                                const p = PICTO_BY_KEY[key];
+                                return (
+                                  <div
+                                    key={key}
+                                    className="w-8 h-8 flex flex-col items-center justify-center text-xs font-semibold border border-gray-400 dark:border-gray-600 rounded-md"
+                                    title={t(p?.tKey, p?.label || key)}
+                                  >
+                                    <span className="text-base leading-none">{p?.icon || key}</span>
+                                    <span className="leading-none">{p?.key || key}</span>
+                                  </div>
+                                );
+                              })}
+                          </div>
+
+                          {/* Additives — Option B (rectangle tags) */}
+                          <div className="flex flex-wrap gap-1">
+                            {(editForm.additives || []).map((n) => {
+                              const tag = formatAdditiveTag(n, t);
+                              return (
+                                <span
+                                  key={n}
+                                  className="px-2 py-0.5 border border-gray-300 dark:border-gray-700 rounded text-xs"
+                                  title={tag.label}
+                                >
+                                  {tag.display}
+                                </span>
+                              );
+                            })}
+                          </div>
+
+                          {/* Diabetic Friendly*/}
+                          <div className="text-xs font-medium">
+                            {t("Meals.MetaEditor.diabeticFriendly", "Diabetic Friendly")}:{" "}
+                            <span className="font-semibold">
+                              {editForm.diabeticFriendly
+                                ? t("Meals.MetaEditor.friendly", "Diabetic-Friendly ✅")
+                                : t("Meals.MetaEditor.notFriendly", "Not Diabetic-Friendly ❌")}
+                            </span>
+                          </div>
+
+                          {/* Open MetaEditor button */}
+                          <button
+                            onClick={() => setMetaOpen(true)}
+                            className="mt-1 px-2 py-1 text-xs rounded bg-blue-600 hover:bg-blue-500 text-white self-start"
+                          >
+                            🧬 {t("Meals.MetaEditor.title")}
+                          </button>
                         </div>
                       </td>
+
+                      {/* Actions */}
                       <td className="p-2 text-center whitespace-nowrap">
                         <button
                           onClick={saveEdit}
@@ -415,6 +619,7 @@ export default function FoodManager() {
 
       {saveMsg && <div className="mt-2 text-sm text-center">{saveMsg}</div>}
 
+      {/* Add Food */}
       {addOpen && (
         <AddFoodModal
           onClose={() => setAddOpen(false)}
@@ -425,6 +630,22 @@ export default function FoodManager() {
           }}
         />
       )}
+
+      {/* Meta Editor (draft updates only; save button commits via PUT) */}
+      <MetaEditorModal
+        isOpen={metaOpen}
+        onClose={() => setMetaOpen(false)}
+        onSave={handleSaveMeta}
+        allergens={editForm?.allergens || []}
+        additives={editForm?.additives || []}
+        diabeticFriendly={editForm?.diabeticFriendly ?? false}
+        showAllergens={true}
+        showAdditives={true}
+        showDiabeticFriendly={true}
+        editableAllergens={true}
+        editableAdditives={true}
+        editableDiabeticFriendly={true}
+      />
     </div>
   );
 }

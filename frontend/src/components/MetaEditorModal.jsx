@@ -15,32 +15,35 @@ export default function MetaEditorModal({
   // incoming values
   allergens = [],
   additives = [],
-  diabetic = false,
+  diabetic = false,           // for user context
+  diabeticFriendly = false,   // for food context
 
-  // visibility (defaults: only allergens visible)
+  // visibility
   showAllergens = true,
   showAdditives = false,
-  showDiabetic = false,
-  showPictograms = false,           // kept for API parity, but not used now
-  showDiabeticFriendly = false,     // ditto
+  showDiabetic = false,         // user diabetic status
+  showDiabeticFriendly = false, // food diabetic friendliness
 
   // editability
   editableAllergens = true,
   editableAdditives = true,
   editableDiabetic = true,
+  editableDiabeticFriendly = true,
 }) {
   const { t } = useTranslation();
 
-  // ───────────────── state ─────────────────
+  // ───────── state ─────────
   const [selAllergens, setSelAllergens] = useState(allergens);
   const [selAdditives, setSelAdditives] = useState(additives);
   const [isDiabetic, setIsDiabetic] = useState(diabetic);
+  const [isFriendly, setIsFriendly] = useState(diabeticFriendly);
 
   useEffect(() => {
     if (isOpen) {
       setSelAllergens(allergens || []);
       setSelAdditives(additives || []);
       setIsDiabetic(!!diabetic);
+      setIsFriendly(!!diabeticFriendly);
     }
   }, [isOpen]);
 
@@ -104,11 +107,12 @@ export default function MetaEditorModal({
     const payload = {};
     if (showAllergens) payload.allergens = selAllergens;
     if (showAdditives) payload.additives = selAdditives;
-    if (showDiabetic)  payload.diabetic  = isDiabetic;
+    if (showDiabetic) payload.diabetic = isDiabetic;
+    if (showDiabeticFriendly) payload.diabeticFriendly = isFriendly;
     onSave(payload);
     onClose();
   };
-
+  
   if (!isOpen) return null;
 
   // Label lookup
@@ -292,6 +296,30 @@ export default function MetaEditorModal({
                   {isDiabetic
                     ? t("Meals.MetaEditor.isDiabetic")
                     : t("Meals.MetaEditor.notDiabetic")}
+                </span>
+              </div>
+            </section>
+          )}
+
+          {/* ───────── Diabetic Friendly (for foods) ───────── */}
+          {!!showDiabeticFriendly && (
+            <section>
+              <h3 className="text-lg font-semibold mb-2">
+                {t("Meals.MetaEditor.diabeticFriendly")}
+              </h3>
+              <div className="flex items-center gap-3">
+                <input
+                  type="checkbox"
+                  checked={isFriendly}
+                  onChange={(e) =>
+                    editableDiabeticFriendly && setIsFriendly(e.target.checked)
+                  }
+                  className="w-5 h-5 accent-blue-600"
+                />
+                <span>
+                  {isFriendly
+                    ? t("Meals.MetaEditor.friendly")
+                    : t("Meals.MetaEditor.notFriendly")}
                 </span>
               </div>
             </section>
