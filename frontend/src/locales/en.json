@@ -491,7 +491,21 @@
         "de": "German",
         "fi": "Finnish",
         "he": "Hebrew"
-      }
+      },
+      "datesTitle": "Meal Dates & Recurrence",
+      "specificDates": "Specific Dates",
+      "recurringDays": "Recurring Days",
+      "saveDates": "Save Dates",
+      "editDates": "Edit Dates"
     }
+  },
+  "Days": {
+    "Sunday": "Sunday",
+    "Monday": "Monday",
+    "Tuesday": "Tuesday",
+    "Wednesday": "Wednesday",
+    "Thursday": "Thursday",
+    "Friday": "Friday",
+    "Saturday": "Saturday"
   }
 }

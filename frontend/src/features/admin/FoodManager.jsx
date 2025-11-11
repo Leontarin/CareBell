@@ -5,6 +5,7 @@ import { useTranslation } from "react-i18next";
 import AddFoodModal from "./AddFoodModal";
 import { QRCodeCanvas } from "qrcode.react";
 import MetaEditorModal from "../../components/MetaEditorModal";
+import DateSelectorModal from "../../components/DateSelectorModal";
 
 // Shared meta utils (single source of truth)
 import {
@@ -43,8 +44,9 @@ export default function FoodManager() {
   const [saveMsg, setSaveMsg] = useState(null);
   const [loading, setLoading] = useState(false);
 
-  // Meta modal state (draft editing like in UserManager)
+  // Meta + Date modals
   const [metaOpen, setMetaOpen] = useState(false);
+  const [dateModalOpen, setDateModalOpen] = useState(false);
 
   // ───────────────── Data loading ─────────────────
   async function fetchFoods() {
@@ -80,13 +82,15 @@ export default function FoodManager() {
     setEditingId(food.id);
     const uiLang = SUPPORTED_LANGS.includes(i18n.language) ? i18n.language : "en";
 
-    // Normalize additives to numbers; keep allergens/pictograms as arrays of strings
     const additives = normalizeAdditives(food.additives);
 
     setEditForm({
       id: food.id,
       barcode: food.barcode || "",
-      date: (food.date || "").slice?.(0, 10) || "",
+
+      // Scheduling
+      dates: Array.isArray(food.dates) ? [...food.dates] : [],
+      recurringDays: Array.isArray(food.recurringDays) ? [...food.recurringDays] : [],
 
       // unified meta fields
       allergens: Array.isArray(food.allergens) ? [...food.allergens] : [],
@@ -96,13 +100,11 @@ export default function FoodManager() {
           ? [...food.pictograms]
           : derivePictogramsFromAllergens(Array.isArray(food.allergens) ? food.allergens : []),
 
-      // diabeticFriendly as a *draft* value (computed OR stored)
       diabeticFriendly:
         typeof food.diabeticFriendly === "boolean"
           ? food.diabeticFriendly
           : isDiabeticFriendly(additives),
 
-      // translations
       translations: {
         en: { dish: "", description: "", category: "", ...(food.translations?.en || {}) },
         de: { dish: "", description: "", category: "", ...(food.translations?.de || {}) },
@@ -121,7 +123,7 @@ export default function FoodManager() {
     setSaveMsg(null);
   }
 
-  // Save (PUT) — sends unified meta fields and translations/image
+  // ───────────────── Save ─────────────────
   async function saveEdit() {
     try {
       const en = editForm.translations?.en || {};
@@ -130,32 +132,29 @@ export default function FoodManager() {
         return;
       }
 
-      // Prepare FormData (keep your existing pattern)
       const fd = new FormData();
       fd.append("barcode", editForm.barcode || "");
-      if (editForm.date) fd.append("date", editForm.date);
 
-      // Meta payload
       const allergens = Array.isArray(editForm.allergens) ? editForm.allergens : [];
       const additives = normalizeAdditives(editForm.additives);
-
-      // If pictograms not explicitly set, derive from allergens
       const pictograms =
         Array.isArray(editForm.pictograms) && editForm.pictograms.length
           ? editForm.pictograms
           : derivePictogramsFromAllergens(allergens);
 
-      // ✅ Prefer manual toggle; fallback to additive-based safety
       const diabeticFriendly =
         typeof editForm.diabeticFriendly === "boolean"
           ? editForm.diabeticFriendly
           : isDiabeticFriendly(additives);
 
-      // Append unified meta
       fd.append("allergens", JSON.stringify(allergens));
       fd.append("additives", JSON.stringify(additives));
       fd.append("pictograms", JSON.stringify(pictograms));
       fd.append("diabeticFriendly", JSON.stringify(!!diabeticFriendly));
+
+      // Scheduling
+      fd.append("dates", JSON.stringify(editForm.dates || []));
+      fd.append("recurringDays", JSON.stringify(editForm.recurringDays || []));
 
       // Translations
       fd.append("translations", JSON.stringify(editForm.translations));
@@ -174,27 +173,26 @@ export default function FoodManager() {
 
       setSaveMsg(t("Admin.Users.saved", "✅ Saved successfully"));
 
-      
-    // Merge updated food into the local list immediately
-    setFoods((prev) =>
-      prev.map((food) =>
-        food.id === editForm.id
-          ? {
-              ...food,
-              allergens: editForm.allergens,
-              additives: editForm.additives,
-              pictograms: editForm.pictograms,
-              diabeticFriendly: editForm.diabeticFriendly,
-              translations: editForm.translations,
-              barcode: editForm.barcode,
-              date: editForm.date,
-              category: editForm.translations?.en?.category || food.category,
-              dish: editForm.translations?.en?.dish || food.dish,
-              description: editForm.translations?.en?.description || food.description,
-            }
-          : food
-      )
-    );
+      setFoods((prev) =>
+        prev.map((food) =>
+          food.id === editForm.id
+            ? {
+                ...food,
+                allergens: editForm.allergens,
+                additives: editForm.additives,
+                pictograms: editForm.pictograms,
+                diabeticFriendly: editForm.diabeticFriendly,
+                translations: editForm.translations,
+                barcode: editForm.barcode,
+                dates: editForm.dates,
+                recurringDays: editForm.recurringDays,
+                category: editForm.translations?.en?.category || food.category,
+                dish: editForm.translations?.en?.dish || food.dish,
+                description: editForm.translations?.en?.description || food.description,
+              }
+            : food
+        )
+      );
 
       setEditingId(null);
       setEditForm({});
@@ -225,28 +223,20 @@ export default function FoodManager() {
     }
   }
 
-  // Meta editor save (draft only — mirrors UserManager pattern)
+  // ───────────────── MetaEditor save ─────────────────
   const handleSaveMeta = (payload) => {
-    // payload: { allergens?, additives?, diabetic? }
     setEditForm((prev) => {
       const next = { ...prev };
 
-      if (payload.allergens) {
-        next.allergens = [...payload.allergens];
-      }
-      if (payload.additives) {
-        next.additives = normalizeAdditives(payload.additives);
-      }
+      if (payload.allergens) next.allergens = [...payload.allergens];
+      if (payload.additives) next.additives = normalizeAdditives(payload.additives);
 
-      // Always re-derive pictograms from allergens for draft display
       const allergenSrc = payload.allergens ? payload.allergens : next.allergens || [];
       next.pictograms = derivePictogramsFromAllergens(allergenSrc);
 
-      // Diabetic-friendly (draft rule):
-      // true if user toggled "friendly" (payload.diabetic === true) OR safe by additives
       const addSrc = payload.additives ? normalizeAdditives(payload.additives) : next.additives;
       const safeByAdditives = isDiabeticFriendly(addSrc);
-      // Determine source of truth for diabeticFriendly
+
       const modalToggle =
         payload.hasOwnProperty("diabeticFriendly")
           ? !!payload.diabeticFriendly
@@ -254,18 +244,19 @@ export default function FoodManager() {
           ? !!payload.diabetic
           : next.diabeticFriendly;
 
-      // Respect manual toggle first, fallback to additive logic
       next.diabeticFriendly =
-      typeof modalToggle === "boolean" ? modalToggle : safeByAdditives;
+        typeof modalToggle === "boolean" ? modalToggle : safeByAdditives;
 
       return next;
     });
-
     setMetaOpen(false);
   };
 
   const imageUrl = (id) => `${API}/admin/foods/${id}/image`;
 
+  // ────────────────────────────────────────────────────────────────
+  //  RENDER
+  // ────────────────────────────────────────────────────────────────
   return (
     <div className="p-4 text-gray-900 dark:text-gray-100">
       <div className="flex items-center justify-between mb-4 flex-wrap gap-2">
@@ -315,7 +306,6 @@ export default function FoodManager() {
               const isEditing = editingId === f.id;
               const loc = getLocalized(isEditing ? editForm : f, i18n.language);
 
-              // Calculate row display values
               const additives = isEditing ? editForm.additives : normalizeAdditives(f.additives);
               const pictos = isEditing
                 ? editForm.pictograms
@@ -336,7 +326,9 @@ export default function FoodManager() {
                     />
                     {isEditing && (
                       <div className="mt-2">
-                        <label className="block text-xs mb-1">{t("Admin.Foods.image", "Image")}</label>
+                        <label className="block text-xs mb-1">
+                          {t("Admin.Foods.image", "Image")}
+                        </label>
                         <input
                           type="file"
                           accept="image/*"
@@ -349,10 +341,7 @@ export default function FoodManager() {
 
                   {!isEditing ? (
                     <>
-                      {/* Dish (read-only) */}
                       <td className="p-2">{loc.dish || "—"}</td>
-
-                      {/* Barcode (with QR) */}
                       <td className="p-2">
                         <div className="flex flex-col items-start gap-1">
                           <span className="font-mono text-xs">{f.barcode || "—"}</span>
@@ -362,12 +351,10 @@ export default function FoodManager() {
                               size={70}
                               bgColor="white"
                               fgColor="black"
-                              includeMargin={true}
+                              includeMargin
                               style={{ cursor: "pointer", border: "1px solid #ccc", borderRadius: "4px" }}
                               onClick={(e) => {
-                                // auto-download on click
-                                const canvas = e.target;
-                                const url = canvas.toDataURL("image/png");
+                                const url = e.target.toDataURL("image/png");
                                 const a = document.createElement("a");
                                 a.href = url;
                                 a.download = `barcode-${f.barcode}.png`;
@@ -377,20 +364,24 @@ export default function FoodManager() {
                           )}
                         </div>
                       </td>
-
-                      {/* Category */}
                       <td className="p-2">{loc.category || "—"}</td>
 
-                      {/* Date (keep + placeholder note) */}
+                      {/* Non-edit dates */}
                       <td className="p-2">
-                        <div>{f.date?.slice?.(0, 10) || "—"}</div>
-                        <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">🕒 To be implemented</div>
+                        {f.dates?.length > 0 && <div className="text-xs">📅 {f.dates.join(", ")}</div>}
+                        {f.recurringDays?.length > 0 && (
+                          <div className="text-xs">🔁 {f.recurringDays.join(", ")}</div>
+                        )}
+                        {!f.dates?.length && !f.recurringDays?.length && (
+                          <div className="text-xs text-gray-500 dark:text-gray-400">
+                            {t("Admin.Foods.noDates", "No dates set")}
+                          </div>
+                        )}
                       </td>
 
-                      {/* Health (READ ONLY): pictograms + additives bubbles + diabetic label */}
+                      {/* Health (read-only) */}
                       <td className="p-2">
                         <div className="flex flex-col gap-1">
-                          {/* Pictograms */}
                           <div className="flex flex-wrap gap-1">
                             {pictos
                               ?.slice()
@@ -409,8 +400,6 @@ export default function FoodManager() {
                                 );
                               })}
                           </div>
-
-                          {/* Additives — Option A (compact bubbles) */}
                           <div className="flex flex-wrap gap-1 text-xs">
                             {additives?.map((n) => (
                               <span key={n} className="px-1">
@@ -418,8 +407,6 @@ export default function FoodManager() {
                               </span>
                             ))}
                           </div>
-
-                          {/* DiabeticFriendly */}
                           <div className="text-xs font-medium">
                             {t("Meals.MetaEditor.diabeticFriendly", "Diabetic Friendly")}:{" "}
                             <span className="font-semibold">
@@ -431,7 +418,6 @@ export default function FoodManager() {
                         </div>
                       </td>
 
-                      {/* Actions */}
                       <td className="p-2 text-center whitespace-nowrap">
                         <button
                           onClick={() => startEdit(f)}
@@ -449,16 +435,14 @@ export default function FoodManager() {
                     </>
                   ) : (
                     <>
-                      {/* Dish + translations (EDIT) */}
+                      {/* Dish / Lang editing */}
                       <td className="p-2">
                         <div className="flex gap-2 mb-2 flex-wrap">
                           {SUPPORTED_LANGS.map((lang) => (
                             <button
                               type="button"
                               key={lang}
-                              onClick={() =>
-                                setEditForm((ef) => ({ ...ef, uiLang: lang }))
-                              }
+                              onClick={() => setEditForm((ef) => ({ ...ef, uiLang: lang }))}
                               className={`px-2 py-1 rounded ${
                                 editForm.uiLang === lang
                                   ? "bg-blue-600 text-white"
@@ -488,7 +472,7 @@ export default function FoodManager() {
                         />
                       </td>
 
-                      {/* Barcode + QR (unchanged) */}
+                      {/* Barcode + QR */}
                       <td className="p-2">
                         <div className="flex flex-col items-start gap-1">
                           <input
@@ -505,14 +489,14 @@ export default function FoodManager() {
                               size={70}
                               bgColor="white"
                               fgColor="black"
-                              includeMargin={true}
+                              includeMargin
                               style={{ border: "1px solid #ccc", borderRadius: "4px" }}
                             />
                           )}
                         </div>
                       </td>
 
-                      {/* Category + description + image */}
+                      {/* Category + Description */}
                       <td className="p-2">
                         <input
                           value={editForm.translations?.[editForm.uiLang]?.category || ""}
@@ -550,23 +534,35 @@ export default function FoodManager() {
                         />
                       </td>
 
-                      {/* Date (keep + placeholder note) */}
-                      <td className="p-2">
-                        <input
-                          type="date"
-                          value={editForm.date || ""}
-                          onChange={(e) =>
-                            setEditForm((ef) => ({ ...ef, date: e.target.value }))
-                          }
-                          className="w-full rounded bg-gray-100 dark:bg-gray-900 border p-1"
-                        />
-                        <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">🕒 To be implemented</div>
+                      {/* Dates & Recurring */}
+                      <td className="p-2 align-top">
+                        <div className="flex flex-col gap-1">
+                          {(editForm.dates?.length > 0 || editForm.recurringDays?.length > 0) ? (
+                            <>
+                              {editForm.dates?.length > 0 && (
+                                <div className="text-xs">📅 {editForm.dates.join(", ")}</div>
+                              )}
+                              {editForm.recurringDays?.length > 0 && (
+                                <div className="text-xs">🔁 {editForm.recurringDays.join(", ")}</div>
+                              )}
+                            </>
+                          ) : (
+                            <div className="text-xs text-gray-500 dark:text-gray-400">
+                              {t("Admin.Foods.noDates", "No dates set")}
+                            </div>
+                          )}
+                          <button
+                            onClick={() => setDateModalOpen(true)}
+                            className="mt-1 px-2 py-1 text-xs rounded bg-blue-600 hover:bg-blue-500 text-white self-start"
+                          >
+                            🗓 {t("Admin.Foods.editDates", "Edit Dates")}
+                          </button>
+                        </div>
                       </td>
 
-                      {/* Health (EDIT): pictograms + additives tags + diabetic label + Edit button */}
+                      {/* Health section */}
                       <td className="p-2 align-top">
                         <div className="flex flex-col gap-2">
-                          {/* Pictograms live preview */}
                           <div className="flex flex-wrap gap-1">
                             {editForm.pictograms
                               ?.slice()
@@ -586,7 +582,6 @@ export default function FoodManager() {
                               })}
                           </div>
 
-                          {/* Additives — Option B (rectangle tags) */}
                           <div className="flex flex-wrap gap-1">
                             {(editForm.additives || []).map((n) => {
                               const tag = formatAdditiveTag(n, t);
@@ -602,7 +597,6 @@ export default function FoodManager() {
                             })}
                           </div>
 
-                          {/* DiabeticFriendly (edit) */}
                           <div className="text-xs font-medium">
                             {t("Meals.MetaEditor.diabeticFriendly", "Diabetic Friendly")}:{" "}
                             <span className="font-semibold">
@@ -612,7 +606,6 @@ export default function FoodManager() {
                             </span>
                           </div>
 
-                          {/* Open MetaEditor button */}
                           <button
                             onClick={() => setMetaOpen(true)}
                             className="mt-1 px-2 py-1 text-xs rounded bg-blue-600 hover:bg-blue-500 text-white self-start"
@@ -622,7 +615,6 @@ export default function FoodManager() {
                         </div>
                       </td>
 
-                      {/* Actions */}
                       <td className="p-2 text-center whitespace-nowrap">
                         <button
                           onClick={saveEdit}
@@ -660,7 +652,7 @@ export default function FoodManager() {
         />
       )}
 
-      {/* Meta Editor (draft updates only; save button commits via PUT) */}
+      {/* Meta Editor */}
       <MetaEditorModal
         isOpen={metaOpen}
         onClose={() => setMetaOpen(false)}
@@ -668,12 +660,24 @@ export default function FoodManager() {
         allergens={editForm?.allergens || []}
         additives={editForm?.additives || []}
         diabeticFriendly={editForm?.diabeticFriendly ?? false}
-        showAllergens={true}
-        showAdditives={true}
-        showDiabeticFriendly={true}
-        editableAllergens={true}
-        editableAdditives={true}
-        editableDiabeticFriendly={true}
+        showAllergens
+        showAdditives
+        showDiabeticFriendly
+        editableAllergens
+        editableAdditives
+        editableDiabeticFriendly
+      />
+
+      {/* Date Selector */}
+      <DateSelectorModal
+        isOpen={dateModalOpen}
+        onClose={() => setDateModalOpen(false)}
+        onSave={({ dates, recurringDays }) => {
+          setEditForm((ef) => ({ ...ef, dates, recurringDays }));
+          setDateModalOpen(false);
+        }}
+        initialDates={editForm.dates || []}
+        initialRecurring={editForm.recurringDays || []}
       />
     </div>
   );

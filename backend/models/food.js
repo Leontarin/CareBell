@@ -32,7 +32,29 @@ const foodSchema = new mongoose.Schema(
     },
     imageURL: { type: String, default: null }, // legacy fallback
     id: { type: Number, required: true },
-    date: { type: String, required: true },
+    // ────────────────────────────────
+    //  Scheduling fields
+    // ────────────────────────────────
+    dates: [
+      {
+        type: String, // ISO 8601 date string: "2025-11-12"
+        match: /^\d{4}-\d{2}-\d{2}$/,
+      },
+    ],
+    recurringDays: [
+      {
+        type: String, // Weekday name
+        enum: [
+          "Sunday",
+          "Monday",
+          "Tuesday",
+          "Wednesday",
+          "Thursday",
+          "Friday",
+          "Saturday",
+        ],
+      },
+    ],
 
     // multilingual
     category: { type: String, required: true },

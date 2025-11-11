@@ -1,4 +1,3 @@
-// backend/routes/admin/foods.js
 const express = require("express");
 const multer = require("multer");
 const router = express.Router();
@@ -82,11 +81,11 @@ router.post(
   "/",
   upload.single("image"),
   wrap(async (req, res) => {
-    const { barcode, date, category, dish, description } = req.body;
+    const { barcode, category, dish, description } = req.body;
 
-    if (!barcode || !date || !category || !dish) {
+    if (!barcode || !category || !dish) {
       return res.status(400).json({
-        message: "Missing required fields (barcode, date, category, dish)",
+        message: "Missing required fields (barcode, category, dish)",
       });
     }
 
@@ -101,8 +100,11 @@ router.post(
       console.warn("Invalid translations JSON:", e);
     }
 
+    // Parse arrays
     const additives = parseArray(req.body.additives);
     const allergens = parseArray(req.body.allergens);
+    const dates = parseArray(req.body.dates);
+    const recurringDays = parseArray(req.body.recurringDays);
 
     // ─────────────────────────────
     //  Derived fields
@@ -116,7 +118,6 @@ router.post(
     const doc = new Food({
       id: numericId,
       barcode: String(barcode),
-      date: String(date),
       category: String(category),
       dish: String(dish),
       description: description ?? null,
@@ -125,6 +126,8 @@ router.post(
       allergens,
       pictograms,
       diabeticFriendly,
+      dates,
+      recurringDays,
     });
 
     if (req.file) {
@@ -162,11 +165,14 @@ router.put(
     // Parse lists
     const additives = parseArray(body.additives);
     const allergens = parseArray(body.allergens);
+    const dates = parseArray(body.dates);
+    const recurringDays = parseArray(body.recurringDays);
 
     // Derived values
     body.additives = additives;
     body.allergens = allergens;
     body.pictograms = derivePictogramsFromAllergens(allergens);
+
     // Diabetic-friendly logic — honor explicit toggle, else derive
     if (body.hasOwnProperty("diabeticFriendly")) {
       body.diabeticFriendly =
@@ -174,6 +180,9 @@ router.put(
     } else {
       body.diabeticFriendly = isDiabeticFriendly(additives);
     }
+
+    body.dates = dates;
+    body.recurringDays = recurringDays;
 
     if (req.file) {
       body.image = {
