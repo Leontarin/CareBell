@@ -191,7 +191,7 @@ export default function Meals() {
           setSelectedMeal(meal);
           setView("details");
         }}
-        className={`w-full text-left border rounded-xl p-4 shadow-sm hover:shadow-lg transition ${bgClass}`}
+        className={`w-full text-left border border-yellow-500 rounded-xl p-4 shadow-sm hover:shadow-lg transition ${bgClass}`}
       >
         <div className="flex items-center gap-4">
           {/* Meal thumbnail */}
@@ -220,7 +220,7 @@ export default function Meals() {
                       className="inline-flex items-center gap-2 px-2 py-1 border rounded-md bg-gray-50 dark:bg-gray-800"
                       title={t(p?.tKey, p?.label || key)}
                     >
-                      <span className="text-lg">{p?.icon || "❔"}</span>
+                      <span className="text-base">{p?.icon || "❔"}</span>
                     </span>
                   );
                 })}
@@ -231,29 +231,11 @@ export default function Meals() {
               {additives.map((n) => (
                 <span
                   key={n}
-                  className="inline-flex items-center gap-2 px-2 py-1 rounded-full bg-gray-200 dark:bg-gray-700 text-sm"
+                  className="inline-flex items-center gap-2 px-2 py-1 rounded-full bg-white  text-base"
                 >
                   <span>{formatAdditiveBubble(n, t)}</span>
                 </span>
               ))}
-            </div>
-
-            {/* Read/Stop TTS button */}
-            <div className="mt-2">
-              <button
-                type="button"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  speaking ? stopSpeaking() : speakVisible(textToRead);
-                }}
-                className={`flex items-center gap-2 px-3 py-1 rounded text-white text-sm ${
-                  speaking
-                    ? "bg-red-600 hover:bg-red-700"
-                    : "bg-blue-600 hover:bg-blue-700"
-                }`}
-              >
-                {speaking ? "⏹ Stop" : "🔊 " + t("Exercise.read", "Read")}
-              </button>
             </div>
           </div>
 
@@ -299,7 +281,7 @@ export default function Meals() {
               setSelectedMeal(null);
               setView("list");
             }}
-            className="px-6 py-2 rounded-lg bg-blue-600 text-white text-lg shadow hover:bg-blue-700"
+            className="px-6 py-2 rounded-lg border border-yellow-500 bg-blue-800 text-white text-lg shadow hover:bg-blue-600"
           >
             {t("Meals.backToList", "Back to list")}
           </button>
@@ -357,14 +339,14 @@ export default function Meals() {
             className={`flex items-center gap-2 px-5 py-2 rounded text-white text-lg ${
               speaking
                 ? "bg-red-600 hover:bg-red-700"
-                : "bg-blue-600 hover:bg-blue-700"
+                : "bg-blue-800 hover:bg-blue-600"
             }`}
           >
             {speaking ? "⏹ Stop" : "🔊 " + t("Exercise.read", "Read")}
           </button>
         </div>
 
-        {/* 5. Pictograms */}
+        {/* 5. Pictograms (icon with letter underneath) */}
         {pictos.length > 0 && (
           <div>
             <div className="text-lg font-semibold mb-1">
@@ -374,18 +356,22 @@ export default function Meals() {
               {pictos.map((k) => {
                 const p = PICTO_BY_KEY[k];
                 return (
-                  <span
+                  <div
                     key={k}
-                    className="text-base inline-flex items-center gap-2 px-3 py-1 border rounded-lg bg-gray-50 dark:bg-gray-800"
+                    className="flex flex-col items-center justify-center border rounded-lg bg-gray-50 dark:bg-gray-800 w-12 h-12 text-base shadow-sm"
+                    title={t(p?.tKey, p?.label || k)}
                   >
                     <span className="text-base">{p?.icon || "❔"}</span>
-                    <span>{t(p?.tKey, p?.label || k)}</span>
-                  </span>
+                    <span className="text-xs font-semibold mt-0.5">
+                      {k}
+                    </span>
+                  </div>
                 );
               })}
             </div>
           </div>
         )}
+
 
         {/* 6. Allergens list (with “Other” logic) */}
         {(allergens.length > 0 || allergy.any) && (
@@ -450,7 +436,7 @@ export default function Meals() {
               setScanning(false);
               setView("list");
             }}
-            className="px-6 py-2 rounded-lg bg-blue-600 text-white text-lg shadow hover:bg-blue-700"
+            className="px-6 py-2 rounded-lg border border-yellow-500 bg-blue-800 text-white text-lg shadow hover:bg-blue-600"
           >
             {t("Meals.backToList")}
           </button>
@@ -467,7 +453,7 @@ export default function Meals() {
         />
         <button
           onClick={handleManualSubmit}
-          className="px-5 py-2 rounded-lg bg-blue-600 text-white text-lg shadow hover:bg-blue-700"
+          className="px-5 py-2 rounded-lg border border-yellow-500 bg-blue-800 text-white text-lg shadow hover:bg-blue-600"
         >
           {t("Meals.enterButton", "Enter")}
         </button>
@@ -504,7 +490,7 @@ export default function Meals() {
         <div className="flex justify-center">
           <button
             onClick={() => setView("list")}
-            className="px-6 py-2 rounded-lg bg-blue-600 text-white text-lg shadow hover:bg-blue-700"
+            className="px-6 py-2 rounded-lg border border-yellow-500 bg-blue-800 text-white text-lg shadow hover:bg-blue-600"
           >
             {t("Meals.backToList", "Back to list")}
           </button>
@@ -527,7 +513,7 @@ export default function Meals() {
               setScanning(false);
               stopSpeaking();
             }}
-            className="px-6 py-3 w-3/4 text-xl rounded-lg bg-indigo-600 text-white shadow hover:bg-indigo-700"
+            className="px-6 py-3 w-3/4 text-xl border border-yellow-500 rounded-lg bg-blue-800 text-white shadow hover:bg-blue-600"
           >
             {t("Meals.scanMealManually")}
           </button>
