@@ -10,13 +10,35 @@ import {
   PICTOGRAM_ORDER,
   derivePictogramsFromAllergens,
   isUserAllergic,
+  formatAdditiveBubble,
 } from "../../../shared/constants/foodMeta.utils.js";
+
+/**
+ * Returns the translation object for the current language,
+ * falling back to English or the first available translation.
+ */
+function getLocalized(food, lang) {
+  const tmap = food?.translations || {};
+  return (
+    tmap[lang] ||
+    tmap.en ||
+    tmap[Object.keys(tmap)[0]] || {
+      dish: food?.dish || "",
+      description: food?.description || "",
+      category: food?.category || "",
+    }
+  );
+}
 
 export default function Meals() {
   const { t, i18n } = useTranslation();
   const { user } = useContext(AppContext);
   const userAllergens = user?.allergens || [];
 
+  // ────────────────────────────────
+  //  State
+  // ────────────────────────────────
+  const [view, setView] = useState("list"); // "list" | "scan" | "details"
   const [scanning, setScanning] = useState(false);
   const [manualCode, setManualCode] = useState("");
   const [selectedMeal, setSelectedMeal] = useState(null);
@@ -26,6 +48,9 @@ export default function Meals() {
   const [speaking, setSpeaking] = useState(false);
   const [audioObj, setAudioObj] = useState(null);
 
+  // ────────────────────────────────
+  //  Load today's meals on mount
+  // ────────────────────────────────
   useEffect(() => {
     fetchTodayMeals();
   }, []);
@@ -33,10 +58,12 @@ export default function Meals() {
   async function fetchTodayMeals() {
     try {
       setLoading(true);
+      setError("");
       const res = await fetch(`${API}/foods/today`);
       if (!res.ok) throw new Error(`${res.status} ${res.statusText}`);
       const data = await res.json();
       setTodayMeals(Array.isArray(data) ? data : []);
+      setView("list");
     } catch (err) {
       setError(t("Meals.errorLoading", { message: err.message }));
     } finally {
@@ -44,13 +71,18 @@ export default function Meals() {
     }
   }
 
+  /**
+   * Fetch a single food by barcode and display its details view.
+   */
   async function fetchByBarcode(code) {
     try {
       setLoading(true);
+      setError("");
       const res = await fetch(`${API}/foods/barcode/${code}`);
       if (!res.ok) throw new Error("Not found");
       const data = await res.json();
       setSelectedMeal(data);
+      setView("details");
     } catch (err) {
       setError(t("Meals.notFoundWithCode", { code }));
     } finally {
@@ -58,6 +90,7 @@ export default function Meals() {
     }
   }
 
+  // Called when barcode detected by camera
   const handleDetected = (_, result) => {
     if (result?.text) {
       setScanning(false);
@@ -69,6 +102,9 @@ export default function Meals() {
     if (manualCode.trim()) fetchByBarcode(manualCode.trim());
   };
 
+  // ────────────────────────────────
+  //  Text-to-Speech controls
+  // ────────────────────────────────
   const stopSpeaking = () => {
     if (audioObj) {
       audioObj.pause();
@@ -78,7 +114,7 @@ export default function Meals() {
     setSpeaking(false);
   };
 
-  const speakText = async (text) => {
+  const speakVisible = async (text) => {
     stopSpeaking();
     if (!text) return;
     try {
@@ -92,148 +128,233 @@ export default function Meals() {
     }
   };
 
-  const backToList = () => {
-    setSelectedMeal(null);
-    setManualCode("");
-    stopSpeaking();
-  };
-
-  // Compose visible text only for the current meal
-  const buildVisibleText = (meal) => {
-    const pictos = meal.pictograms || [];
-    const allergens = meal.allergens || [];
-    let text = `${meal.dish}. ${meal.description || t("Meals.noDescription")}. `;
-    text += `${meal.diabeticFriendly
-      ? t("Meals.diabeticFriendlyYes")
-      : t("Meals.diabeticFriendlyNo")
-    }. `;
-    if (allergens.length)
-      text +=
-        t("Meals.LegendHeadings.Allergens") +
-        ": " +
-        allergens.join(", ") +
-        ". ";
-    if (pictos.length)
+  /**
+   * Build a readable sentence using only visible info
+   * (for accessibility and TTS clarity).
+   */
+  const buildVisibleText = (loc, pictos, allergens, additives) => {
+    let text = `${loc.dish}. ${loc.description || ""}. `;
+    if (pictos?.length)
       text +=
         t("Meals.LegendHeadings.Pictograms") +
         ": " +
-        pictos.join(", ") +
-        ".";
+        pictos
+          .map((k) => PICTO_BY_KEY[k]?.label || k)
+          .join(", ") +
+        ". ";
+    if (allergens?.length)
+      text +=
+        t("Meals.LegendHeadings.Allergens") + ": " + allergens.join(", ") + ". ";
+    if (additives?.length)
+      text +=
+        t("Meals.LegendHeadings.Additives") +
+        ": " +
+        additives.join(", ") +
+        ". ";
     return text;
   };
 
-  // ───────────────────────────────
-  //  Render meal cards
-  // ───────────────────────────────
-  const renderMealCard = (meal) => {
-    const allergic = isUserAllergic(userAllergens, meal.allergens).any;
-    const tabColor = allergic
-      ? "bg-red-100 dark:bg-red-300 text-black"
-      : "bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100";
+  const imageSrc = (meal) => {
+    if (meal?.imageURL) return meal.imageURL;
+    if (meal?.id != null) return `${API}/foods/${meal.id}/image`;
+    return "https://via.placeholder.com/120x120.png?text=No+Image";
+  };
+
+  // ────────────────────────────────
+  //  MealCard (list item)
+  // ────────────────────────────────
+  const MealCard = ({ meal }) => {
+    const loc = getLocalized(meal, i18n.language);
     const pictos =
       meal.pictograms?.length > 0
         ? meal.pictograms
         : derivePictogramsFromAllergens(meal.allergens || []);
+    const allergicInfo = isUserAllergic(userAllergens, meal.allergens || []);
+    const allergic = allergicInfo.any;
+    const additives = meal.additives || [];
+    const bgClass = allergic
+      ? "bg-red-100 dark:bg-red-300 text-black"
+      : "bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100";
+
+    const textToRead = buildVisibleText(
+      loc,
+      pictos,
+      meal.allergens || [],
+      additives
+    );
 
     return (
-      <div
-        key={meal.id}
-        className={`border rounded-xl p-4 mb-4 shadow-sm hover:shadow-lg cursor-pointer transition ${tabColor}`}
-        onClick={() => setSelectedMeal(meal)}
+      <button
+        type="button"
+        onClick={() => {
+          stopSpeaking();
+          setSelectedMeal(meal);
+          setView("details");
+        }}
+        className={`w-full text-left border rounded-xl p-4 shadow-sm hover:shadow-lg transition ${bgClass}`}
       >
         <div className="flex items-center gap-4">
+          {/* Meal thumbnail */}
           <img
-            src={`${API}/foods/${meal.id}/image`}
-            alt={meal.dish}
+            src={imageSrc(meal)}
+            alt={loc.dish}
             className="w-24 h-24 object-cover rounded-lg border"
-            onError={(e) => (e.currentTarget.style.visibility = "hidden")}
           />
-          <div className="flex-1">
-            <h3 className="text-xl font-semibold">{meal.dish}</h3>
-            <p className="text-sm mb-2 line-clamp-2">{meal.description}</p>
-            <div className="flex flex-wrap gap-2 mb-2">
+
+          {/* Central content: title + icons */}
+          <div className="flex-1 min-w-0">
+            <div className="font-semibold text-xl mb-1 truncate">{loc.dish}</div>
+
+            {/* Pictograms (rectangular chips) */}
+            <div className="flex flex-wrap gap-2 mb-1">
               {pictos
                 .slice()
                 .sort(
-                  (a, b) =>
-                    PICTOGRAM_ORDER.indexOf(a) - PICTOGRAM_ORDER.indexOf(b)
+                  (a, b) => PICTOGRAM_ORDER.indexOf(a) - PICTOGRAM_ORDER.indexOf(b)
                 )
                 .map((key) => {
                   const p = PICTO_BY_KEY[key];
                   return (
-                    <div
+                    <span
                       key={key}
-                      className="flex items-center gap-1 text-sm px-2 py-1 border rounded-md"
+                      className="inline-flex items-center gap-2 px-2 py-1 border rounded-md bg-gray-50 dark:bg-gray-800"
                       title={t(p?.tKey, p?.label || key)}
                     >
                       <span className="text-lg">{p?.icon || "❔"}</span>
-                      <span>{p?.label || key}</span>
-                    </div>
+                    </span>
                   );
                 })}
             </div>
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                speaking
-                  ? stopSpeaking()
-                  : speakText(buildVisibleText(meal));
-              }}
-              className={`flex items-center gap-2 px-3 py-1 rounded text-white text-sm ${
-                speaking
-                  ? "bg-red-600 hover:bg-red-700"
-                  : "bg-blue-600 hover:bg-blue-700"
-              }`}
-            >
-              {speaking ? "⏹ Stop" : "🔊 " + t("Exercise.read", "Read")}
-            </button>
+
+            {/* Additives: label + icon */}
+            <div className="flex flex-wrap gap-2">
+              {additives.map((n) => (
+                <span
+                  key={n}
+                  className="inline-flex items-center gap-2 px-2 py-1 rounded-full bg-gray-200 dark:bg-gray-700 text-sm"
+                >
+                  <span>{formatAdditiveBubble(n, t)}</span>
+                </span>
+              ))}
+            </div>
+
+            {/* Read/Stop TTS button */}
+            <div className="mt-2">
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  speaking ? stopSpeaking() : speakVisible(textToRead);
+                }}
+                className={`flex items-center gap-2 px-3 py-1 rounded text-white text-sm ${
+                  speaking
+                    ? "bg-red-600 hover:bg-red-700"
+                    : "bg-blue-600 hover:bg-blue-700"
+                }`}
+              >
+                {speaking ? "⏹ Stop" : "🔊 " + t("Exercise.read", "Read")}
+              </button>
+            </div>
           </div>
+
+          {/* Right: allergy warning symbol */}
           {allergic && (
             <div
-              className="text-red-700 text-3xl ml-3"
-              title={t("Meals.allergyWarningShort", "Allergy Warning!")}
+              className="text-red-700 text-3xl ml-2"
+              title={t("Meals.allergyWarningShort", "Allergy warning!")}
             >
               ⚠️
             </div>
           )}
         </div>
-      </div>
+      </button>
     );
   };
 
-  // ───────────────────────────────
-  //  Render single meal (opened tab)
-  // ───────────────────────────────
-  const renderMealDetails = (meal) => {
+  // ────────────────────────────────
+  //  Details view for a selected meal
+  // ────────────────────────────────
+  const DetailsView = () => {
+    if (!selectedMeal) return null;
+
+    const loc = getLocalized(selectedMeal, i18n.language);
     const pictos =
-      meal.pictograms?.length > 0
-        ? meal.pictograms
-        : derivePictogramsFromAllergens(meal.allergens || []);
-    const allergic = isUserAllergic(userAllergens, meal.allergens).any;
+      selectedMeal.pictograms?.length > 0
+        ? selectedMeal.pictograms
+        : derivePictogramsFromAllergens(selectedMeal.allergens || []);
+    const allergens = selectedMeal.allergens || [];
+    const additives = selectedMeal.additives || [];
+    const allergy = isUserAllergic(userAllergens, allergens);
+    const matched = allergy.matched || [];
+
+    const textToRead = buildVisibleText(loc, pictos, allergens, additives);
 
     return (
-      <div className="bg-gray-100 dark:bg-gray-800 p-6 rounded-xl shadow-md">
-        <img
-          src={`${API}/foods/${meal.id}/image`}
-          alt={meal.dish}
-          className="w-full max-w-md mx-auto rounded-lg mb-4"
-          onError={(e) => (e.currentTarget.style.visibility = "hidden")}
-        />
-        <h2 className="text-3xl font-bold mb-2 text-center">{meal.dish}</h2>
-        <p className="text-lg mb-4 text-center">{meal.description}</p>
+      <div className="space-y-4">
+        {/* Navigation: Back to list */}
+        <div className="flex justify-end">
+          <button
+            onClick={() => {
+              stopSpeaking();
+              setSelectedMeal(null);
+              setView("list");
+            }}
+            className="px-6 py-2 rounded-lg bg-blue-600 text-white text-lg shadow hover:bg-blue-700"
+          >
+            {t("Meals.backToList", "Back to list")}
+          </button>
+        </div>
 
-        {allergic && (
-          <p className="text-red-600 font-semibold text-center mb-4 text-xl">
-            ⚠️ {t("Meals.allergyWarningShort", "Allergy Warning!")}
-          </p>
+        {/* 1. Meal image */}
+        <img
+          src={imageSrc(selectedMeal)}
+          alt={loc.dish}
+          className="w-full max-h-72 object-cover rounded-xl bg-gray-100"
+        />
+
+        {/* 2. Title + description */}
+        <div className="text-center">
+          <div className="text-2xl font-semibold">{loc.dish}</div>
+          <p className="opacity-80 mt-1">{loc.description}</p>
+        </div>
+
+        {/* 3. Allergy warning box */}
+        {allergy.any && (
+          <div className="p-3 rounded-xl bg-red-100 dark:bg-red-300 text-black">
+            <div className="font-semibold mb-2 flex items-center gap-2">
+              <span>⚠️</span>
+              <span>
+                {t(
+                  "Meals.allergyWarning",
+                  "You are allergic to the following in this meal:"
+                )}
+              </span>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              {matched.map((code) => (
+                <span
+                  key={code}
+                  className="inline-flex items-center gap-2 px-2 py-1 rounded-md bg-white/90 border"
+                >
+                  <span className="inline-flex items-center justify-center w-6 h-6 text-xs font-bold rounded-full bg-red-600 text-white">
+                    {code}
+                  </span>
+                  <span className="text-sm">
+                    {t(`Meals.Meta.Allergens.${code}`, code)}
+                  </span>
+                </span>
+              ))}
+            </div>
+          </div>
         )}
 
-        <div className="flex justify-center mb-4">
+        {/* 4. Read/Stop TTS button */}
+        <div className="flex justify-center">
           <button
             onClick={() =>
-              speaking ? stopSpeaking() : speakText(buildVisibleText(meal))
+              speaking ? stopSpeaking() : speakVisible(textToRead)
             }
-            className={`flex items-center gap-2 px-4 py-2 rounded text-white ${
+            className={`flex items-center gap-2 px-5 py-2 rounded text-white text-lg ${
               speaking
                 ? "bg-red-600 hover:bg-red-700"
                 : "bg-blue-600 hover:bg-blue-700"
@@ -243,126 +364,203 @@ export default function Meals() {
           </button>
         </div>
 
-        {/* Pictograms */}
-        <h3 className="text-xl font-semibold mb-2">
-          {t("Meals.pictograms", "Pictograms")}
-        </h3>
-        <div className="flex flex-wrap gap-3 mb-4">
-          {pictos
-            .slice()
-            .sort(
-              (a, b) => PICTOGRAM_ORDER.indexOf(a) - PICTOGRAM_ORDER.indexOf(b)
-            )
-            .map((key) => {
-              const p = PICTO_BY_KEY[key];
-              return (
-                <div
-                  key={key}
-                  className="flex flex-col items-center justify-center border rounded-lg px-3 py-2 bg-white dark:bg-gray-900"
-                  title={t(p?.tKey, p?.label || key)}
-                >
-                  <span className="text-3xl mb-1">{p?.icon || "❔"}</span>
-                  <span className="text-sm font-medium">
-                    {t(p?.tKey, p?.label || key)}
+        {/* 5. Pictograms */}
+        {pictos.length > 0 && (
+          <div>
+            <div className="text-lg font-semibold mb-1">
+              {t("Meals.LegendHeadings.Pictograms")}
+            </div>
+            <div className="flex flex-wrap gap-3">
+              {pictos.map((k) => {
+                const p = PICTO_BY_KEY[k];
+                return (
+                  <span
+                    key={k}
+                    className="text-base inline-flex items-center gap-2 px-3 py-1 border rounded-lg bg-gray-50 dark:bg-gray-800"
+                  >
+                    <span className="text-base">{p?.icon || "❔"}</span>
+                    <span>{t(p?.tKey, p?.label || k)}</span>
                   </span>
-                </div>
-              );
-            })}
-        </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
 
-        {/* Allergens */}
-        <h3 className="text-xl font-semibold mb-2">
-          {t("Meals.allergens", "Allergens")}
-        </h3>
-        <ul className="grid grid-cols-2 md:grid-cols-3 gap-2 mb-6">
-          {(meal.allergens || []).map((a) => (
-            <li
-              key={a}
-              className="flex items-center gap-2 px-2 py-1 bg-white dark:bg-gray-900 rounded border"
-            >
-              <span className="text-lg"></span>
-              <span>{t(`Meals.Meta.Allergens.${a}`)}</span>
-            </li>
-          ))}
-        </ul>
+        {/* 6. Allergens list (with “Other” logic) */}
+        {(allergens.length > 0 || allergy.any) && (
+          <div>
+            <div className="text-lg font-semibold mb-2">
+              {allergy.any
+                ? t("Meals.otherAllergens", "Other allergens")
+                : t("Meals.LegendHeadings.Allergens", "Allergens")}
+            </div>
 
-        <div className="text-center">
-          <button
-            onClick={backToList}
-            className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg"
-          >
-            {t("Meals.back", "Back")}
-          </button>
-        </div>
+            <ul className="space-y-2">
+              {(allergy.any
+                ? allergens.filter((a) => !matched.includes(a))
+                : allergens
+              ).map((a) => (
+                <li
+                  key={a}
+                  className="flex items-center gap-2 px-3 py-1 bg-gray-200 dark:bg-gray-700 rounded-md border border-gray-400 dark:border-gray-600 text-base"
+                >
+                  <span className="inline-flex items-center justify-center w-6 h-6 text-base font-bold rounded-full bg-gray-900 text-white">
+                    {a}
+                  </span>
+                  <span>{t(`Meals.Meta.Allergens.${a}`, a)}</span>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+
+        {/* 7. Additives: icon + name */}
+        {additives.length > 0 && (
+          <div>
+            <div className="text-lg font-semibold mb-1">
+              {t("Meals.LegendHeadings.Additives")}
+            </div>
+            <div className="flex flex-wrap gap-2">
+              {additives.map((n) => (
+                <span
+                  key={n}
+                  className="inline-flex text-base items-center gap-2 px-2 py-1 bg-gray-200 dark:bg-gray-700 rounded-md"
+                >
+                  <span>{formatAdditiveBubble(n, t)}</span>
+                  <span>{t(`Meals.Meta.Additives.${n}`, String(n))}</span>
+                </span>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
     );
   };
 
-  // ───────────────────────────────
-  //  Main render
-  // ───────────────────────────────
-  return (
-    <div className="p-4 max-w-5xl mx-auto text-gray-900 dark:text-gray-100">
-      <h1 className="text-3xl font-bold mb-6 text-center">
-        {t("Meals.title", "Today's Meals")}
-      </h1>
-
-      {!selectedMeal && (
-        <>
-          <div className="mb-6">
-            <div className="flex mb-4">
-              <input
-                type="text"
-                value={manualCode}
-                onChange={(e) => setManualCode(e.target.value)}
-                placeholder={t("Meals.enterBarcodePlaceholder", "Enter barcode...")}
-                className="flex-1 px-4 py-2 border rounded-l-lg bg-white dark:bg-gray-800"
-              />
-              <button
-                onClick={handleManualSubmit}
-                className="px-4 py-2 bg-blue-600 text-white rounded-r-lg hover:bg-blue-700"
-              >
-                {t("Meals.enterButton", "Enter")}
-              </button>
-            </div>
-
-            {scanning ? (
-              <>
-                <BarcodeScannerComponent
-                  width="100%"
-                  height={250}
-                  onUpdate={handleDetected}
-                />
-                <button
-                  onClick={() => setScanning(false)}
-                  className="mt-3 w-full py-3 bg-red-500 text-white rounded-lg"
-                >
-                  {t("Meals.stopCamera", "Stop Camera")}
-                </button>
-              </>
-            ) : (
-              <button
-                onClick={() => setScanning(true)}
-                className="w-full py-3 bg-green-600 text-white rounded-lg"
-              >
-                {t("Meals.startCamera", "Start Camera")}
-              </button>
-            )}
-          </div>
-
-          {loading ? (
-            <p>{t("Meals.loadingLabel", "Loading...")}</p>
-          ) : error ? (
-            <p className="text-red-600">{error}</p>
-          ) : todayMeals.length === 0 ? (
-            <p>{t("Meals.noMealsToday", "No meals available today.")}</p>
-          ) : (
-            todayMeals.map((meal) => renderMealCard(meal))
-          )}
-        </>
+  // ────────────────────────────────
+  //  Scan tab for barcode input
+  // ────────────────────────────────
+  const ScanTab = () => (
+    <div className="space-y-4">
+      {scanning && (
+        <div className="flex justify-center">
+          <button
+            onClick={() => {
+              setScanning(false);
+              setView("list");
+            }}
+            className="px-6 py-2 rounded-lg bg-blue-600 text-white text-lg shadow hover:bg-blue-700"
+          >
+            {t("Meals.backToList", "Back to list")}
+          </button>
+        </div>
       )}
 
-      {selectedMeal && renderMealDetails(selectedMeal)}
+      {/* Barcode manual entry */}
+      <div className="flex gap-2">
+        <input
+          value={manualCode}
+          onChange={(e) => setManualCode(e.target.value)}
+          className="flex-1 px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900"
+          placeholder={t("Meals.enterBarcodePlaceholder")}
+        />
+        <button
+          onClick={handleManualSubmit}
+          className="px-5 py-2 rounded-lg bg-blue-600 text-white text-lg shadow hover:bg-blue-700"
+        >
+          {t("Meals.enterButton", "Enter")}
+        </button>
+      </div>
+
+      {/* Camera controls */}
+      {!scanning ? (
+        <button
+          onClick={() => setScanning(true)}
+          className="w-full py-3 text-lg bg-green-600 text-white rounded-lg hover:bg-green-700"
+        >
+          📷 {t("Meals.startCamera")}
+        </button>
+      ) : (
+        <div className="space-y-3">
+          <div className="rounded-xl overflow-hidden border border-gray-300 dark:border-gray-700">
+            <BarcodeScannerComponent
+              width={"100%"}
+              height={280}
+              onUpdate={handleDetected}
+            />
+          </div>
+          <button
+            onClick={() => setScanning(false)}
+            className="w-full py-3 text-lg bg-red-600 text-white rounded-lg hover:bg-red-700"
+          >
+            {t("Meals.stopCamera")}
+          </button>
+        </div>
+      )}
+
+      {/* Bottom Back button (when not scanning) */}
+      {!scanning && (
+        <div className="flex justify-center">
+          <button
+            onClick={() => setView("list")}
+            className="px-6 py-2 rounded-lg bg-blue-600 text-white text-lg shadow hover:bg-blue-700"
+          >
+            {t("Meals.backToList", "Back to list")}
+          </button>
+        </div>
+      )}
+    </div>
+  );
+
+  // ────────────────────────────────
+  //  Main Render
+  // ────────────────────────────────
+  return (
+    <div className="p-4 max-w-5xl mx-auto text-gray-900 dark:text-gray-100 space-y-6">
+      {view === "list" && (
+        <div className="flex justify-center">
+          <button
+            onClick={() => {
+              setView("scan");
+              setManualCode("");
+              setScanning(false);
+              stopSpeaking();
+            }}
+            className="px-6 py-3 w-3/4 text-xl rounded-lg bg-indigo-600 text-white shadow hover:bg-indigo-700"
+          >
+            {t("Meals.scanMealManually", "Scan meal manually")}
+          </button>
+        </div>
+      )}
+
+      {error && (
+        <div className="rounded-lg p-3 bg-yellow-100 text-yellow-900">{error}</div>
+      )}
+
+      {view === "scan" ? (
+        <ScanTab />
+      ) : view === "details" ? (
+        <DetailsView />
+      ) : loading ? (
+        <div className="text-center opacity-70 text-lg">
+          {t("Meals.loadingLabel")}
+        </div>
+      ) : todayMeals.length ? (
+        todayMeals.map(
+          (meal) =>
+            meal && (
+              <MealCard
+                key={meal.id ?? meal.barcode ?? Math.random()}
+                meal={meal}
+              />
+            )
+        )
+      ) : (
+        <div className="text-center opacity-70 text-lg">
+          {t("Meals.noFoods")}
+        </div>
+      )}
     </div>
   );
 }
