@@ -158,6 +158,10 @@
     "allergyWarning": "את/ה אלרגי/ת לפריטים הבאים במנה:",
     "enterBarcodePlaceholder": "הזן ברקוד",
     "enterButton": "הזן",
+    "scanMealManually": "סריקת ארוחה ידנית",
+    "backToList": "חזרה לרשימה",
+    "allergyWarningShort": "אזהרת אלרגיה!",
+    "otherAllergens": "אלרגנים אחרים",
     "LegendHeadings": {
       "Additives": "תוספים",
       "Allergens": "אלרגנים",

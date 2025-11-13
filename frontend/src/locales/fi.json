@@ -145,6 +145,10 @@
     "allergyWarning": "Olet allerginen aterian seuraaville aineksille:",
     "enterBarcodePlaceholder": "Syötä viivakoodi",
     "enterButton": "Syötä",
+    "scanMealManually": "Skannaa ateria manuaalisesti",
+    "backToList": "Takaisin listaan",
+    "allergyWarningShort": "Allergiavaroitus!",
+    "otherAllergens": "Muut allergeenit",
     "LegendHeadings": {
       "Additives":  "Lisäaineet",
       "Allergens":  "Allergeenit",

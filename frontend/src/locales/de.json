@@ -156,6 +156,10 @@
     "allergyWarning": "Du bist allergisch gegen folgende Bestandteile:",
     "enterBarcodePlaceholder": "Barcode eingeben",
     "enterButton": "Eingeben",
+    "scanMealManually": "Mahlzeit manuell scannen",
+    "backToList": "Zurück zur Liste",
+    "allergyWarningShort": "Allergiewarnung!",
+    "otherAllergens": "Andere Allergene",
     "LegendHeadings": {
       "Additives": "Zusatzstoffe",
       "Allergens": "Allergene",

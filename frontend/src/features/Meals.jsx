@@ -261,7 +261,7 @@ export default function Meals() {
           {allergic && (
             <div
               className="text-red-700 text-3xl ml-2"
-              title={t("Meals.allergyWarningShort", "Allergy warning!")}
+              title={t("Meals.allergyWarningShort")}
             >
               ⚠️
             </div>
@@ -392,7 +392,7 @@ export default function Meals() {
           <div>
             <div className="text-lg font-semibold mb-2">
               {allergy.any
-                ? t("Meals.otherAllergens", "Other allergens")
+                ? t("Meals.otherAllergens")
                 : t("Meals.LegendHeadings.Allergens", "Allergens")}
             </div>
 
@@ -452,7 +452,7 @@ export default function Meals() {
             }}
             className="px-6 py-2 rounded-lg bg-blue-600 text-white text-lg shadow hover:bg-blue-700"
           >
-            {t("Meals.backToList", "Back to list")}
+            {t("Meals.backToList")}
           </button>
         </div>
       )}
@@ -529,7 +529,7 @@ export default function Meals() {
             }}
             className="px-6 py-3 w-3/4 text-xl rounded-lg bg-indigo-600 text-white shadow hover:bg-indigo-700"
           >
-            {t("Meals.scanMealManually", "Scan meal manually")}
+            {t("Meals.scanMealManually")}
           </button>
         </div>
       )}

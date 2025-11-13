@@ -159,6 +159,10 @@
     "allergyWarning": "You are allergic to the following in the meal:",
     "enterBarcodePlaceholder": "Enter barcode",
     "enterButton": "Enter",
+    "scanMealManually": "Scan meal manually",
+    "backToList": "Back to list",
+    "allergyWarningShort": "Allergy Warning!",
+    "otherAllergens": "Other allergens",
     "LegendHeadings": {
       "Additives":  "Additives",
       "Allergens":  "Allergens",
