@@ -231,7 +231,7 @@ export default function Meals() {
               {additives.map((n) => (
                 <span
                   key={n}
-                  className="inline-flex items-center gap-2 px-2 py-1 rounded-full bg-white  text-base"
+                  className="inline-flex items-center gap-2 px-2 py-1 rounded-full bg-white  dark:text-black text-lg"
                 >
                   <span>{formatAdditiveBubble(n, t)}</span>
                 </span>
@@ -283,7 +283,7 @@ export default function Meals() {
             }}
             className="px-6 py-2 rounded-lg border border-yellow-500 bg-blue-800 text-white text-lg shadow hover:bg-blue-600"
           >
-            {t("Meals.backToList", "Back to list")}
+            {t("Meals.backToList")}
           </button>
         </div>
 
