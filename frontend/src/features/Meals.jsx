@@ -169,7 +169,7 @@ export default function Meals() {
     // ✅ background logic: red if allergic OR user diabetic and not diabetic-friendly
     const bgClass =
       allergic || (userIsDiabetic && !diabeticFriendly)
-        ? "bg-red-100 text-black"
+        ? "bg-red-300 text-black"
         : "bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100";
 
     const textToRead = buildVisibleText(
@@ -225,7 +225,7 @@ export default function Meals() {
                   return (
                     <span
                       key={key}
-                      className="inline-flex items-center gap-2 px-2 py-1 border rounded-md bg-gray-50 dark:bg-gray-800"
+                      className="inline-flex items-center gap-2 px-2 py-1 border rounded-md bg-gray-50"
                       title={t(p?.tKey, p?.label || key)}
                     >
                       <span className="text-base">{p?.icon || "❔"}</span>
@@ -332,7 +332,7 @@ export default function Meals() {
 
         {/* Allergy warning box */}
         {allergy.any && (
-          <div className="p-3 rounded-xl bg-red-100 dark:bg-red-300 text-black">
+          <div className="p-3 rounded-xl bg-red-300  text-black">
             <div className="font-semibold mb-2 flex items-center gap-2">
               <span>⚠️</span>
               <span>
@@ -388,7 +388,7 @@ export default function Meals() {
                 return (
                   <div
                     key={k}
-                    className="flex flex-col items-center justify-center border rounded-lg bg-gray-50 dark:bg-gray-800 w-12 h-12 text-base shadow-sm"
+                    className="flex flex-col items-center justify-center text-black border rounded-lg bg-gray-50 w-12 h-12 text-base shadow-sm"
                     title={t(p?.tKey, p?.label || k)}
                   >
                     <span className="text-base">{p?.icon || "❔"}</span>
@@ -415,7 +415,7 @@ export default function Meals() {
               ).map((a) => (
                 <li
                   key={a}
-                  className="flex items-center gap-2 px-3 py-1 bg-gray-200 dark:bg-gray-700 rounded-md border border-gray-400 dark:border-gray-600 text-base"
+                  className="flex items-center gap-2 px-3 py-1 text-black bg-gray-200 rounded-md border border-gray-400 dark:border-gray-600 text-base"
                 >
                   <span className="inline-flex items-center justify-center w-6 h-6 text-base font-bold rounded-full bg-gray-900 text-white">
                     {a}
@@ -437,7 +437,7 @@ export default function Meals() {
               {additives.map((n) => (
                 <span
                   key={n}
-                  className="inline-flex text-base items-center gap-2 px-2 py-1 bg-gray-200 dark:bg-gray-700 rounded-md"
+                  className="inline-flex text-base items-center gap-2 px-2 py-1 bg-gray-200  rounded-md text-black"
                 >
                   <span>{formatAdditiveBubble(n, t)}</span>
                   <span>{t(`Meals.Meta.Additives.${n}`, String(n))}</span>
