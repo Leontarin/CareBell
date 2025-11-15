@@ -11,12 +11,9 @@ import {
   derivePictogramsFromAllergens,
   isUserAllergic,
   formatAdditiveBubble,
+  isDiabeticFriendly,
 } from "../../../shared/constants/foodMeta.utils.js";
 
-/**
- * Returns the translation object for the current language,
- * falling back to English or the first available translation.
- */
 function getLocalized(food, lang) {
   const tmap = food?.translations || {};
   return (
@@ -33,12 +30,16 @@ function getLocalized(food, lang) {
 export default function Meals() {
   const { t, i18n } = useTranslation();
   const { user } = useContext(AppContext);
-  const userAllergens = user?.allergens || [];
 
-  // ────────────────────────────────
-  //  State
-  // ────────────────────────────────
-  const [view, setView] = useState("list"); // "list" | "scan" | "details"
+  const userAllergens = user?.allergens || [];
+  const userIsDiabetic =
+    user?.Diabetic === true ||
+    user?.Diabetic === "true" ||
+    user?.isDiabetic === true ||
+    user?.isDiabetic === "true" ||
+    user?.healthProfile?.isDiabetic === true;
+
+  const [view, setView] = useState("list");
   const [scanning, setScanning] = useState(false);
   const [manualCode, setManualCode] = useState("");
   const [selectedMeal, setSelectedMeal] = useState(null);
@@ -48,9 +49,6 @@ export default function Meals() {
   const [speaking, setSpeaking] = useState(false);
   const [audioObj, setAudioObj] = useState(null);
 
-  // ────────────────────────────────
-  //  Load today's meals on mount
-  // ────────────────────────────────
   useEffect(() => {
     fetchTodayMeals();
   }, []);
@@ -71,9 +69,6 @@ export default function Meals() {
     }
   }
 
-  /**
-   * Fetch a single food by barcode and display its details view.
-   */
   async function fetchByBarcode(code) {
     try {
       setLoading(true);
@@ -90,7 +85,6 @@ export default function Meals() {
     }
   }
 
-  // Called when barcode detected by camera
   const handleDetected = (_, result) => {
     if (result?.text) {
       setScanning(false);
@@ -102,9 +96,6 @@ export default function Meals() {
     if (manualCode.trim()) fetchByBarcode(manualCode.trim());
   };
 
-  // ────────────────────────────────
-  //  Text-to-Speech controls
-  // ────────────────────────────────
   const stopSpeaking = () => {
     if (audioObj) {
       audioObj.pause();
@@ -128,11 +119,7 @@ export default function Meals() {
     }
   };
 
-  /**
-   * Build a readable sentence using only visible info
-   * (for accessibility and TTS clarity).
-   */
-  const buildVisibleText = (loc, pictos, allergens, additives) => {
+  const buildVisibleText = (loc, pictos, allergens, additives, diabeticLabel) => {
     let text = `${loc.dish}. ${loc.description || ""}. `;
     if (pictos?.length)
       text +=
@@ -151,6 +138,7 @@ export default function Meals() {
         ": " +
         additives.join(", ") +
         ". ";
+    text += diabeticLabel ? ` ${diabeticLabel}. ` : "";
     return text;
   };
 
@@ -161,7 +149,7 @@ export default function Meals() {
   };
 
   // ────────────────────────────────
-  //  MealCard (list item)
+  //  MealCard
   // ────────────────────────────────
   const MealCard = ({ meal }) => {
     const loc = getLocalized(meal, i18n.language);
@@ -172,15 +160,24 @@ export default function Meals() {
     const allergicInfo = isUserAllergic(userAllergens, meal.allergens || []);
     const allergic = allergicInfo.any;
     const additives = meal.additives || [];
-    const bgClass = allergic
-      ? "bg-red-100 dark:bg-red-300 text-black"
-      : "bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100";
+
+    const diabeticFriendly = meal.diabeticFriendly ?? isDiabeticFriendly(meal);
+    const diabeticLabel = diabeticFriendly
+      ? "✅ Diabetic Friendly"
+      : "❌ Not Diabetic Friendly";
+
+    // ✅ background logic: red if allergic OR user diabetic and not diabetic-friendly
+    const bgClass =
+      allergic || (userIsDiabetic && !diabeticFriendly)
+        ? "bg-red-100 text-black"
+        : "bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100";
 
     const textToRead = buildVisibleText(
       loc,
       pictos,
       meal.allergens || [],
-      additives
+      additives,
+      diabeticLabel
     );
 
     return (
@@ -194,23 +191,34 @@ export default function Meals() {
         className={`w-full text-left border border-yellow-500 rounded-xl p-4 shadow-sm hover:shadow-lg transition ${bgClass}`}
       >
         <div className="flex items-center gap-4">
-          {/* Meal thumbnail */}
           <img
             src={imageSrc(meal)}
             alt={loc.dish}
             className="w-24 h-24 object-cover rounded-lg border"
           />
 
-          {/* Central content: title + icons */}
           <div className="flex-1 min-w-0">
             <div className="font-semibold text-xl mb-1 truncate">{loc.dish}</div>
 
-            {/* Pictograms (rectangular chips) */}
+            {/* Diabetic label */}
+            <div
+              className={`text-sm font-semibold mb-2 ${
+                allergic || (userIsDiabetic && !diabeticFriendly)
+                  ? "text-black"
+                  : diabeticFriendly
+                  ? "text-green-700 dark:text-green-400"
+                  : "text-red-700 dark:text-red-400"
+              }`}
+            >
+              {diabeticLabel}
+            </div>
+            {/* Pictograms */}
             <div className="flex flex-wrap gap-2 mb-1">
               {pictos
                 .slice()
                 .sort(
-                  (a, b) => PICTOGRAM_ORDER.indexOf(a) - PICTOGRAM_ORDER.indexOf(b)
+                  (a, b) =>
+                    PICTOGRAM_ORDER.indexOf(a) - PICTOGRAM_ORDER.indexOf(b)
                 )
                 .map((key) => {
                   const p = PICTO_BY_KEY[key];
@@ -226,12 +234,12 @@ export default function Meals() {
                 })}
             </div>
 
-            {/* Additives: label + icon */}
+            {/* Additives */}
             <div className="flex flex-wrap gap-2">
               {additives.map((n) => (
                 <span
                   key={n}
-                  className="inline-flex items-center gap-2 px-2 py-1 rounded-full bg-white  dark:text-black text-lg"
+                  className="inline-flex items-center gap-2 px-2 py-1 rounded-full bg-white dark:text-black text-lg"
                 >
                   <span>{formatAdditiveBubble(n, t)}</span>
                 </span>
@@ -239,11 +247,14 @@ export default function Meals() {
             </div>
           </div>
 
-          {/* Right: allergy warning symbol */}
-          {allergic && (
+          {(allergic || (userIsDiabetic && !diabeticFriendly)) && (
             <div
               className="text-red-700 text-3xl ml-2"
-              title={t("Meals.allergyWarningShort")}
+              title={
+                allergic
+                  ? t("Meals.allergyWarningShort")
+                  : t("Meals.diabeticWarningShort", "Not diabetic-friendly")
+              }
             >
               ⚠️
             </div>
@@ -254,7 +265,7 @@ export default function Meals() {
   };
 
   // ────────────────────────────────
-  //  Details view for a selected meal
+  //  DetailsView
   // ────────────────────────────────
   const DetailsView = () => {
     if (!selectedMeal) return null;
@@ -268,12 +279,22 @@ export default function Meals() {
     const additives = selectedMeal.additives || [];
     const allergy = isUserAllergic(userAllergens, allergens);
     const matched = allergy.matched || [];
+    const diabeticFriendly =
+      selectedMeal.diabeticFriendly ?? isDiabeticFriendly(selectedMeal);
+    const diabeticLabel = diabeticFriendly
+      ? "✅ Diabetic Friendly"
+      : "❌ Not Diabetic Friendly";
 
-    const textToRead = buildVisibleText(loc, pictos, allergens, additives);
+    const textToRead = buildVisibleText(
+      loc,
+      pictos,
+      allergens,
+      additives,
+      diabeticLabel
+    );
 
     return (
       <div className="space-y-4">
-        {/* Navigation: Back to list */}
         <div className="flex justify-end">
           <button
             onClick={() => {
@@ -287,20 +308,29 @@ export default function Meals() {
           </button>
         </div>
 
-        {/* 1. Meal image */}
         <img
           src={imageSrc(selectedMeal)}
           alt={loc.dish}
           className="w-full max-h-72 object-cover rounded-xl bg-gray-100"
         />
 
-        {/* 2. Title + description */}
         <div className="text-center">
           <div className="text-2xl font-semibold">{loc.dish}</div>
           <p className="opacity-80 mt-1">{loc.description}</p>
         </div>
 
-        {/* 3. Allergy warning box */}
+        {/* Diabetic friendly info */}
+        <div
+          className={`text-lg font-semibold text-center ${
+            diabeticFriendly
+              ? "text-green-700 dark:text-green-400"
+              : "text-red-700 dark:text-red-400"
+          }`}
+        >
+          {diabeticLabel}
+        </div>
+
+        {/* Allergy warning box */}
         {allergy.any && (
           <div className="p-3 rounded-xl bg-red-100 dark:bg-red-300 text-black">
             <div className="font-semibold mb-2 flex items-center gap-2">
@@ -330,7 +360,7 @@ export default function Meals() {
           </div>
         )}
 
-        {/* 4. Read/Stop TTS button */}
+        {/* TTS button */}
         <div className="flex justify-center">
           <button
             onClick={() =>
@@ -346,7 +376,7 @@ export default function Meals() {
           </button>
         </div>
 
-        {/* 5. Pictograms (icon with letter underneath) */}
+        {/* Pictograms */}
         {pictos.length > 0 && (
           <div>
             <div className="text-lg font-semibold mb-1">
@@ -362,9 +392,7 @@ export default function Meals() {
                     title={t(p?.tKey, p?.label || k)}
                   >
                     <span className="text-base">{p?.icon || "❔"}</span>
-                    <span className="text-xs font-semibold mt-0.5">
-                      {k}
-                    </span>
+                    <span className="text-xs font-semibold mt-0.5">{k}</span>
                   </div>
                 );
               })}
@@ -372,8 +400,7 @@ export default function Meals() {
           </div>
         )}
 
-
-        {/* 6. Allergens list (with “Other” logic) */}
+        {/* Allergens */}
         {(allergens.length > 0 || allergy.any) && (
           <div>
             <div className="text-lg font-semibold mb-2">
@@ -381,7 +408,6 @@ export default function Meals() {
                 ? t("Meals.otherAllergens")
                 : t("Meals.LegendHeadings.Allergens", "Allergens")}
             </div>
-
             <ul className="space-y-2">
               {(allergy.any
                 ? allergens.filter((a) => !matched.includes(a))
@@ -401,7 +427,7 @@ export default function Meals() {
           </div>
         )}
 
-        {/* 7. Additives: icon + name */}
+        {/* Additives */}
         {additives.length > 0 && (
           <div>
             <div className="text-lg font-semibold mb-1">
@@ -425,25 +451,20 @@ export default function Meals() {
   };
 
   // ────────────────────────────────
-  //  Scan tab for barcode input
+  //  ScanTab
   // ────────────────────────────────
   const ScanTab = () => (
     <div className="space-y-4">
-      {scanning && (
+      {!scanning && (
         <div className="flex justify-center">
           <button
-            onClick={() => {
-              setScanning(false);
-              setView("list");
-            }}
+            onClick={() => setView("list")}
             className="px-6 py-2 rounded-lg border border-yellow-500 bg-blue-800 text-white text-lg shadow hover:bg-blue-600"
           >
             {t("Meals.backToList")}
           </button>
         </div>
       )}
-
-      {/* Barcode manual entry */}
       <div className="flex gap-2">
         <input
           value={manualCode}
@@ -458,8 +479,6 @@ export default function Meals() {
           {t("Meals.enterButton", "Enter")}
         </button>
       </div>
-
-      {/* Camera controls */}
       {!scanning ? (
         <button
           onClick={() => setScanning(true)}
@@ -484,18 +503,6 @@ export default function Meals() {
           </button>
         </div>
       )}
-
-      {/* Bottom Back button (when not scanning) */}
-      {!scanning && (
-        <div className="flex justify-center">
-          <button
-            onClick={() => setView("list")}
-            className="px-6 py-2 rounded-lg border border-yellow-500 bg-blue-800 text-white text-lg shadow hover:bg-blue-600"
-          >
-            {t("Meals.backToList", "Back to list")}
-          </button>
-        </div>
-      )}
     </div>
   );
 
@@ -505,19 +512,26 @@ export default function Meals() {
   return (
     <div className="p-4 max-w-5xl mx-auto text-gray-900 dark:text-gray-100 space-y-6">
       {view === "list" && (
-        <div className="flex justify-center">
-          <button
-            onClick={() => {
-              setView("scan");
-              setManualCode("");
-              setScanning(false);
-              stopSpeaking();
-            }}
-            className="px-6 py-3 w-3/4 text-xl border border-yellow-500 rounded-lg bg-blue-800 text-white shadow hover:bg-blue-600"
-          >
-            {t("Meals.scanMealManually")}
-          </button>
-        </div>
+        <>
+          <div className="flex justify-center mb-2">
+            <h1 className="text-2xl font-bold text-center">
+              {t("Meals.todaysMeals", "Today's Meals")}
+            </h1>
+          </div>
+          <div className="flex justify-center">
+            <button
+              onClick={() => {
+                setView("scan");
+                setManualCode("");
+                setScanning(false);
+                stopSpeaking();
+              }}
+              className="px-6 py-3 w-3/4 text-xl border border-yellow-500 rounded-lg bg-blue-800 text-white shadow hover:bg-blue-600"
+            >
+              {t("Meals.scanMealManually")}
+            </button>
+          </div>
+        </>
       )}
 
       {error && (
