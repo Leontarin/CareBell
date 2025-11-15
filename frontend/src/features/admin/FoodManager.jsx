@@ -644,8 +644,8 @@ export default function FoodManager() {
       {addOpen && (
         <AddFoodModal
           onClose={() => setAddOpen(false)}
-          onAdded={(newFood) => {
-            setFoods((prev) => [newFood, ...prev]);
+          onAdded={async () => {
+            await fetchFoods(); // ← 🔥 Auto-refresh fixes ALL missing fields
             setSaveMsg(t("Admin.Foods.added", "✅ Added successfully"));
             setTimeout(() => setSaveMsg(null), 2000);
           }}

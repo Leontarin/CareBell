@@ -1,18 +1,18 @@
+// frontend/src/features/admin/AddFoodModal.jsx
 import React, { useEffect, useMemo, useState } from "react";
 import { API } from "../../shared/config";
 import { useTranslation } from "react-i18next";
 import { LANG_LABELS } from "../../shared/constants";
 
-const ALLERGEN_KEYS = [
-  { key: "R", icon: "🥩" },
-  { key: "S", icon: "🐷" },
-  { key: "G", icon: "🐔" },
-  { key: "M", icon: "🥛" },
-  { key: "A", icon: "🍷" },
-  { key: "W", icon: "🌾" },
-  { key: "K", icon: "🧄" },
-  { key: "Y", icon: "🌱" },
-];
+import MetaEditorModal from "../../components/MetaEditorModal";
+import DateSelectorModal from "../../components/DateSelectorModal";
+
+import {
+  derivePictogramsFromAllergens,
+  isDiabeticFriendly,
+  formatAdditiveBubble,
+  PICTO_BY_KEY,
+} from "../../../../shared/constants/foodMeta.utils.js";
 
 const SUPPORTED_LANGS = ["en", "de", "fi", "he"];
 const safeLangLabel = (lang, t) =>
@@ -25,13 +25,20 @@ export default function AddFoodModal({ onClose, onAdded }) {
   const [loading, setLoading] = useState(false);
   const [msg, setMsg] = useState(null);
 
+  // NEW MODALS
+  const [metaOpen, setMetaOpen] = useState(false);
+  const [dateOpen, setDateOpen] = useState(false);
+
+  // NEW Fields (replacing old pictograms system)
   const [form, setForm] = useState({
     barcode: "",
-    date: new Date().toISOString().slice(0, 10),
+    dates: [],
+    recurringDays: [],
+    allergens: [],
+    additives: [],
+    pictograms: [],
     diabeticFriendly: false,
-    // pictogram flags
-    R: false, S: false, G: false, M: false, A: false, W: false, K: false, Y: false,
-    // multilingual content
+
     translations: {
       en: { dish: "", description: "", category: "" },
       de: { dish: "", description: "", category: "" },
@@ -40,17 +47,18 @@ export default function AddFoodModal({ onClose, onAdded }) {
     },
   });
 
-  // ────────────────────────────────
-  //  Helpers
-  // ────────────────────────────────
+  // Generate random barcode
   const nextBarcode = () =>
-    String(Math.floor(100000 + Math.random() * 900000)); // 6-digit (ok for small dataset)
+    String(Math.floor(100000 + Math.random() * 900000));
 
   useEffect(() => {
     setForm((f) => ({ ...f, barcode: nextBarcode() }));
   }, []);
 
-  const langData = useMemo(() => form.translations[activeLang], [form.translations, activeLang]);
+  const langData = useMemo(
+    () => form.translations[activeLang],
+    [form.translations, activeLang]
+  );
 
   const setLangField = (lang, field, value) => {
     setForm((f) => ({
@@ -62,9 +70,33 @@ export default function AddFoodModal({ onClose, onAdded }) {
     }));
   };
 
-  // ────────────────────────────────
-  //  Submit
-  // ────────────────────────────────
+  // ───────────────────────────────
+  // Save from MetaEditorModal
+  // ───────────────────────────────
+  const handleSaveMeta = (payload) => {
+    const allergens = payload.allergens || form.allergens;
+    const additives = payload.additives || form.additives;
+    const diabeticFriendly =
+      typeof payload.diabeticFriendly === "boolean"
+        ? payload.diabeticFriendly
+        : isDiabeticFriendly(additives);
+
+    const pictograms = derivePictogramsFromAllergens(allergens);
+
+    setForm((prev) => ({
+      ...prev,
+      allergens,
+      additives,
+      diabeticFriendly,
+      pictograms,
+    }));
+
+    setMetaOpen(false);
+  };
+
+  // ───────────────────────────────
+  // Submit form
+  // ───────────────────────────────
   async function handleSubmit(e) {
     e.preventDefault();
     setLoading(true);
@@ -72,7 +104,7 @@ export default function AddFoodModal({ onClose, onAdded }) {
 
     const en = form.translations.en || {};
     if (!en.dish?.trim() || !en.category?.trim()) {
-      setMsg(t("Admin.Foods.validation.missingEn", "English dish and category are required."));
+      setMsg(t("Admin.Foods.validation.missingEn"));
       setLoading(false);
       return;
     }
@@ -80,20 +112,24 @@ export default function AddFoodModal({ onClose, onAdded }) {
     try {
       const fd = new FormData();
 
-      // Core fields
+      // Required top-level fields
       fd.append("barcode", form.barcode);
-      fd.append("date", form.date);
-      fd.append("diabeticFriendly", String(!!form.diabeticFriendly));
+
+      // NEW fields
+      fd.append("dates", JSON.stringify(form.dates));
+      fd.append("recurringDays", JSON.stringify(form.recurringDays));
+
+      fd.append("allergens", JSON.stringify(form.allergens));
+      fd.append("additives", JSON.stringify(form.additives));
+      fd.append("pictograms", JSON.stringify(form.pictograms));
+      fd.append("diabeticFriendly", JSON.stringify(form.diabeticFriendly));
 
       // English fallback for backend validation
       fd.append("dish", en.dish);
       fd.append("category", en.category);
       fd.append("description", en.description || "");
 
-      // pictograms (booleans)
-      ALLERGEN_KEYS.forEach(({ key }) => fd.append(`contains_${key}`, String(!!form[key])));
-
-      // full multilingual payload
+      // full translations JSON
       fd.append("translations", JSON.stringify(form.translations));
 
       if (file) fd.append("image", file);
@@ -105,9 +141,9 @@ export default function AddFoodModal({ onClose, onAdded }) {
       });
 
       const data = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(data?.message || `HTTP ${res.status}`);
+      if (!res.ok) throw new Error(data.message || `HTTP ${res.status}`);
 
-      setMsg(t("Admin.Foods.added", "✅ Added successfully"));
+      setMsg(t("Admin.Foods.added"));
       onAdded?.(data);
       setTimeout(onClose, 700);
     } catch (err) {
@@ -117,19 +153,20 @@ export default function AddFoodModal({ onClose, onAdded }) {
     }
   }
 
+  // ───────────────────────────────
+  // UI
+  // ───────────────────────────────
   return (
     <div className="fixed inset-0 bg-black/50 flex justify-center items-center z-50">
       <div className="bg-white dark:bg-gray-900 p-6 rounded-lg w-[92%] max-w-2xl shadow-lg text-gray-900 dark:text-gray-100">
         <h2 className="text-2xl font-bold mb-4">
-          {t("Admin.Foods.modalTitle", "Add New Food")}
+          {t("Admin.Foods.modalTitle")}
         </h2>
 
         <form onSubmit={handleSubmit} className="space-y-4">
-          {/* Barcode (readonly) */}
+          {/* BARCODE */}
           <div>
-            <label className="block text-sm mb-1">
-              {t("Admin.Foods.barcode", "Barcode")}
-            </label>
+            <label className="block text-sm mb-1">{t("Admin.Foods.barcode")}</label>
             <div className="flex gap-2">
               <input
                 value={form.barcode}
@@ -141,59 +178,12 @@ export default function AddFoodModal({ onClose, onAdded }) {
                 onClick={() => setForm((f) => ({ ...f, barcode: nextBarcode() }))}
                 className="px-3 py-2 rounded bg-gray-200 dark:bg-gray-700"
               >
-                {t("Admin.Foods.regen", "Regen")}
+                {t("Admin.Foods.regen")}
               </button>
             </div>
           </div>
 
-          {/* Date + Diabetic */}
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label className="block text-sm mb-1">{t("Calendar.date", "Date")}</label>
-              <input
-                type="date"
-                value={form.date}
-                onChange={(e) => setForm({ ...form, date: e.target.value })}
-                className="w-full px-3 py-2 rounded border dark:bg-gray-800"
-              />
-            </div>
-            <label className="flex items-center gap-2 mt-6">
-              <input
-                type="checkbox"
-                checked={form.diabeticFriendly}
-                onChange={(e) => setForm({ ...form, diabeticFriendly: e.target.checked })}
-              />
-              {t("Admin.Foods.diabeticFriendly", "Diabetic Friendly")}
-            </label>
-          </div>
-
-          {/* Pictograms */}
-          <div>
-            <p className="font-semibold mb-2">
-              {t("Meals.LegendHeadings.Pictograms", "Pictograms")}
-            </p>
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-sm">
-              {ALLERGEN_KEYS.map(({ key, icon }) => (
-                <label
-                  key={key}
-                  className="flex items-center gap-2 border border-gray-300 dark:border-gray-700 rounded p-2"
-                >
-                  <input
-                    type="checkbox"
-                    checked={!!form[key]}
-                    onChange={(e) => setForm({ ...form, [key]: e.target.checked })}
-                  />
-                  <span className="text-base">{icon}</span>
-                  <span>
-                    {t(`Meals.Legend.Pictograms.${key}`, key)}
-                    {" (" + key + ")"}
-                  </span>
-                </label>
-              ))}
-            </div>
-          </div>
-
-          {/* Language Tabs */}
+          {/* TRANSLATIONS (UNCHANGED) */}
           <div>
             <div className="flex gap-2 mb-2 flex-wrap">
               {SUPPORTED_LANGS.map((lang) => (
@@ -215,34 +205,36 @@ export default function AddFoodModal({ onClose, onAdded }) {
             <div className="grid grid-cols-1 gap-3">
               <div>
                 <label className="block text-sm mb-1">
-                  {t("Admin.Foods.dish", "Dish Name")}
-                  {activeLang === "en" && <span className="text-red-500"> *</span>}
+                  {t("Admin.Foods.dish")}
+                  {activeLang === "en" && <span className="text-red-500">*</span>}
                 </label>
                 <input
-                  placeholder={t("Admin.Foods.dish", "Dish Name")}
+                  placeholder={t("Admin.Foods.dish")}
                   value={langData?.dish || ""}
                   onChange={(e) => setLangField(activeLang, "dish", e.target.value)}
                   className="w-full px-3 py-2 rounded border dark:bg-gray-800"
                 />
               </div>
+
               <div>
                 <label className="block text-sm mb-1">
-                  {t("Admin.Foods.category", "Category")}
-                  {activeLang === "en" && <span className="text-red-500"> *</span>}
+                  {t("Admin.Foods.category")}
+                  {activeLang === "en" && <span className="text-red-500">*</span>}
                 </label>
                 <input
-                  placeholder={t("Admin.Foods.category", "Category")}
+                  placeholder={t("Admin.Foods.category")}
                   value={langData?.category || ""}
                   onChange={(e) => setLangField(activeLang, "category", e.target.value)}
                   className="w-full px-3 py-2 rounded border dark:bg-gray-800"
                 />
               </div>
+
               <div>
                 <label className="block text-sm mb-1">
-                  {t("Admin.Foods.description", "Description")}
+                  {t("Admin.Foods.description")}
                 </label>
                 <textarea
-                  placeholder={t("Admin.Foods.description", "Description")}
+                  placeholder={t("Admin.Foods.description")}
                   value={langData?.description || ""}
                   onChange={(e) => setLangField(activeLang, "description", e.target.value)}
                   className="w-full px-3 py-2 rounded border dark:bg-gray-800 min-h-[90px]"
@@ -251,10 +243,10 @@ export default function AddFoodModal({ onClose, onAdded }) {
             </div>
           </div>
 
-          {/* Image */}
+          {/* IMAGE */}
           <div>
             <label className="block text-sm mb-1">
-              {t("Meals.FoodInfo", "Food Information")} — {t("Admin.Foods.image", "Image")}
+              {t("Admin.Foods.image")}
             </label>
             <input
               type="file"
@@ -262,6 +254,90 @@ export default function AddFoodModal({ onClose, onAdded }) {
               onChange={(e) => setFile(e.target.files?.[0] || null)}
               className="w-full"
             />
+          </div>
+
+          
+          {/* HEALTH VALUES (MetaEditor) */}
+          <div className="mt-3">
+            <div className="flex justify-between items-center mb-1">
+              <span className="text-sm font-semibold">{t("Admin.Users.health")}</span>
+              <button
+                type="button"
+                onClick={() => setMetaOpen(true)}
+                className="px-3 py-1 text-xs rounded bg-blue-600 text-white"
+              >
+                🧬 {t("Meals.MetaEditor.title")}
+              </button>
+            </div>
+
+            {/* HEALTH SUMMARY */}
+            <div className="flex flex-col gap-1 text-xs">
+              {/* Pictograms */}
+              {form.pictograms.length > 0 && (
+                <div className="flex flex-wrap gap-1">
+                  {form.pictograms.map((key) => {
+                    const p = PICTO_BY_KEY[key];
+                    return (
+                      <div
+                        key={key}
+                        className="w-8 h-8 border rounded flex flex-col items-center justify-center text-xs"
+                        title={t(p.tKey, p.label)}
+                      >
+                        <span>{p.icon}</span>
+                        <span>{p.key}</span>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+
+              {/* Allergens */}
+              {form.allergens.length > 0 && (
+                <div>{form.allergens.join(", ")}</div>
+              )}
+
+              {/* Additives */}
+              {form.additives.length > 0 && (
+                <div className="flex flex-wrap gap-1">
+                  {form.additives.map((n) => (
+                    <span key={n}>{formatAdditiveBubble(n, t)}</span>
+                  ))}
+                </div>
+              )}
+
+              {/* Diabetic Friendly */}
+              <div>
+                {t("Meals.MetaEditor.diabeticFriendly")}:{" "}
+                {form.diabeticFriendly
+                  ? t("Meals.MetaEditor.friendly")
+                  : t("Meals.MetaEditor.notFriendly")}
+              </div>
+            </div>
+          </div>
+
+          {/* DATES */}
+          <div className="mt-3">
+            <div className="flex justify-between items-center">
+              <span className="text-sm font-semibold">{t("Admin.Foods.date")}</span>
+              <button
+                type="button"
+                onClick={() => setDateOpen(true)}
+                className="px-3 py-1 text-xs rounded bg-blue-600 text-white"
+              >
+                🗓 {t("Admin.Foods.editDates")}
+              </button>
+            </div>
+
+            {/* Dates summary */}
+            {form.dates?.length > 0 && (
+              <div className="text-xs mt-1">📅 {form.dates.join(", ")}</div>
+            )}
+            {form.recurringDays?.length > 0 && (
+              <div className="text-xs">🔁 {form.recurringDays.join(", ")}</div>
+            )}
+            {!form.dates.length && !form.recurringDays.length && (
+              <div className="text-xs text-gray-500">{t("Admin.Foods.noDates", "No dates set")}</div>
+            )}
           </div>
 
           {msg && <p className="text-center text-sm">{msg}</p>}
@@ -272,17 +348,45 @@ export default function AddFoodModal({ onClose, onAdded }) {
               onClick={onClose}
               className="px-4 py-2 rounded bg-gray-500 text-white"
             >
-              {t("Calendar.cancel", "Cancel")}
+              {t("Calendar.cancel")}
             </button>
             <button
               type="submit"
               disabled={loading}
-              className="px-4 py-2 rounded bg-blue-600 hover:bg-blue-500 text-white"
+              className="px-4 py-2 rounded bg-blue-600 text-white"
             >
-              {loading ? t("Admin.Users.saving", "Saving…") : t("Calendar.save", "Save")}
+              {loading ? t("Admin.Users.saving") : t("Calendar.save")}
             </button>
           </div>
         </form>
+
+        {/* MODALS */}
+        <MetaEditorModal
+          isOpen={metaOpen}
+          onClose={() => setMetaOpen(false)}
+          onSave={handleSaveMeta}
+          allergens={form.allergens}
+          additives={form.additives}
+          diabeticFriendly={form.diabeticFriendly}
+          showAllergens
+          showAdditives
+          showDiabeticFriendly
+        />
+
+        <DateSelectorModal
+          isOpen={dateOpen}
+          onClose={() => setDateOpen(false)}
+          onSave={({ dates, recurringDays }) => {
+            setForm((prev) => ({
+              ...prev,
+              dates,
+              recurringDays,
+            }));
+            setDateOpen(false);
+          }}
+          initialDates={form.dates}
+          initialRecurring={form.recurringDays}
+        />
       </div>
     </div>
   );
