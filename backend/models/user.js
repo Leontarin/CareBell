@@ -75,8 +75,9 @@ userSchema.pre("save", function (next) {
   }
 
   // Derive pictograms from allergens
-  if (this.isModified("allergens")) {
-    this.pictograms = derivePictogramsFromAllergens(this.allergens || []);
+  if (this.isModified("allergens") || this.isModified("pictograms")) {
+    const auto = derivePictogramsFromAllergens(this.allergens || []);
+    this.pictograms = mergePictograms(auto, this.pictograms || []);
   }
 
   next();

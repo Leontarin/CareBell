@@ -16,6 +16,7 @@ const {
 const {
   derivePictogramsFromAllergens,
   isDiabeticFriendly,
+  mergePictograms,
 } = require("../../../shared/constants/foodMeta.utils.js");
 
 // ──────────────────────────────────────────────────────────────────────────────
@@ -171,7 +172,9 @@ router.put(
     // Derived values
     body.additives = additives;
     body.allergens = allergens;
-    body.pictograms = derivePictogramsFromAllergens(allergens);
+    const auto = derivePictogramsFromAllergens(allergens);
+    const manual = parseArray(body.pictograms);
+    body.pictograms = mergePictograms(auto, manual);
 
     // Diabetic-friendly logic — honor explicit toggle, else derive
     if (body.hasOwnProperty("diabeticFriendly")) {

@@ -7,7 +7,7 @@ import {
   LANG_LABELS,
   AVAILABLE_LANGUAGES,
 } from "../../shared/constants";
-import { PICTO_BY_KEY,derivePictogramsFromAllergens } from "../../../../shared/constants/foodMeta.utils.js";
+import { PICTO_BY_KEY,derivePictogramsFromAllergens,mergePictograms } from "../../../../shared/constants/foodMeta.utils.js";
 import MetaEditorModal from "../../components/MetaEditorModal";
 import NotificationModal from "../../components/NotificationModal";
 import AddUserModal from "./AddUserModal";
@@ -174,24 +174,33 @@ export default function UserManager() {
     }
   };
 
-  // 🧬 Meta modal “Save” now updates local form only
-  const handleSaveMeta = (data) => {
-    // Derive pictograms from updated allergens if empty
-    const derivedPictos =
-      (data.pictograms && data.pictograms.length > 0)
-        ? data.pictograms
-        : derivePictogramsFromAllergens(data.allergens || []);
-  
-    setEditForm((prev) => ({
-      ...prev,
-      allergens: data.allergens || [],
-      pictograms: derivedPictos,
-      Diabetic: data.diabetic ?? prev.Diabetic,
-    }));
-  
-    setMetaOpen(false);
-    setMetaUser(null);
-  };
+ // 🧬 Meta modal “Save” — correctly merges auto + manual pictograms
+const handleSaveMeta = (data) => {
+  setEditForm((prev) => {
+    const next = { ...prev };
+
+    // 1) Update allergens
+    next.allergens = data.allergens || [];
+
+    // 2) Auto pictograms from allergens
+    const auto = derivePictogramsFromAllergens(next.allergens);
+
+    // 3) Manual pictograms (from modal payload)
+    const manual = Array.isArray(data.pictograms) ? data.pictograms : prev.pictograms || [];
+
+    // 4) Merge auto + manual
+    next.pictograms = mergePictograms(auto, manual);
+
+    // 5) Diabetic
+    next.Diabetic = data.diabetic ?? prev.Diabetic;
+
+    return next;
+  });
+
+  setMetaOpen(false);
+  setMetaUser(null);
+};
+
 
   const handleDeleteSelected = async () => setConfirmOpen(true);
 
@@ -558,10 +567,24 @@ export default function UserManager() {
         isOpen={metaOpen}
         onClose={() => setMetaOpen(false)}
         onSave={handleSaveMeta}
+
+        /* incoming values */
         allergens={metaUser?.allergens || []}
         additives={metaUser?.additives || []}
         pictograms={metaUser?.pictograms || []}
         diabetic={metaUser?.Diabetic ?? false}
+
+        /* WHAT WAS MISSING */
+        showAllergens={true}
+        editableAllergens={true}
+
+        showPictograms={true}
+        editablePictograms={true}
+
+        showAdditives={false}     // users don't edit additives
+        editableAdditives={false}
+
+        /* diabetic flag */
         showDiabetic={true}
         editableDiabetic={true}
       />

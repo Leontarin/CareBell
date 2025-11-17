@@ -98,10 +98,9 @@ export default function FoodManager() {
       // unified meta fields
       allergens: Array.isArray(food.allergens) ? [...food.allergens] : [],
       additives,
-      pictograms:
-        Array.isArray(food.pictograms) && food.pictograms.length > 0
-          ? [...food.pictograms]
-          : derivePictogramsFromAllergens(Array.isArray(food.allergens) ? food.allergens : []),
+      pictograms: Array.isArray(food.pictograms)
+      ? [...food.pictograms] // always respect saved pictograms (even empty)
+      : derivePictogramsFromAllergens(Array.isArray(food.allergens) ? food.allergens : []),
 
       diabeticFriendly:
         typeof food.diabeticFriendly === "boolean"
@@ -230,28 +229,48 @@ export default function FoodManager() {
   const handleSaveMeta = (payload) => {
     setEditForm((prev) => {
       const next = { ...prev };
-
+  
+      // 1) Update allergens / additives from payload
       if (payload.allergens) next.allergens = [...payload.allergens];
       if (payload.additives) next.additives = normalizeAdditives(payload.additives);
-
+  
+      // 2) Source arrays
       const allergenSrc = payload.allergens ? payload.allergens : next.allergens || [];
-      next.pictograms = derivePictogramsFromAllergens(allergenSrc);
-
       const addSrc = payload.additives ? normalizeAdditives(payload.additives) : next.additives;
+  
+      // 3) Auto pictograms from allergens
+      const autoFromAllergens = derivePictogramsFromAllergens(allergenSrc);
+  
+      // 4) Manual pictograms = payload pictos minus auto
+      const payloadPictos = Array.isArray(payload.pictograms)
+        ? payload.pictograms
+        : Array.isArray(next.pictograms)
+        ? next.pictograms
+        : [];
+  
+      const manualFromPayload = payloadPictos.filter(
+        (key) => !autoFromAllergens.includes(key)
+      );
+  
+      // 5) Final pictograms = auto + manual (no duplicates)
+      next.pictograms = [...new Set([...autoFromAllergens, ...manualFromPayload])];
+  
+      // 6) Diabetic-friendly logic (unchanged)
       const safeByAdditives = isDiabeticFriendly(addSrc);
-
+  
       const modalToggle =
-        payload.hasOwnProperty("diabeticFriendly")
+        Object.prototype.hasOwnProperty.call(payload, "diabeticFriendly")
           ? !!payload.diabeticFriendly
-          : payload.hasOwnProperty("diabetic")
+          : Object.prototype.hasOwnProperty.call(payload, "diabetic")
           ? !!payload.diabetic
           : next.diabeticFriendly;
-
+  
       next.diabeticFriendly =
         typeof modalToggle === "boolean" ? modalToggle : safeByAdditives;
-
+  
       return next;
     });
+  
     setMetaOpen(false);
   };
 
@@ -669,6 +688,9 @@ export default function FoodManager() {
         editableAllergens
         editableAdditives
         editableDiabeticFriendly
+        pictograms={editForm?.pictograms || []}
+        showPictograms
+        editablePictograms
       />
 
       {/* Date Selector */}

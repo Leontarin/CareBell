@@ -4,7 +4,9 @@ const router = express.Router();
 const User = require("../models/user");
 const { readSession } = require("../lib/session");
 const { safeUserQuery } = require("../lib/utils");
-
+const { derivePictogramsFromAllergens,
+  mergePictograms
+ } = require("../../shared/constants/foodMeta.utils.js");
 const BLOCKED_UPDATE_FIELDS = new Set([
   "passwordHash",
   "googleId",
@@ -124,7 +126,9 @@ router.patch("/:id/health", async (req, res) => {
     const Diabetic = parseBool(req.body.Diabetic);
 
     // ───── Derive pictograms ─────
-    const pictograms = derivePictogramsFromAllergens(allergens);
+    const auto = derivePictogramsFromAllergens(allergens);
+    const manual = parseArray(req.body.pictograms);
+    const pictograms = mergePictograms(auto, manual);
 
     // ───── Save to Mongo ─────
     const updatedUser = await User.findOneAndUpdate(

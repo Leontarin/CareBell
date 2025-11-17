@@ -395,6 +395,7 @@ const fetchHealth = async (payload) => {
                     try {
                       await fetchHealth({
                         allergens: data.allergens,
+                        pictograms: data.pictograms,
                         Diabetic: data.diabetic,
                       });
                       setMetaModalOpen(false);

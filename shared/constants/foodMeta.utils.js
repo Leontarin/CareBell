@@ -81,14 +81,17 @@ export function derivePictogramsFromAllergens(codes = []) {
     // Eggs → poultry
     if (code === "C") pictos.add("G");
 
-    // Soybeans → vegan/soy
-    if (code === "F") pictos.add("Y");
-
     // Celery, mustard, sesame, sulphites, lupin → spice/plant mix
     if (["I", "J", "K", "L", "M"].includes(code)) pictos.add("K");
   }
 
   return [...pictos];
+}
+
+/** Merge auto-derived pictograms with manual pictograms from payload */
+export function mergePictograms(auto = [], manual = []) {
+  const pureManual = manual.filter((k) => !auto.includes(k));
+  return [...new Set([...auto, ...pureManual])];
 }
 
 // ─────────────────────────────
@@ -187,8 +190,10 @@ try {
       isUserAllergic,
       formatAdditiveBubble,
       getAllergenGroup,
+      mergePictograms,         // ← ← ← FIXED! (you were missing this)
       ADDITIVE_SUBSET,
       PICTOGRAM_ORDER,
+      sortAdditives,           // (nice to include for consistency)
     };
   }
 } catch (_) {}

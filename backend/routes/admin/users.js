@@ -5,7 +5,9 @@ const User = require("../../models/user");
 const AdminBackup = require("../../models/adminBackup");
 const isAdmin = require("../../middleware/isAdmin");
 const { safeUserQuery, parseArray } = require("../../lib/utils");
-const { derivePictogramsFromAllergens } = require("../../../shared/constants/foodMeta.utils.js");
+const { derivePictogramsFromAllergens,
+  mergePictograms
+ } = require("../../../shared/constants/foodMeta.utils.js");
 const bcrypt = require("bcrypt");
 const Admin = require("../../models/admin");
 
@@ -74,9 +76,8 @@ router.post("/add", async (req, res) => {
     // Normalize and derive
     const parsedAllergens = parseArray(allergens);
     let parsedPictos = parseArray(pictograms);
-    if ((!parsedPictos || parsedPictos.length === 0) && parsedAllergens.length > 0) {
-      parsedPictos = derivePictogramsFromAllergens(parsedAllergens);
-    }
+    const auto = derivePictogramsFromAllergens(parsedAllergens);
+    parsedPictos = mergePictograms(auto, parsedPictos);
 
     const newUser = new User({
       id: id || crypto.randomUUID(),
