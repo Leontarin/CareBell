@@ -300,6 +300,7 @@ const handleSaveMeta = (data) => {
               <th className="p-2">{t("Admin.Users.country")}</th>
               <th className="p-2">{t("Admin.Users.language")}</th>
               <th className="p-2">{t("Admin.Users.health")}</th>
+              <th className="p-2">{t("Admin.Users.role")}</th>
               <th className="p-2 text-center">{t("Admin.Users.actions")}</th>
             </tr>
           </thead>
@@ -447,6 +448,18 @@ const handleSaveMeta = (data) => {
                           </button>
                         </div>
                       </td>
+                      
+                      {/* Role Edit */}
+                      <td className="p-2">
+                        <select
+                          value={u.roles?.[0] || "user"}
+                          onChange={(e) => handleRoleChange(u, e.target.value)}
+                          className="w-full rounded p-1 border bg-gray-100 dark:bg-gray-900 border-gray-300 dark:border-gray-700 text-gray-900 dark:text-gray-100"
+                        >
+                          <option value="user">{t("Admin.Users.roleUser", "User")}</option>
+                          <option value="superadmin">{t("Admin.Users.roleSuperadmin", "Superadmin")}</option>
+                        </select>
+                      </td>
 
                       <td className="p-2 text-center">
                         <div className="mt-2">
@@ -508,6 +521,12 @@ const handleSaveMeta = (data) => {
                           )}
                         </div>
                       </td>
+
+                      {/* Roles */}
+                      <td className="p-2">
+                        {u.roles?.[0] || "user"}
+                      </td>
+
                       <td className="p-2 text-center">
                         <button
                           onClick={() => startEdit(u)}
