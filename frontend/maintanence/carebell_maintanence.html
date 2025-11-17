@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="en" class="h-full" style="color-scheme: light dark;">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <!-- Tailwind CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+
+  <title>CareBell – Updating</title>
+
+  <style>
+    /* Force dark mode when system prefers it */
+    @media (prefers-color-scheme: dark) {
+      html {
+        color-scheme: dark;
+      }
+    }
+  </style>
+</head>
+
+<body class="h-full flex items-center justify-center bg-gray-100 dark:bg-[#0a172f] text-gray-800 dark:text-gray-200 px-4">
+
+  <div class="bg-white/90 dark:bg-[#10203f]/70 backdrop-blur-md shadow-2xl p-10 rounded-3xl max-w-md w-full text-center border border-gray-200 dark:border-gray-700">
+    
+    <!-- CareBell Logo Style -->
+    <!-- CareBell Logo -->
+    <div class="flex justify-center mb-6">
+      <img src="../src/resources/Logo_Gold_Blau_Rubik.png"
+           alt="CareBell Logo"
+           class="w-80 h-32 object-contain drop-shadow-lg select-none pointer-events-none" />
+    </div>
+
+    <!-- Title -->
+    <h1 class="text-3xl font-bold mb-4 text-[#142850] dark:text-[#e1b859]">
+      CareBells is Updating
+    </h1>
+
+    <!-- Description -->
+    <p class="text-lg leading-relaxed mb-6 text-gray-700 dark:text-gray-300">
+      We’re deploying a new version of the system.<br><br>
+      This usually takes just a few minutes — please check back shortly.
+    </p>
+
+    <!-- Spinner -->
+    <div class="flex justify-center py-4">
+      <svg class="animate-spin h-10 w-10 text-[#e1b859] dark:text-[#e1b859]" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"></path>
+      </svg>
+    </div>
+
+    <!-- Footer -->
+    <p class="text-sm mt-6 text-gray-500 dark:text-gray-400">
+      Thank you for your patience 💙
+    </p>
+
+  </div>
+</body>
+</html>
