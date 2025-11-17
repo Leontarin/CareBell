@@ -4,6 +4,7 @@ import { useTranslation } from "react-i18next";
 import {
   ALLERGENS,
   ADDITIVES,
+  sortAdditives,
 } from "../../../shared/constants/foodMeta.utils.js";
 import { ALLERGEN_GROUPS } from "../../../shared/constants/foodMeta.js";
 
@@ -97,9 +98,16 @@ export default function MetaEditorModal({
 
   const toggleAdditive = (num) => {
     if (!editableAdditives) return;
-    setSelAdditives(prev =>
-      prev.includes(num) ? prev.filter(n => n !== num) : [...prev, num]
-    );
+  
+    setSelAdditives(prev => {
+      let next;
+      if (prev.includes(num)) {
+        next = prev.filter(n => n !== num);
+      } else {
+        next = [...prev, num];
+      }
+      return sortAdditives(next);  // ← enforce sorted order
+    });
   };
 
   // Build payload respecting visibility: if a section is hidden, we DO NOT send it

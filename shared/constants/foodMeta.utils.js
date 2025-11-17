@@ -153,6 +153,12 @@ export function getAllergenGroup(code) {
   return null;
 }
 
+/** Always return additives sorted numerically */
+export function sortAdditives(arr = []) {
+  if (!Array.isArray(arr)) return [];
+  return [...arr].map(v => Number(v)).filter(v => !isNaN(v)).sort((a, b) => a - b);
+}
+
 // ─────────────────────────────
 //  Re-exports (for convenience)
 // ─────────────────────────────

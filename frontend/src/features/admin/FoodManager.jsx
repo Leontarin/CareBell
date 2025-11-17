@@ -15,6 +15,7 @@ import {
   formatAdditiveBubble,
   formatAdditiveTag,
   PICTOGRAM_ORDER,
+  sortAdditives,
 } from "../../../../shared/constants/foodMeta.utils.js";
 
 // Supported UI languages for inline translation editing
@@ -27,9 +28,11 @@ function getLocalized(food, lang) {
 
 // Normalize additives to numbers (schema may contain strings from legacy)
 const normalizeAdditives = (arr) =>
-  (Array.isArray(arr) ? arr : [])
-    .map((v) => (typeof v === "string" ? Number(v) : v))
-    .filter((v) => !Number.isNaN(v));
+  sortAdditives(
+    (Array.isArray(arr) ? arr : [])
+      .map((v) => (typeof v === "string" ? Number(v) : v))
+      .filter((v) => !Number.isNaN(v))
+  );
 
 export default function FoodManager() {
   const { t, i18n } = useTranslation();
