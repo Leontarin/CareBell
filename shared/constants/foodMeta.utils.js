@@ -190,10 +190,10 @@ try {
       isUserAllergic,
       formatAdditiveBubble,
       getAllergenGroup,
-      mergePictograms,         // ← ← ← FIXED! (you were missing this)
+      mergePictograms,         
       ADDITIVE_SUBSET,
       PICTOGRAM_ORDER,
-      sortAdditives,           // (nice to include for consistency)
+      sortAdditives,           
     };
   }
 } catch (_) {}

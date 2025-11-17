@@ -2,7 +2,7 @@
 //  Imports
 // ────────────────────────────────
 const mongoose = require('mongoose');
-const { derivePictogramsFromAllergens } = require("../../shared/constants/foodMeta.utils.js");
+const { derivePictogramsFromAllergens, mergePictograms } = require("../../shared/constants/foodMeta.utils.js");
 const {
   LANGUAGE_CODES,
   DEFAULT_LANGUAGE,
