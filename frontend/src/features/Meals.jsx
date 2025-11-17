@@ -97,50 +97,124 @@ export default function Meals() {
   };
 
   const stopSpeaking = () => {
-    if (audioObj) {
-      audioObj.pause();
-      audioObj.currentTime = 0;
-      setAudioObj(null);
+    try {
+      if (audioObj) {
+        audioObj.pause();
+        audioObj.currentTime = 0;
+      }
+    } catch (e) {
+      // ignore
     }
+    setAudioObj(null);
     setSpeaking(false);
   };
 
   const speakVisible = async (text) => {
     stopSpeaking();
     if (!text) return;
+
     try {
       const lang = i18n.language.split("-")[0];
+
       const audio = await playTts(text, lang);
+
+      if (!audio) return; // Failsafe: if backend gave nothing → do nothing
+
       setAudioObj(audio);
       setSpeaking(true);
+
       audio.onended = () => setSpeaking(false);
+      audio.onerror = () => setSpeaking(false);
     } catch (err) {
-      console.error("TTS error:", err);
+      // Failsafe: do nothing, absolutely silent
+      setSpeaking(false);
     }
   };
 
-  const buildVisibleText = (loc, pictos, allergens, additives, diabeticLabel) => {
-    let text = `${loc.dish}. ${loc.description || ""}. `;
-    if (pictos?.length)
-      text +=
-        t("Meals.LegendHeadings.Pictograms") +
-        ": " +
-        pictos
-          .map((k) => PICTO_BY_KEY[k]?.label || k)
-          .join(", ") +
-        ". ";
-    if (allergens?.length)
-      text +=
-        t("Meals.LegendHeadings.Allergens") + ": " + allergens.join(", ") + ". ";
-    if (additives?.length)
-      text +=
-        t("Meals.LegendHeadings.Additives") +
-        ": " +
-        additives.join(", ") +
-        ". ";
-    text += diabeticLabel ? ` ${diabeticLabel}. ` : "";
-    return text;
+  const buildVisibleText = (
+    loc,
+    pictos,
+    allergens,
+    additives,
+    diabeticFriendly,
+    allergyInfo,
+    userIsDiabetic,
+    t
+  ) => {
+    let text = "";
+
+    // 1) Basic info: Name + description
+    text += `${loc.dish}. `;
+    if (loc.description) text += `${loc.description}. `;
+
+    const matched = allergyInfo?.matched || [];
+    const unmatched = allergens.filter(a => !matched.includes(a));
+
+    const translateAllergen = (code) =>
+      t(`Meals.Meta.Allergens.${code}`, code);
+
+    const translateAdditive = (code) =>
+      t(`Meals.Meta.Additives.${code}`, code);
+
+    // 2) If allergic or diabetic → warnings FIRST
+    const hasAnyWarning = allergyInfo?.any || (userIsDiabetic && diabeticFriendly === false);
+
+    if (hasAnyWarning) {
+
+      // Allergy warning
+      if (allergyInfo?.any && matched.length > 0) {
+        text += `${t("Meals.TTS.warningAllergic")} `;
+        text += matched.map(code => translateAllergen(code)).join(", ") + ". ";
+      }
+
+      // Diabetic warning ONLY if user is diabetic
+      if (userIsDiabetic && diabeticFriendly === false) {
+        text += `${t("Meals.TTS.warningDiabetic")} `;
+      }
+
+      // Other allergens
+      if (unmatched.length > 0) {
+        text += `${t("Meals.TTS.otherAllergens")} `;
+        text += unmatched.map(code => translateAllergen(code)).join(", ") + ". ";
+      }
+
+      // Additives
+      if (additives.length > 0) {
+        text += `${t("Meals.TTS.additivesInMeal")} `;
+        text += additives
+          .map(code => t("Meals.TTS.containsAdditive", { name: translateAdditive(code) }))
+          .join(", ") + ". ";
+      }
+
+      return text.trim();
+    }
+
+    // 3) If NOT allergic and NOT diabetic-warning-case → simple listing
+    if (allergens.length > 0) {
+      text += `${t("Meals.TTS.allergensInMeal")} `;
+      text += allergens.map(code => translateAllergen(code)).join(", ") + ". ";
+    }
+
+    if (additives.length > 0) {
+      text += `${t("Meals.TTS.additivesInMeal")} `;
+      text += additives
+        .map(code => t("Meals.TTS.containsAdditive", { name: translateAdditive(code) }))
+        .join(", ") + ". ";
+    }
+
+    // Diabetic status spoken ONLY if user is diabetic
+    if (userIsDiabetic) {
+      if (diabeticFriendly === true) {
+        text += t("Meals.TTS.diabeticFriendly");
+      } else {
+        text += t("Meals.TTS.notDiabeticFriendly");
+      }
+    }
+
+    return text.trim();
   };
+
+
 
   const imageSrc = (meal) => {
     if (meal?.imageURL) return meal.imageURL;
@@ -172,12 +246,16 @@ export default function Meals() {
         ? "bg-red-300 text-black"
         : "bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100";
 
+    const allergyInfo = isUserAllergic(userAllergens, meal.allergens || []);
     const textToRead = buildVisibleText(
       loc,
       pictos,
       meal.allergens || [],
       additives,
-      diabeticLabel
+      diabeticFriendly,
+      allergyInfo,
+      userIsDiabetic,
+      t
     );
 
     return (
@@ -285,12 +363,16 @@ export default function Meals() {
       ? "✅ Diabetic Friendly"
       : "❌ Not Diabetic Friendly";
 
+    const allergyInfo = isUserAllergic(userAllergens, allergens);
     const textToRead = buildVisibleText(
       loc,
       pictos,
       allergens,
       additives,
-      diabeticLabel
+      diabeticFriendly,
+      allergyInfo,
+      userIsDiabetic,
+      t
     );
 
     return (
@@ -363,9 +445,13 @@ export default function Meals() {
         {/* TTS button */}
         <div className="flex justify-center">
           <button
-            onClick={() =>
-              speaking ? stopSpeaking() : speakVisible(textToRead)
-            }
+            onClick={() => {
+              try {
+                speaking ? stopSpeaking() : speakVisible(textToRead);
+              } catch (e) {
+                // total silent fail-safe
+              }
+            }}
             className={`flex items-center gap-2 px-5 py-2 rounded text-white text-lg ${
               speaking
                 ? "bg-red-600 hover:bg-red-700"

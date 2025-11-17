@@ -230,6 +230,16 @@
         "friendly": "Diabeetikkoystävällinen ✅",
         "notFriendly": "Ei diabeetikkoystävällinen ❌",
         "otherAllergens": "Muut allergeenit"
+      },
+      "TTS": {
+        "warningAllergic": "Varoitus: Olet allerginen seuraaville tämän aterian aineille:",
+        "warningDiabetic": "Varoitus: Tämä ateria ei ole diabeetikkoystävällinen.",
+        "otherAllergens": "Muut allergeenit:",
+        "allergensInMeal": "Aterian allergeenit:",
+        "additivesInMeal": "Lisäaineet aterialla:",
+        "containsAdditive": "Sisältää: {{name}}",
+        "diabeticFriendly": "Tämä ateria sopii diabeetikoille.",
+        "notDiabeticFriendly": "Tämä ateria ei sovi diabeetikoille."
       }
   },
   "Medication": {

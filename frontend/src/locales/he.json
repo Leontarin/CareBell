@@ -244,6 +244,16 @@
         "friendly": "ידידותי לסוכרת ✅",
         "notFriendly": "לא ידידותי לסוכרת ❌",
         "otherAllergens": "אלרגנים נוספים"
+      },
+      "TTS": {
+        "warningAllergic": "אזהרה: אתה אלרגי לדברים הבאים במנה הזו:",
+        "warningDiabetic": "אזהרה: המנה הזו אינה מתאימה לסוכרתיים.",
+        "otherAllergens": "אלרגנים נוספים:",
+        "allergensInMeal": "האלרגנים במנה:",
+        "additivesInMeal": "תוספים במנה:",
+        "containsAdditive": "מכיל {{name}}",
+        "diabeticFriendly": "הארוחה מתאימה לסוכרתיים.",
+        "notDiabeticFriendly": "הארוחה אינה מתאימה לסוכרתיים."
       }
   },
   "Medication": {

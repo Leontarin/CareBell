@@ -244,6 +244,16 @@
       "friendly": "Diabetic-Friendly ✅",
       "notFriendly": "Not Diabetic-Friendly ❌",
       "otherAllergens": "Other Allergens"
+    },
+    "TTS": {
+      "warningAllergic": "Warning: You are allergic to the following in this meal:",
+      "warningDiabetic": "Warning: This meal is not diabetic friendly.",
+      "otherAllergens": "Other allergens:",
+      "allergensInMeal": "Allergens in this meal:",
+      "additivesInMeal": "Additives in this meal:",
+      "containsAdditive": "Contains {{name}}",
+      "diabeticFriendly": "This meal is diabetic friendly.",
+      "notDiabeticFriendly": "This meal is not diabetic friendly."
     }
   },
   "Medication": {

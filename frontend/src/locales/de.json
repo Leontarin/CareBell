@@ -248,6 +248,16 @@
       "friendly": "Diabetikerfreundlich ✅",
       "notFriendly": "Nicht diabetikerfreundlich ❌",
       "otherAllergens": "Weitere Allergene"
+    },
+    "TTS": {
+      "warningAllergic": "Warnung: Du bist allergisch gegen Folgendes in dieser Mahlzeit:",
+      "warningDiabetic": "Warnung: Diese Mahlzeit ist nicht diabetikerfreundlich.",
+      "otherAllergens": "Weitere Allergene:",
+      "allergensInMeal": "Allergene in dieser Mahlzeit:",
+      "additivesInMeal": "Zusatzstoffe in dieser Mahlzeit:",
+      "containsAdditive": "Enthält {{name}}",
+      "diabeticFriendly": "Diese Mahlzeit ist diabetikerfreundlich.",
+      "notDiabeticFriendly": "Diese Mahlzeit ist nicht diabetikerfreundlich."
     }
   },
 
