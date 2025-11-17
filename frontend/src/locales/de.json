@@ -13,18 +13,18 @@
     "exitFullscreen": "Vollbild verlassen",
     "warningMessage": "Gib keine persönlichen Informationen (Passwörter...) ein.",
     "menus": {
-      "kontakte öffnen":           "call-contacts",
-      "kontakt öffnen":            "call-contacts",
-      "freunde öffnen":            "meet-with-friends",
+      "kontakte öffnen": "call-contacts",
+      "kontakt öffnen": "call-contacts",
+      "freunde öffnen": "meet-with-friends",
       "treffen mit freunden öffnen": "meet-with-friends",
-      "medikament öffnen":         "medicine",
-      "medikamente öffnen":        "medicine",
-      "mahlzeiten öffnen":         "meals",
-      "mahlzeit öffnen":           "meals",
-      "essen öffnen":              "meals",
-      "nachrichten öffnen":        "news",
-      "übung öffnen":              "exercise",
-      "workout öffnen":            "exercise"
+      "medikament öffnen": "medicine",
+      "medikamente öffnen": "medicine",
+      "mahlzeiten öffnen": "meals",
+      "mahlzeit öffnen": "meals",
+      "essen öffnen": "meals",
+      "nachrichten öffnen": "news",
+      "übung öffnen": "exercise",
+      "workout öffnen": "exercise"
     }
   },
   "Calendar": {
@@ -165,7 +165,7 @@
       "Allergens": "Allergene",
       "Pictograms": "Piktogramme"
     },
-     "Meta": {
+    "Meta": {
       "Pictograms": {
         "R": "Rindfleisch",
         "S": "Schweinefleisch",
@@ -208,7 +208,11 @@
         "J": "Senf",
         "K": "Sesam",
         "L": "Sulfite",
-        "M": "Lupine"
+        "M": "Lupine",
+        "N1": "Miesmuscheln",
+        "N2": "Austern",
+        "N3": "Tintenfisch",
+        "N4": "Schnecken"
       },
       "Additives": {
         "1": "Farbstoff",
@@ -220,11 +224,34 @@
         "16": "Zucker+Süßstoff"
       },
       "AdditiveBubble": {
-        "1": "①", "3": "③", "5": "⑤", "7": "⑦", "8": "⑧", "9": "⑨", "16": "⑯"
+        "1": "①",
+        "3": "③",
+        "5": "⑤",
+        "7": "⑦",
+        "8": "⑧",
+        "9": "⑨",
+        "16": "⑯"
       }
+    },
+
+    "MetaEditor": {
+      "title": "Gesundheitswerte bearbeiten",
+      "allergens": "Allergene",
+      "additives": "Zusatzstoffe",
+      "pictograms": "Piktogramme",
+      "diabeticFriendly": "Diabetikerfreundlich",
+      "diabetic": "Diabetiker-Status",
+      "cancel": "Abbrechen",
+      "save": "Speichern",
+      "isDiabetic": "Diabetiker",
+      "notDiabetic": "Nicht-Diabetiker",
+      "friendly": "Diabetikerfreundlich ✅",
+      "notFriendly": "Nicht diabetikerfreundlich ❌",
+      "otherAllergens": "Weitere Allergene"
     }
   },
-    "Medication": {
+
+  "Medication": {
     "noMedications": "Keine Medikamente gefunden. Bitte füge ein neues hinzu.",
     "frequencyHours": "Häufigkeit (Stunden)",
     "MedicationName": "Medikamentenname",
@@ -244,6 +271,7 @@
     "addMedication": "Medikament hinzufügen",
     "dosage": "Dosierung"
   },
+
   "MeetWithFriends": {
     "Close": "Schließen",
     "Muted": "🔇 Stumm",
@@ -277,6 +305,7 @@
     "createRoom": "Raum erstellen",
     "Title": "Videoräume"
   },
+
   "News": {
     "latestNews": "Aktuelle Nachrichten",
     "selectRegions": "Regionen auswählen",
@@ -306,6 +335,7 @@
     "schleswigHolstein": "Schleswig-Holstein",
     "thuringia": "Thüringen"
   },
+
   "RightSide": {
     "callContacts": "Kontakte anrufen",
     "meetWithFriends": "Freunde treffen",
@@ -316,6 +346,7 @@
     "back": "Zurück",
     "loadingUser": "Benutzer wird geladen…"
   },
+
   "SettingsModal": {
     "title": "Einstellungen",
     "general": "Allgemein",
@@ -334,8 +365,11 @@
     "close": "Schließen",
     "language": "Sprache",
     "User": "Benutzer wechseln",
-    "loading": "Benutzer werden geladen..."
+    "loading": "Benutzer werden geladen...",
+    "noPictograms": "Keine Piktogramme zugewiesen",
+    "noAllergens": "Keine Allergene ausgewählt"
   },
+
   "Auth": {
     "Login": {
       "welcome": "Willkommen bei CareBells",
@@ -382,9 +416,8 @@
       "failed": "Registrierung fehlgeschlagen",
       "noMatch": "Passwörter stimmen nicht überein.",
       "missing": "Pflichtfelder fehlen:",
-
       "close": "Schließen",
-      "step" : "Schritt",
+      "step": "Schritt",
       "of4": "von 4",
       "Next": "Nächste →",
       "back": "← Zurück",
@@ -395,6 +428,7 @@
       "selectCountry": "Land auswählen"
     }
   },
+
   "Admin": {
     "Panel": {
       "title": "Admin-Bereich",
@@ -473,8 +507,13 @@
         "de": "Deutsch",
         "fi": "Finnisch",
         "he": "Hebräisch"
-      }
+      },
+
+      "datesTitle": "Essensdaten & Wiederholung",
+      "specificDates": "Spezifische Daten",
+      "recurringDays": "Wiederkehrende Tage",
+      "saveDates": "Daten speichern",
+      "editDates": "Daten bearbeiten"
     }
   }
 }
-

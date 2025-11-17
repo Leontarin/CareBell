@@ -197,7 +197,11 @@
         "J": "Sinappi",
         "K": "Seesami",
         "L": "Sulfiitit",
-        "M": "Lupiini"
+        "M": "Lupiini",
+        "N1": "Simpukat",         
+        "N2": "Osterit",         
+        "N3": "Kalmari",          
+        "N4": "Etanat"            
       },
       "Additives": {
         "1": "Väri",
@@ -211,7 +215,22 @@
       "AdditiveBubble": {
         "1": "①", "3": "③", "5": "⑤", "7": "⑦", "8": "⑧", "9": "⑨", "16": "⑯"
       }
-    }
+    },
+    "MetaEditor": {
+        "title": "Muokkaa terveysarvoja",
+        "allergens": "Allergeenit",
+        "additives": "Lisäaineet",
+        "pictograms": "Piktogrammit",
+        "diabeticFriendly": "Diabeetikkoystävällinen",
+        "diabetic": "Käyttäjän diabetes-tila",
+        "cancel": "Peruuta",
+        "save": "Tallenna",
+        "isDiabetic": "Diabeetikko",
+        "notDiabetic": "Ei diabeetikko",
+        "friendly": "Diabeetikkoystävällinen ✅",
+        "notFriendly": "Ei diabeetikkoystävällinen ❌",
+        "otherAllergens": "Muut allergeenit"
+      }
   },
   "Medication": {
     "noMedications": "Lääkkeitä ei löytynyt. Lisää uusi lääke.",
@@ -324,7 +343,9 @@
     "close": "Sulje",
     "language": "kieli",
     "User": "Vaihda käyttäjää",
-    "loading": "Ladataan käyttäjiä..."
+    "loading": "Ladataan käyttäjiä...",
+    "noPictograms": "Ei piktogrammeja määritetty",
+    "noAllergens": "Ei valittuja allergeeneja"
   },
   "Auth": {
     "Login": {
@@ -462,7 +483,21 @@
         "de": "Saksa",
         "fi": "Suomi",
         "he": "Heprea"
-      }
+      },
+      "datesTitle": "Aterian päivämäärät ja toistuvuus",
+      "specificDates": "Tietyt päivämäärät",
+      "recurringDays": "Toistuvat päivät",
+      "saveDates": "Tallenna päivämäärät",
+      "editDates": "Muokkaa päivämääriä"
     }
+  },
+  "Days": {
+    "Sunday": "Sunnuntai",
+    "Monday": "Maanantai",
+    "Tuesday": "Tiistai",
+    "Wednesday": "Keskiviikko",
+    "Thursday": "Torstai",
+    "Friday": "Perjantai",
+    "Saturday": "Lauantai"
   }
 }

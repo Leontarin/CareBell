@@ -211,7 +211,11 @@
         "J": "Mustard",
         "K": "Sesame",
         "L": "Sulphites",
-        "M": "Lupin"
+        "M": "Lupin",
+        "N1": "Mussels",
+        "N2": "Oysters",
+        "N3": "Squid",
+        "N4": "Snails"
       },
       "Additives": {
         "1": "Colorant",
