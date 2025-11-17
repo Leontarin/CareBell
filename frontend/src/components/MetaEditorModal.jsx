@@ -162,7 +162,7 @@ export default function MetaEditorModal({
                             : "bg-gray-100 dark:bg-gray-800 text-gray-800 dark:text-gray-200"
                         }`}
                       >
-                        {labelFor(code)}
+                        ({code}) {labelFor(code)}
                       </button>
                     ))}
                   </div>
@@ -192,7 +192,7 @@ export default function MetaEditorModal({
                             : "bg-gray-100 dark:bg-gray-800 text-gray-800 dark:text-gray-200"
                         }`}
                       >
-                        {labelFor(code)}
+                       ({code}) {labelFor(code)}
                       </button>
                     ))}
                   </div>
@@ -222,7 +222,7 @@ export default function MetaEditorModal({
                             : "bg-gray-100 dark:bg-gray-800 text-gray-800 dark:text-gray-200"
                         }`}
                       >
-                        {labelFor(code)}
+                       ({code}) {labelFor(code)}
                       </button>
                     ))}
                   </div>
@@ -246,7 +246,7 @@ export default function MetaEditorModal({
                           : "bg-gray-100 dark:bg-gray-800 text-gray-800 dark:text-gray-200"
                       }`}
                     >
-                      {labelFor(code)}
+                     ({code}) {labelFor(code)}
                     </button>
                   ))}
                 </div>
