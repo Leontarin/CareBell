@@ -54,7 +54,12 @@ router.post('/', (req, res) => {
   const piper = spawn(PIPER_PATH, [
     '--model', modelPath,
     '--output_file', outFile
-  ]);
+  ], {
+      env: {
+          ...process.env,
+          LD_LIBRARY_PATH: `/app/tts/bin/linux:${process.env.LD_LIBRARY_PATH || ''}`
+      }
+  });
 
   // log stderr in case Piper itself reports missing DLLs or other runtime errors
   piper.stderr.on('data', data => console.error('piper stderr:', data.toString()));
