@@ -98,6 +98,7 @@ services:
       - ./backend:/app
       - /app/node_modules
       - ./shared:/shared:ro
+      - /app/tts/bin/linux
     environment:
       DOCKER_ENV: "true"
       PORT: ${BACKEND_PORT}

@@ -73,7 +73,7 @@ docker image prune -f >nul
 echo.
 echo 🐳 Building and starting CareBell (dev containers)…
 docker compose --profile dev down --remove-orphans
-docker compose --profile dev build
+docker compose --profile dev build --build-arg REBUILD_PIPER=0
 docker compose --profile dev up -d
 
 echo.

@@ -13,7 +13,8 @@ RUN npm install -g nodemon
 # Copy the rest of the backend source
 COPY . .
 
-RUN rm -rf /app/tts/bin/linux && mkdir -p /app/tts/bin/linux
+ARG REBUILD_PIPER=1
+RUN rm -rf /app/tts/bin/linux/* && mkdir -p /app/tts/bin/linux
 RUN cd /app/tts/bin/linux && tar -xzf /app/tts/bin/piper_linux_x86_64.tar.gz --strip-components=1
 
 # Expose backend port
