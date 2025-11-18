@@ -15,12 +15,8 @@ ENV PORT=5174
 
 # Copy tarball from repository
 RUN rm -rf /app/tts/bin/linux && mkdir -p /app/tts/bin/linux
-COPY backend/tts/bin/piper_linux_x86_64.tar.gz /app/tts/bin/linux/
-
-# Extract into the same folder (no nested dirs)
-RUN cd /app/tts/bin/linux \
-    && tar -xzf piper_linux_x86_64.tar.gz --strip-components=2 \
-    && rm piper_linux_x86_64.tar.gz
+# Extract into linux folder
+RUN cd /app/tts/bin/linux && tar -xzf /app/tts/bin/piper_linux_x86_64.tar.gz --strip-components=1
 
 # Install minimal runtime deps for Piper (Debian-based)
 RUN apt-get update && apt-get install -y \

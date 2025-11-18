@@ -14,16 +14,10 @@ RUN npm install -g nodemon
 COPY . .
 
 RUN rm -rf /app/tts/bin/linux && mkdir -p /app/tts/bin/linux
-
-ENV PORT=5174
-
-COPY backend/tts/piper_linux_x86_64.tar.gz /app/tts/bin/
-
-RUN cd /app/tts/bin/linux \
-    && tar -xzf /app/tts/bin/piper_linux_x86_64.tar.gz --strip-components=2 \
-    && rm /app/tts/bin/piper_linux_x86_64.tar.gz
+RUN cd /app/tts/bin/linux && tar -xzf /app/tts/bin/piper_linux_x86_64.tar.gz --strip-components=1
 
 # Expose backend port
+ENV PORT=5174
 EXPOSE 5174
 
 # Use nodemon to watch for file changes
