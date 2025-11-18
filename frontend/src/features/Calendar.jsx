@@ -148,40 +148,49 @@ export default function Calendar({ onClose }) {
   while (grid.length < 42) grid.push(null);
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-30 flex text-black dark:text-white  z-50">
+    <div className="fixed inset-0 bg-black bg-opacity-30 flex items-stretch md:items-center justify-center text-black dark:text-white z-50">
       {/* Calendar panel */}
-      <div className="bg-blue-200 dark:bg-gray-800 rounded-lg shadow-lg m-2 flex flex-col w-full h-screen max-h-screen">
+      <div className="bg-blue-200 dark:bg-gray-800 rounded-none md:rounded-lg shadow-lg m-0 md:m-2 flex flex-col w-full max-w-5xl h-full md:h-[95vh] max-h-screen">
 
         {/* Header */}
-        <div className="flex-none h-16 p-3 bg-blue-200 dark:bg-gray-900 border-b border-blue-900 dark:border-gray-700 flex items-center justify-between">
-          <h2 className="text-2xl font-bold text-blue-800">
+        <div className="flex-none px-3 py-2 md:p-3 bg-blue-200 dark:bg-gray-900 border-b border-blue-900 dark:border-gray-700 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+          <h2 className="text-xl sm:text-2xl md:text-3xl font-bold text-blue-800">
             {currentDate.toLocaleDateString(undefined, { month: "long", year: "numeric" })}
           </h2>
-          <div className="flex space-x-2">
-            <button onClick={prevMonth} className="px-3 py-1 bg-blue-600 text-white rounded">
+          <div className="flex flex-wrap gap-2 justify-end">
+            <button
+              onClick={prevMonth}
+              className="px-3 py-1.5 md:py-1 bg-blue-600 text-white rounded text-base md:text-sm"
+            >
               {t("Calendar.prev")}
             </button>
             <input
               type="month"
               value={`${y}-${String(mo+1).padStart(2,"0")}`}
               onChange={jumpToMonth}
-              className="border px-2 py-1 rounded dark:bg-gray-700 dark:text-white dark:border-gray-500"
+              className="border px-2 py-1 rounded text-base md:text-sm dark:bg-gray-700 dark:text-white dark:border-gray-500"
             />
-            <button onClick={nextMonth} className="px-3 py-1 bg-blue-600 text-white rounded">
+            <button
+              onClick={nextMonth}
+              className="px-3 py-1.5 md:py-1 bg-blue-600 text-white rounded text-base md:text-sm"
+            >
               {t("Calendar.next")}
             </button>
-            <button onClick={onClose} className="px-3 py-1 bg-red-600 text-white rounded">
+            <button
+              onClick={onClose}
+              className="px-3 py-1.5 md:py-1 bg-red-600 text-white rounded text-base md:text-sm"
+            >
               {t("Calendar.close")}
             </button>
           </div>
         </div>
 
         {/* Upcoming events */}
-        <div className="flex-none h-24 p-3 border-b border-blue-300 dark:border-gray-600 bg-blue-50 dark:bg-gray-800">
-          <strong className="text-blue-700">
+        <div className="flex-none px-3 py-3 border-b border-blue-300 dark:border-gray-600 bg-blue-50 dark:bg-gray-800">
+          <strong className="block text-blue-700 text-base md:text-lg">
             {t("Calendar.upcoming")}
           </strong>
-          <div className="mt-2 flex space-x-2 overflow-x-auto">
+          <div className="mt-2 flex gap-2 overflow-x-auto pb-1">
             {upcomingEvents.length > 0 ? upcomingEvents.map(e => {
               const d = e.dateObj;
               const tStr = d.toLocaleTimeString(undefined, { hour:"2-digit", minute:"2-digit" });
@@ -189,13 +198,13 @@ export default function Calendar({ onClose }) {
                 <button
                   key={e._id}
                   onClick={() => openDayView(d)}
-                  className="px-2 py-1 bg-blue-100 border border-blue-400 rounded text-sm hover:bg-blue-200 dark:bg-blue-900 dark:border-blue-600 dark:hover:bg-blue-800"
+                  className="px-3 py-2 bg-blue-100 border border-blue-400 rounded text-sm md:text-xs hover:bg-blue-200 dark:bg-blue-900 dark:border-blue-600 dark:hover:bg-blue-800 whitespace-nowrap"
                 >
                   {d.getDate()}/{d.getMonth()+1} {tStr} — {e.title}
                 </button>
               );
             }) : (
-              <span className="text-blue-500">
+              <span className="text-blue-500 text-base md:text-sm">
                 {t("Calendar.noEvents")}
               </span>
             )}
@@ -203,70 +212,74 @@ export default function Calendar({ onClose }) {
         </div>
 
         {/* Month grid */}
-        <div className="flex-1 overflow-auto grid grid-cols-7 grid-rows-7 divide-y divide-x divide-gray-300">
-          {[t("Calendar.Mon"),t("Calendar.Tue"),t("Calendar.Wed"),t("Calendar.Thu"),t("Calendar.Fri"),t("Calendar.Sat"),t("Calendar.Sun")].map(w => (
-            <div key={w} className="p-2 bg-blue-300 dark:bg-blue-700 text-white font-semibold text-center">{w}</div>
-          ))}
-          {grid.map((day, idx) =>
-            day ? (
+        <div className="flex-1 overflow-auto">
+          <div className="grid grid-cols-7 grid-rows-7 divide-y divide-x divide-gray-300">
+            {[t("Calendar.Mon"),t("Calendar.Tue"),t("Calendar.Wed"),t("Calendar.Thu"),t("Calendar.Fri"),t("Calendar.Sat"),t("Calendar.Sun")].map(w => (
               <div
-                key={idx}
-                onClick={() => openDayView(day)}
-                className={`p-2 relative cursor-pointer ${
-                  day.toDateString() === todayString
-                    ? "bg-blue-400 text-white dark:bg-blue-700"
-                    : day < new Date()
-                      ? "bg-gray-300 text-gray-700 dark:bg-cyan-900 dark:text-gray-300"
-                      : "bg-blue-100 text-blue-900 dark:bg-cyan-700 dark:text-gray-100"
-
-                }`}
+                key={w}
+                className="p-1 sm:p-2 bg-blue-300 dark:bg-blue-700 text-white font-semibold text-center text-[0.7rem] sm:text-sm"
               >
-                <div className="text-xl font-medium">{day.getDate()}</div>
-
-                {/* Weather */}
-                {weather.filter(w => w.day === day.toDateString()).map(w => (
-                  <div key={w.day} className="flex items-center space-x-1 mt-1">
-                    <img
-                      src={`https://openweathermap.org/img/wn/${w.icon}@2x.png`}
-                      alt="weather"
-                      className="w-6 h-6"
-                    />
-                    <span className="text-s">
-                      {w.min}°/{w.max}°
-                    </span>
-                  </div>
-                ))}
-
-                {/* Events */}
-                {events
-                  .filter(e => new Date(e.date).toDateString() === day.toDateString())
-                  .slice(0, 2)
-                  .map(e => (
-                    <div
-                      key={e._id}
-                      onClick={ev => { ev.stopPropagation(); openEdit(e); }}
-                      className="mt-1 px-1 bg-blue-200 text-xs truncate rounded hover:bg-blue-300 cursor-pointer dark:bg-blue-700 dark:hover:bg-blue-800"
-                    >
-                      {new Date(e.date).toLocaleTimeString(undefined, { hour:"2-digit", minute:"2-digit" })} {e.title}
-                    </div>
-                  ))
-                }
-
-                <button
-                  onClick={ev => { ev.stopPropagation(); openNew(day); }}
-                  className="w-8 h-8 absolute bottom-1 right-1 bg-teal-500 hover:bg-teal-600 text-white rounded-full flex items-center justify-center"
-                >
-                  <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M12 5v14M5 12h14" />
-                  </svg>
-                </button>
-
+                {w}
               </div>
-              
-            ) : (
-              <div key={idx} className="bg-blue-100 dark:bg-gray-800" />
-            )
-          )}
+            ))}
+            {grid.map((day, idx) =>
+              day ? (
+                <div
+                  key={idx}
+                  onClick={() => openDayView(day)}
+                  className={`p-1 sm:p-2 relative cursor-pointer min-h-[3.8rem] sm:min-h-[4.5rem] ${
+                    day.toDateString() === todayString
+                      ? "bg-blue-400 text-white dark:bg-blue-700"
+                      : day < new Date()
+                        ? "bg-gray-300 text-gray-700 dark:bg-cyan-900 dark:text-gray-300"
+                        : "bg-blue-100 text-blue-900 dark:bg-cyan-700 dark:text-gray-100"
+                  }`}
+                >
+                  <div className="text-lg sm:text-xl font-medium">{day.getDate()}</div>
+
+                  {/* Weather */}
+                  {weather.filter(w => w.day === day.toDateString()).map(w => (
+                    <div key={w.day} className="flex items-center space-x-1 mt-1">
+                      <img
+                        src={`https://openweathermap.org/img/wn/${w.icon}@2x.png`}
+                        alt="weather"
+                        className="w-5 h-5 sm:w-6 sm:h-6"
+                      />
+                      <span className="text-[0.7rem] sm:text-xs">
+                        {w.min}°/{w.max}°
+                      </span>
+                    </div>
+                  ))}
+
+                  {/* Events */}
+                  {events
+                    .filter(e => new Date(e.date).toDateString() === day.toDateString())
+                    .slice(0, 2)
+                    .map(e => (
+                      <div
+                        key={e._id}
+                        onClick={ev => { ev.stopPropagation(); openEdit(e); }}
+                        className="mt-1 px-1 bg-blue-200 text-[0.7rem] sm:text-xs truncate rounded hover:bg-blue-300 cursor-pointer dark:bg-blue-700 dark:hover:bg-blue-800"
+                      >
+                        {new Date(e.date).toLocaleTimeString(undefined, { hour:"2-digit", minute:"2-digit" })} {e.title}
+                      </div>
+                    ))
+                  }
+
+                  <button
+                    onClick={ev => { ev.stopPropagation(); openNew(day); }}
+                    className="w-8 h-8 absolute bottom-1 right-1 bg-teal-500 hover:bg-teal-600 text-white rounded-full flex items-center justify-center"
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M12 5v14M5 12h14" />
+                    </svg>
+                  </button>
+                </div>
+              ) : (
+                <div key={idx} className="bg-blue-100 dark:bg-gray-800" />
+              )
+            )}
+          </div>
         </div>
       </div>
 
@@ -356,9 +369,9 @@ export default function Calendar({ onClose }) {
       {/* Day-detail View */}
       {dayViewOpen && selectedDay && (
         <div className="fixed inset-0 bg-black bg-opacity-30 flex items-center justify-center z-40">
-          <div className="bg-blue-300 dark:bg-gray-800 rounded-lg p-6 w-full max-w-2xl h-full max-h-screen overflow-auto">
+          <div className="bg-blue-300 dark:bg-gray-800 rounded-lg p-4 sm:p-6 w-full max-w-2xl h-full max-h-screen overflow-auto">
             <div className="flex justify-between items-center mb-4">
-              <h3 className="text-xl font-bold">{selectedDay.toDateString()}</h3>
+              <h3 className="text-lg sm:text-xl font-bold">{selectedDay.toDateString()}</h3>
               <button
                 onClick={closeDayView}
                 className="text-xl font-bold text-red-600 hover:text-red-800"
@@ -367,7 +380,7 @@ export default function Calendar({ onClose }) {
                 ✕
               </button>
             </div>
-            <div className="grid grid-cols-4 grid-rows-6 gap-4 h-full">
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3 sm:gap-4 h-full">
               {[...Array(24).keys()].map(hour => {
                 const evs = events.filter(e => {
                   const d = new Date(e.date);
@@ -377,7 +390,7 @@ export default function Calendar({ onClose }) {
                   <div
                     key={hour}
                     onClick={() => openNewAtHour(hour)}
-                    className="bg-teal-400 hover:bg-teal-500 dark:bg-teal-600 dark:hover:bg-teal-700 border rounded-lg p-2 flex flex-col cursor-pointer"
+                    className="bg-teal-400 hover:bg-teal-500 dark:bg-teal-600 dark:hover:bg-teal-700 border rounded-lg p-2 flex flex-col cursor-pointer text-sm sm:text-base"
                   >
                     <span className="font-semibold">{String(hour).padStart(2,"0")}:00</span>
                     <div className="flex-1 overflow-auto mt-1">
@@ -385,12 +398,12 @@ export default function Calendar({ onClose }) {
                         <div
                           key={e._id}
                           onClick={ev => { ev.stopPropagation(); openEdit(e); }}
-                          className="bg-blue-500 dark:bg-blue-700 p-1 rounded mb-1 text-sm cursor-pointer"
+                          className="bg-blue-500 dark:bg-blue-700 p-1 rounded mb-1 text-xs sm:text-sm cursor-pointer"
                         >
                           <strong>{new Date(e.date).toTimeString().slice(0,5)}</strong> {e.title}
                         </div>
                       )) : (
-                        <div className="text-black text-sm">No events</div>
+                        <div className="text-black text-xs sm:text-sm">No events</div>
                       )}
                     </div>
                   </div>
