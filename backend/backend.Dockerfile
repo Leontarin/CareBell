@@ -14,6 +14,7 @@ COPY shared/ /shared
 ENV PORT=5174
 
 # Copy tarball from repository
+RUN rm -rf /app/tts/bin/linux && mkdir -p /app/tts/bin/linux
 COPY backend/tts/bin/linux/piper_linux_x86_64.tar.gz /app/tts/bin/linux/
 
 # Extract into the same folder (no nested dirs)
