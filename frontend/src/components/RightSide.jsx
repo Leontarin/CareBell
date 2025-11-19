@@ -21,7 +21,7 @@ import { AppContext } from "../shared/AppContext";
 import CallContacts      from "../features/CallContacts";
 import MeetWithFriends   from "../features/MeetWithFriends";
 import Medication        from "../features/Medication";
-import Meals             from "../features/Meals";
+import Meals             from "../features/Meals-Tests";
 import News              from "../features/News";
 import Exercise          from "../features/Exercise";
 
