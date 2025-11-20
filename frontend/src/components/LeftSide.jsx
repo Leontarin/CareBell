@@ -10,7 +10,19 @@ export default function LeftSide() {
   
   const widthClass = bellaFullscreen ? "w-full" : "w-full md:w-2/5";
   return (
-    <div id="leftSide" className={`h-fit ${widthClass} flex flex-col items-center`}>
+    <div
+      id="leftSide"
+      className={`
+        flex flex-col items-center
+        ${widthClass}
+
+        /* PHONE: auto height, proper spacing */
+        h-auto px-2
+
+        /* DESKTOP/TABLET: keep your original behavior */
+        md:h-fit
+      `}
+    >
       <Bella/>
     </div>
   );

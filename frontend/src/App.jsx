@@ -116,7 +116,16 @@ export default function App() {
                   <Header />
                   <div
                     id="mainContent"
-                    className="flex-1 flex flex-col md:flex-row gap-2 md:overflow-hidden overflow-y-auto"
+                    className="flex-1
+                      flex
+                      flex-col md:flex-row
+                      gap-2
+
+                      /* PHONE: enable vertical scroll inside content */
+                      overflow-y-auto
+
+                      /* TABLET+DESKTOP: keep original behavior */
+                      md:overflow-hidden"
                   >
                     <LeftSide />
                     <RightSide />

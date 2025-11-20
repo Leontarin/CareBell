@@ -69,19 +69,44 @@ export default function RightSide() {
   return (
     <div
       id="rightSide"
-      className={`${widthClass} ${heightClass} px-4 md:overflow-hidden overflow-y-auto`}
+      className={`
+        ${widthClass}
+        ${heightClass}
+        px-4
+
+        /* PHONE: allow full scrolling inside RightSide */
+        overflow-y-auto
+
+        /* DESKTOP/TABLET: same behavior as before */
+        md:overflow-hidden
+      `}
+
     >
       <Routes>
         {/* Main menu */}
         <Route
           index
           element={
-            <div className="grid grid-cols-2 gap-6 p-6">
+            <div className="grid grid-cols-2 gap-4 p-4
+              /* PHONE: larger touch area, bigger spacing */
+              max-[768px]:gap-6
+              max-[768px]:p-6">
               {MENU_BUTTONS.map(({ key, icon: Icon, to }) => (
                 <Link
                   key={to}
                   to={to}
-                  className="flex flex-col items-center justify-center border-2 border-blue-900 dark:border-yellow-300 rounded-xl p-6 hover:bg-blue-100 dark:hover:bg-blue-900/30 transition whitespace-nowrap"
+                  className="flex flex-col items-center justify-center
+                    border-2 border-blue-900 dark:border-yellow-300
+                    rounded-xl p-6
+                    hover:bg-blue-100 dark:hover:bg-blue-900/30
+                    transition
+
+                    /* allow text to wrap on phones */
+                    whitespace-normal
+                    text-center
+
+                    /* keep text from being too wide */
+                    max-w-full"
                 >
                   <Icon className="text-4xl mb-2 text-blue-900 dark:text-blue-200" />
                   <span className="text-lg font-semibold text-blue-900 dark:text-blue-200">
@@ -95,9 +120,20 @@ export default function RightSide() {
 
         {/* Sub-pages */}
         <Route element={
-          <div className="flex flex-col h-full min-h-0 bg-slate-400 rounded-md dark:bg-gray-700 p-4">
+          <div
+            className="
+              flex flex-col
+              h-full min-h-0
+              bg-slate-400 dark:bg-gray-700
+              rounded-md
+
+              /* PHONE: comfortable padding */
+              p-3
+              max-[768px]:p-4
+            "
+          >
             {/* Toolbar */}
-            <div className="flex items-center mb-4">
+            <div className="flex items-center mb-3 max-[768px]:mb-4">
               <button
                 onClick={() => {
                   // Reset meet fullscreen when going back
@@ -106,7 +142,19 @@ export default function RightSide() {
                   }
                   navigate(-1);
                 }}
-                className="flex items-center gap-2 px-3 py-2 bg-white dark:bg-gray-800 border-2 border-blue-900 dark:border-yellow-300 rounded-lg text-blue-900 dark:text-blue-200 font-semibold hover:bg-blue-50 dark:hover:bg-blue-900/30 transition"
+                className="flex items-center gap-2
+                  px-4 py-3
+                  bg-white dark:bg-gray-800
+                  border-2 border-blue-900 dark:border-yellow-300
+                  rounded-lg
+                  text-blue-900 dark:text-blue-200
+                  font-semibold
+                  hover:bg-blue-50 dark:hover:bg-blue-900/30
+                  transition
+
+                  /* PHONE: bigger hitbox */
+                  max-[768px]:px-5
+                  max-[768px]:py-4"
               >
                 <FaArrowLeft /> {t("RightSide.back")}
               </button>
@@ -116,7 +164,9 @@ export default function RightSide() {
             </div>
 
             {/* Content */}
-            <div className="flex-1 overflow-y-auto min-w-0">
+            <div className="flex-1 overflow-y-auto min-w-0
+              /* PHONE: safer scrolling */
+              max-[768px]:pr-1">
               <div className="w-full p-2">
                 <Outlet />
               </div>

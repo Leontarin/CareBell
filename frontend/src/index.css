@@ -1,8 +1,16 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+/* Desktop & tablet “no scroll” */
 html, body {
-  overflow: hidden !important;
   height: 100%;
-  touch-action: none; /* stops scroll gestures */
 }
+
+/* Phones (max-width: 768px) can scroll */
+@media (max-width: 768px) {
+  html, body {
+    overflow: auto !important;
+    touch-action: auto !important;
+  }
+}
+
