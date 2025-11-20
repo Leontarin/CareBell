@@ -266,17 +266,30 @@ export default function Meals() {
           setSelectedMeal(meal);
           setView("details");
         }}
-        className={`w-full text-left border border-yellow-500 rounded-xl p-4 shadow-sm hover:shadow-lg transition ${bgClass}`}
+        className={` w-full text-left border border-yellow-500 rounded-xl p-4 shadow-sm hover:shadow-lg transition
+                    ${bgClass}
+
+                    /* PHONE: tighter padding so card isn’t too tall */
+                    max-[768px]:p-3`}
       >
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-4
+            /* PHONE: smaller gaps */
+            max-[768px]:gap-2">
           <img
             src={imageSrc(meal)}
             alt={loc.dish}
-            className="w-24 h-24 object-cover rounded-lg border"
+            className="w-24 h-24 object-cover rounded-lg border
+              /* PHONE: smaller image */
+              max-[768px]:w-20
+              max-[768px]:h-20"
           />
 
           <div className="flex-1 min-w-0">
-            <div className="font-semibold text-xl mb-1 truncate">{loc.dish}</div>
+            <div className="font-semibold text-xl mb-1
+                  truncate
+                  max-[768px]:whitespace-normal
+                  max-[768px]:break-words
+                  max-[768px]:truncate-none">{loc.dish}</div>
 
             {/* Diabetic label */}
             <div
@@ -303,11 +316,26 @@ export default function Meals() {
                   return (
                     <span
                       key={key}
-                      className="inline-flex items-center gap-2 px-2 py-1 border rounded-md bg-gray-50"
+                      className="
+                        inline-flex items-center gap-2 px-2 py-1 border rounded-md bg-gray-50
+
+                        /* PHONE: shrink pictos so card isn’t huge */
+                        max-[768px]:px-1
+                        max-[768px]:py-0.5
+                        max-[768px]:gap-1
+                      "
                       title={t(p?.tKey, p?.label || key)}
                     >
-                      <span className="text-base">{p?.icon || "❔"}</span>
+                      <span
+                        className="
+                          text-base
+                          max-[768px]:text-sm   /* smaller icon on phones */
+                        "
+                      >
+                        {p?.icon || "❔"}
+                      </span>
                     </span>
+
                   );
                 })}
             </div>

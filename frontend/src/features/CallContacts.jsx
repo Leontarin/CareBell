@@ -126,9 +126,28 @@ export default function CallContacts() {
     );
 
   return (
-    <div className="h-full flex flex-col bg-slate-400 dark:bg-gray-700 p-4 overflow-y-auto">
+    <div
+      className="
+        h-full flex flex-col
+        bg-slate-400 dark:bg-gray-700
+
+        p-4
+        overflow-y-auto
+
+        /* PHONE: slightly smaller padding, better spacing */
+        max-[768px]:p-3
+      "
+    >
       {/* Header: Search, Add, and Bulk Menu */}
-      <div className="flex items-center mb-6 max-w-md mx-auto">
+      <div
+        className="
+          flex items-center mb-6 max-w-md mx-auto
+
+          /* PHONE: only Add button moves, delete stays beside search */
+          max-[768px]:flex-wrap
+          max-[768px]:gap-2
+        "
+      >
         <input
           type="text"
           value={query}
@@ -139,20 +158,40 @@ export default function CallContacts() {
         {!isAdding && (
           <button
             onClick={() => setIsAdding(true)}
-            className="ml-3 bg-blue-900 hover:bg-blue-700 text-white font-semibold text-sm rounded-lg px-4 py-2 transition"
+            className="ml-3 bg-blue-900 hover:bg-blue-700
+              text-white font-semibold text-sm rounded-lg
+              px-4 py-2 transition
+
+              /* PHONE: full width + placed on 2nd row */
+              max-[768px]:w-full
+              max-[768px]:ml-0
+              max-[768px]:order-2"
           >
             {t("CallContacts.addContact")}
           </button>
         )}
         <button
           onClick={() => setMenuOpen((o) => !o)}
-          className="ml-auto ml-4 text-blue-900 dark:text-blue-200 p-5 font-semibold focus:outline-none"
+          className="ml-4 text-blue-900 dark:text-blue-200 p-5 font-semibold focus:outline-none
+            /* PHONE: align with search bar on the same row */
+            max-[768px]:p-3
+            max-[768px]:ml-0
+            max-[768px]:self-center"
           title={t("CallContacts.deleteSelected")}
         >
           <span className="text-xl">🗑️</span>
         </button>
         {menuOpen && (
-          <div className="absolute mt-20 right-96 transform translate-x-4/5 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-md shadow-lg z-10">
+          <div className="absolute mt-20
+              right-96 transform translate-x-4/5
+              bg-white dark:bg-gray-800
+              border border-gray-200 dark:border-gray-600
+              rounded-md shadow-lg z-10
+
+              /* PHONE: anchor below the button */
+              max-[768px]:right-4
+              max-[768px]:translate-x-0
+              max-[768px]:mt-2">
             <ul className="py-1">
               <li>
                 <button
@@ -170,7 +209,18 @@ export default function CallContacts() {
 
       {/* Add form */}
       {isAdding && (
-        <div className="mb-6 max-w-md mx-auto bg-white dark:bg-gray-800 rounded-2xl shadow-md p-3 space-y-1">
+        <div
+          className="
+            mb-6 max-w-md mx-auto
+            bg-white dark:bg-gray-800
+            rounded-2xl shadow-md
+            p-3 space-y-1
+
+            /* PHONE: full width */
+            max-[768px]:w-full
+            max-[768px]:p-4 
+          "
+        >
           {[
             {
               lbl: t("CallContacts.fullNameLabel"),
@@ -223,11 +273,27 @@ export default function CallContacts() {
       )}
 
       {/* Contacts list with selection */}
-      <div className="grid gap-6 max-w-md mx-auto">
+      <div
+        className="
+           grid gap-6 mx-auto
+
+          /* DESKTOP/TABLET: wider cards */
+          md:max-w-2xl
+
+          /* PHONE */
+          max-[768px]:w-full
+          max-[768px]:gap-4
+        "
+      >
         {visibleContacts.map((c) => (
           <label
             key={c._id}
-            className="relative bg-white dark:bg-gray-800 rounded-3xl shadow-md p-6 flex items-center gap-3"
+            className="relative bg-white dark:bg-gray-800
+              rounded-3xl shadow-md
+              p-6 flex items-center gap-3
+
+              /* PHONE: smaller padding ONLY on phones */
+              max-[768px]:p-4"
           >
             {menuOpen && (
               <input
