@@ -5,13 +5,11 @@ import { io } from "socket.io-client";
 import { API } from "../shared/config";
 import { AppContext } from "../shared/AppContext";
 import { useTranslation } from "react-i18next";
-import { FaExpand, FaCompress } from "react-icons/fa";
-import { FaTimes } from "react-icons/fa";
+import { FaExpand, FaCompress, FaTimes } from "react-icons/fa";
 import { Room as LiveKitRoom, RoomEvent, Track } from "livekit-client";
 
 // ─────────────────────────────────────────────
 //  Helper: Request LiveKit token from backend
-//  (matches backend/routes/rtc.js)
 // ─────────────────────────────────────────────
 async function fetchLiveKitToken(roomName) {
   const res = await axios.post(
@@ -77,7 +75,6 @@ const ParticipantsModal = ({ isOpen, onClose, participants, roomName }) => {
   );
 };
 
-// Recommended participant cap for UX
 const MAX_ROOM_PARTICIPANTS = 10;
 
 // ─────────────────────────────────────────────
@@ -101,6 +98,12 @@ export default function MeetWithFriends() {
   const [isAudioMuted, setIsAudioMuted] = useState(false);
   const [isVideoOff, setIsVideoOff] = useState(false);
 
+  // Devices
+  const [cameras, setCameras] = useState([]);
+  const [mics, setMics] = useState([]);
+  const [selectedCameraId, setSelectedCameraId] = useState("");
+  const [selectedMicId, setSelectedMicId] = useState("");
+
   // Participants modal
   const [showParticipantsModal, setShowParticipantsModal] = useState(false);
   const [selectedRoomParticipants, setSelectedRoomParticipants] = useState([]);
@@ -109,6 +112,55 @@ export default function MeetWithFriends() {
   // Video refs
   const localVideoRef = useRef(null);
   const remoteVideoRefs = useRef(new Map()); // participantSid -> React ref
+
+  // ─────────────────────────────────────────────
+  //  Enumerate devices (camera + mic)
+  // ─────────────────────────────────────────────
+  useEffect(() => {
+    if (!navigator.mediaDevices?.enumerateDevices) return;
+
+    async function loadDevices() {
+      try {
+        const devices = await navigator.mediaDevices.enumerateDevices();
+        const videoInputs = devices.filter((d) => d.kind === "videoinput");
+        const audioInputs = devices.filter((d) => d.kind === "audioinput");
+
+        setCameras(videoInputs);
+        setMics(audioInputs);
+
+        if (!selectedCameraId && videoInputs[0]) {
+          setSelectedCameraId(videoInputs[0].deviceId);
+        }
+        if (!selectedMicId && audioInputs[0]) {
+          setSelectedMicId(audioInputs[0].deviceId);
+        }
+      } catch (err) {
+        console.error("Error enumerating media devices:", err);
+      }
+    }
+
+    loadDevices();
+  }, [selectedCameraId, selectedMicId]);
+
+  // Switch camera device when selection changes
+  useEffect(() => {
+    if (!livekitRoom || !selectedCameraId) return;
+    livekitRoom
+      .switchActiveDevice("videoinput", selectedCameraId)
+      .catch((err) =>
+        console.warn("Failed to switch camera device:", err)
+      );
+  }, [livekitRoom, selectedCameraId]);
+
+  // Switch microphone device when selection changes
+  useEffect(() => {
+    if (!livekitRoom || !selectedMicId) return;
+    livekitRoom
+      .switchActiveDevice("audioinput", selectedMicId)
+      .catch((err) =>
+        console.warn("Failed to switch microphone device:", err)
+      );
+  }, [livekitRoom, selectedMicId]);
 
   // ─────────────────────────────────────────────
   //  Cleanup on browser/tab close (sendBeacon)
@@ -125,7 +177,6 @@ export default function MeetWithFriends() {
 
     const handleVisibilityChange = () => {
       if (document.hidden && livekitRoom) {
-        // Optional: turn off camera when tab is hidden
         livekitRoom.localParticipant
           .setCameraEnabled(false)
           .catch(() => {});
@@ -185,7 +236,7 @@ export default function MeetWithFriends() {
       newSocket.disconnect();
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [user?.id, joinedRoom]); // joinedRoom only so leaveRoom is in scope
+  }, [user?.id, joinedRoom]);
 
   // ─────────────────────────────────────────────
   //  Fetch existing rooms once on mount
@@ -212,7 +263,7 @@ export default function MeetWithFriends() {
   };
 
   // ─────────────────────────────────────────────
-  //  Media control buttons
+  //  Media control buttons (mute/camera)
   // ─────────────────────────────────────────────
   const toggleAudio = async () => {
     if (!livekitRoom) return;
@@ -242,7 +293,7 @@ export default function MeetWithFriends() {
   //  Wire LiveKit events
   // ─────────────────────────────────────────────
   function wireLiveKitEvents(room) {
-    // Existing remote participants when you join
+    // Existing remote participants
     room.participants.forEach((p) => {
       if (!p.isLocal) {
         setRemoteParticipants((prev) => {
@@ -366,12 +417,12 @@ export default function MeetWithFriends() {
       wireLiveKitEvents(room);
 
       // Connect to LiveKit
-      await room.connect(livekitUrl, token);
+      await room.connect(livekitUrl, token, { autoSubscribe: true });
 
-      // Create local tracks (audio + video)
+      // Create local tracks (audio + video) using selected devices if available
       const localTracks = await room.localParticipant.createTracks({
-        video: true,
-        audio: true,
+        video: selectedCameraId ? { deviceId: selectedCameraId } : true,
+        audio: selectedMicId ? { deviceId: selectedMicId } : true,
       });
 
       // Attach local video
@@ -463,7 +514,8 @@ export default function MeetWithFriends() {
   // Compute current room participant count from backend rooms list
   const currentRoom = rooms.find((r) => r.name === joinedRoom);
   const currentParticipantCount =
-    currentRoom?.participants?.length || (remoteParticipants.length + (joinedRoom ? 1 : 0));
+    currentRoom?.participants?.length ||
+    (remoteParticipants.length + (joinedRoom ? 1 : 0));
 
   // ─────────────────────────────────────────────
   //  Render
@@ -600,7 +652,7 @@ export default function MeetWithFriends() {
         // ─────────────────────────────
         <div className="w-full h-full flex flex-col bg-gray-900">
           {/* Room Header */}
-          <div className="flex justify-between items-center w-full p-6 bg-gray-800 border-b border-gray-700">
+          <div className="flex flex-wrap justify-between items-center w-full gap-4 p-6 bg-gray-800 border-b border-gray-700">
             <div>
               <h2 className="text-white text-2xl font-bold">
                 {joinedRoom} Room
@@ -624,6 +676,43 @@ export default function MeetWithFriends() {
                   </span>
                 )}
               </p>
+            </div>
+
+            {/* Device selectors */}
+            <div className="flex flex-col md:flex-row gap-2 md:items-center text-xs md:text-sm">
+              <div className="flex flex-col">
+                <span className="text-gray-300 mb-1">Camera</span>
+                <select
+                  className="bg-gray-700 text-white rounded px-2 py-1 text-xs md:text-sm"
+                  value={selectedCameraId}
+                  onChange={(e) => setSelectedCameraId(e.target.value)}
+                  disabled={!cameras.length}
+                >
+                  {!cameras.length && <option value="">No cameras</option>}
+                  {cameras.map((dev, idx) => (
+                    <option key={dev.deviceId || idx} value={dev.deviceId}>
+                      {dev.label || `Camera ${idx + 1}`}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="flex flex-col">
+                <span className="text-gray-300 mb-1">Microphone</span>
+                <select
+                  className="bg-gray-700 text-white rounded px-2 py-1 text-xs md:text-sm"
+                  value={selectedMicId}
+                  onChange={(e) => setSelectedMicId(e.target.value)}
+                  disabled={!mics.length}
+                >
+                  {!mics.length && <option value="">No microphones</option>}
+                  {mics.map((dev, idx) => (
+                    <option key={dev.deviceId || idx} value={dev.deviceId}>
+                      {dev.label || `Mic ${idx + 1}`}
+                    </option>
+                  ))}
+                </select>
+              </div>
             </div>
 
             <div className="flex gap-3">
@@ -692,14 +781,14 @@ export default function MeetWithFriends() {
           {/* Video Grid */}
           <div className="flex-1 bg-black p-6 overflow-hidden">
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 h-full min-h-0">
-              {/* Local Video */}
+              {/* Local Video (mirrored) */}
               <div className="relative bg-gray-800 rounded-xl overflow-hidden shadow-2xl border-2 border-green-500">
                 <video
                   ref={localVideoRef}
                   autoPlay
                   muted
                   playsInline
-                  className="w-full h-full object-cover"
+                  className="w-full h-full object-cover transform -scale-x-100"
                 />
                 <div className="absolute top-2 left-2 flex gap-1">
                   {isAudioMuted && (

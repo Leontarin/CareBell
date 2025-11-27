@@ -28,7 +28,12 @@ router.post("/token", requireUser, async (req, res) => {
     // Load LiveKit config
     const apiKey = process.env.LIVEKIT_API_KEY;
     const apiSecret = process.env.LIVEKIT_API_SECRET;
-    const livekitUrl = process.env.LIVEKIT_PUBLIC_URL;
+        // Force WS for dev
+    let livekitUrl = process.env.LIVEKIT_PUBLIC_URL;
+    // Validate format
+    if (!/^wss?:\/\//.test(livekitUrl)) {
+      return res.status(500).json({ error: "LIVEKIT_PUBLIC_URL must begin with ws:// or wss://" });
+    }
 
     if (!apiKey || !apiSecret || !livekitUrl) {
       return res.status(500).json({ error: "LiveKit config missing" });

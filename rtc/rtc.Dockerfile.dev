@@ -1,14 +1,14 @@
+#/rtc/rtc.Dockerfile.dev
 # ─────────────────────────────────────────────
 # LiveKit Server - Development Dockerfile
 # Hot reload enabled using --watch
 # ─────────────────────────────────────────────
-FROM livekit/livekit-server:latest
+FROM livekit/livekit-server:v1.9.1
 
 WORKDIR /app
 COPY . .
 
-# Expose internal LiveKit port
 EXPOSE 7880
 
-# Enable file watching for live reload (for config edits)
-CMD ["--bind", "0.0.0.0:7880", "--dev", "--config", "/app/livekit.yaml"]
+# Correct dev run command
+CMD ["--dev", "--config", "/app/livekit.yaml"]

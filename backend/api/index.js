@@ -1,3 +1,4 @@
+//backend/api/index.js
 const path = require('path');
 const fs = require('fs');
 const dotenv = require('dotenv');
@@ -152,7 +153,7 @@ app.use('/rooms',         roomsRoute);
 app.use('/tts',           ttsRoute);
 app.use("/admin/users", adminUsersRoute);
 app.use("/admin/foods", adminFoodsRoute);
-app.use("/api/rtc", rtcRoutes);
+app.use("/rtc", rtcRoutes);
 
 app.get('/', (_req, res) => {
   res.send('API is live! 🚀');
