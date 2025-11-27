@@ -1,5 +1,12 @@
 // src/features/MeetWithFriends.jsx
-import React, { useState, useEffect, useContext, useRef } from "react";
+import React, {
+  useState,
+  useEffect,
+  useContext,
+  useRef,
+  useMemo,
+  useCallback,
+} from "react";
 import axios from "axios";
 import { io } from "socket.io-client";
 import { API } from "../shared/config";
@@ -77,6 +84,13 @@ const ParticipantsModal = ({ isOpen, onClose, participants, roomName }) => {
 
 const MAX_ROOM_PARTICIPANTS = 10;
 
+const VIDEO_PRESETS = {
+  "360p": { resolution: { width: 640, height: 360 }, fps: 30, maxBitrate: 500_000 },
+  "480p": { resolution: { width: 854, height: 480 }, fps: 30, maxBitrate: 900_000 },
+  "720p": { resolution: { width: 1280, height: 720 }, fps: 30, maxBitrate: 1_500_000 },
+  "1080p": { resolution: { width: 1920, height: 1080 }, fps: 30, maxBitrate: 2_500_000 },
+};
+
 // ─────────────────────────────────────────────
 //  Main Component
 // ─────────────────────────────────────────────
@@ -87,16 +101,16 @@ export default function MeetWithFriends() {
   const [rooms, setRooms] = useState([]);
   const [joinedRoom, setJoinedRoom] = useState(null);
   const [newRoomName, setNewRoomName] = useState("");
-  const [socket, setSocket] = useState(null);
 
   // LiveKit state
   const [livekitRoom, setLivekitRoom] = useState(null);
   const [remoteParticipants, setRemoteParticipants] = useState([]);
-  const [connectionStatus, setConnectionStatus] = useState("disconnected"); // "connecting" | "connected" | "disconnected"
+  const [connectionStatus, setConnectionStatus] = useState("disconnected"); // "connecting" | "connected" | "disconnected" | "reconnecting"
 
   // Media control states
   const [isAudioMuted, setIsAudioMuted] = useState(false);
   const [isVideoOff, setIsVideoOff] = useState(false);
+  const [videoQuality, setVideoQuality] = useState("720p");
 
   // Devices
   const [cameras, setCameras] = useState([]);
@@ -112,6 +126,12 @@ export default function MeetWithFriends() {
   // Video refs
   const localVideoRef = useRef(null);
   const remoteVideoRefs = useRef(new Map()); // participantSid -> React ref
+  const remoteAudioEls = useRef(new Map());
+
+  const selectedVideoProfile = useMemo(
+    () => VIDEO_PRESETS[videoQuality] || VIDEO_PRESETS["720p"],
+    [videoQuality]
+  );
 
   // ─────────────────────────────────────────────
   //  Enumerate devices (camera + mic)
@@ -230,8 +250,6 @@ export default function MeetWithFriends() {
       }
     });
 
-    setSocket(newSocket);
-
     return () => {
       newSocket.disconnect();
     };
@@ -276,7 +294,11 @@ export default function MeetWithFriends() {
     if (!livekitRoom) return;
     const newState = !isVideoOff;
     setIsVideoOff(newState);
-    await livekitRoom.localParticipant.setCameraEnabled(!newState);
+    await livekitRoom.localParticipant.setCameraEnabled(!newState, {
+      deviceId: selectedCameraId || undefined,
+      resolution: selectedVideoProfile.resolution,
+      frameRate: selectedVideoProfile.fps,
+    });
   };
 
   // ─────────────────────────────────────────────
@@ -319,30 +341,72 @@ export default function MeetWithFriends() {
         ref.current.srcObject = null;
       }
       remoteVideoRefs.current.delete(participant.sid);
+
+      const audioEl = remoteAudioEls.current.get(participant.sid);
+      if (audioEl) {
+        audioEl.srcObject = null;
+        audioEl.remove();
+        remoteAudioEls.current.delete(participant.sid);
+      }
     });
 
     // 🔹 Track subscribed (remote track available)
     room.on(RoomEvent.TrackSubscribed, (track, publication, participant) => {
       if (participant.isLocal) return;
-      if (track.kind !== "video") return;
+      if (track.kind === "video") {
+        if (!remoteVideoRefs.current.has(participant.sid)) {
+          remoteVideoRefs.current.set(participant.sid, React.createRef());
+        }
+        const ref = remoteVideoRefs.current.get(participant.sid);
 
-      if (!remoteVideoRefs.current.has(participant.sid)) {
-        remoteVideoRefs.current.set(participant.sid, React.createRef());
+        if (ref?.current) {
+          track.attach(ref.current);
+        }
       }
-      const ref = remoteVideoRefs.current.get(participant.sid);
 
-      if (ref?.current) {
-        track.attach(ref.current);
+      if (track.kind === "audio") {
+        const audioEl = track.attach();
+        audioEl.autoplay = true;
+        audioEl.playsInline = true;
+        audioEl.hidden = true;
+        remoteAudioEls.current.set(participant.sid, audioEl);
       }
     });
 
     // 🔹 Track unsubscribed (remote camera disabled)
     room.on(RoomEvent.TrackUnsubscribed, (track, publication, participant) => {
-      const ref = remoteVideoRefs.current.get(participant.sid);
-      if (ref?.current) {
-        track.detach(ref.current);
-        ref.current.srcObject = null;
+      if (track.kind === "video") {
+        const ref = remoteVideoRefs.current.get(participant.sid);
+        if (ref?.current) {
+          track.detach(ref.current);
+          ref.current.srcObject = null;
+        }
       }
+
+      if (track.kind === "audio") {
+        const audioEl = remoteAudioEls.current.get(participant.sid);
+        if (audioEl) {
+          track.detach(audioEl);
+          audioEl.srcObject = null;
+          audioEl.remove();
+        }
+        remoteAudioEls.current.delete(participant.sid);
+      }
+    });
+
+    room.on(RoomEvent.TrackMuted, () => {
+      setRemoteParticipants((prev) => [...prev]);
+    });
+
+    room.on(RoomEvent.TrackUnmuted, () => {
+      setRemoteParticipants((prev) => [...prev]);
+    });
+
+    room.on(RoomEvent.ConnectionStateChanged, (state) => {
+      if (state === "connected") setConnectionStatus("connected");
+      else if (state === "reconnecting") setConnectionStatus("reconnecting");
+      else if (state === "connecting") setConnectionStatus("connecting");
+      else setConnectionStatus("disconnected");
     });
   }
 
@@ -410,7 +474,15 @@ export default function MeetWithFriends() {
         adaptiveStream: true,
         dynacast: true,
         videoCaptureDefaults: {
-          resolution: { width: 1280, height: 720 },
+          resolution: selectedVideoProfile.resolution,
+          frameRate: selectedVideoProfile.fps,
+        },
+        publishDefaults: {
+          simulcast: true,
+          videoEncoding: {
+            maxBitrate: selectedVideoProfile.maxBitrate,
+            maxFramerate: selectedVideoProfile.fps,
+          },
         },
       });
 
@@ -425,7 +497,16 @@ export default function MeetWithFriends() {
 
       // Create local tracks (audio + video) using selected devices if available
       const localTracks = await room.localParticipant.createTracks({
-        video: selectedCameraId ? { deviceId: selectedCameraId } : true,
+        video: selectedCameraId
+          ? {
+              deviceId: selectedCameraId,
+              resolution: selectedVideoProfile.resolution,
+              frameRate: selectedVideoProfile.fps,
+            }
+          : {
+              resolution: selectedVideoProfile.resolution,
+              frameRate: selectedVideoProfile.fps,
+            },
         audio: selectedMicId ? { deviceId: selectedMicId } : true,
       });
 
@@ -440,8 +521,14 @@ export default function MeetWithFriends() {
       setConnectionStatus("connected");
 
       // Ensure mic + camera are enabled after join
-      await room.localParticipant.setMicrophoneEnabled(true);
-      await room.localParticipant.setCameraEnabled(true);
+      await room.localParticipant.setMicrophoneEnabled(true, {
+        deviceId: selectedMicId || undefined,
+      });
+      await room.localParticipant.setCameraEnabled(true, {
+        deviceId: selectedCameraId || undefined,
+        resolution: selectedVideoProfile.resolution,
+        frameRate: selectedVideoProfile.fps,
+      });
     } catch (err) {
       console.error("LiveKit join error:", err);
       alert("Unable to join room.");
@@ -453,7 +540,7 @@ export default function MeetWithFriends() {
   // ─────────────────────────────────────────────
   //  Leave room (backend + LiveKit + cleanup)
   // ─────────────────────────────────────────────
-  async function leaveRoom() {
+  const leaveRoom = useCallback(async () => {
     console.log("Leaving LiveKit room:", joinedRoom);
 
     setMeetFullscreen(false);
@@ -487,6 +574,11 @@ export default function MeetWithFriends() {
     });
     remoteVideoRefs.current.clear();
 
+    remoteAudioEls.current.forEach((audioEl) => {
+      audioEl?.remove();
+    });
+    remoteAudioEls.current.clear();
+
     // Reset state
     setLivekitRoom(null);
     setRemoteParticipants([]);
@@ -494,7 +586,31 @@ export default function MeetWithFriends() {
     setConnectionStatus("disconnected");
     setIsAudioMuted(false);
     setIsVideoOff(false);
-  }
+  }, [joinedRoom, livekitRoom, setMeetFullscreen, user?.id]);
+
+  useEffect(() => {
+    if (!livekitRoom) return undefined;
+
+    return () => {
+      livekitRoom.disconnect().catch(() => {});
+    };
+  }, [livekitRoom]);
+
+  useEffect(() => {
+    if (!livekitRoom || isVideoOff) return;
+
+    livekitRoom.localParticipant
+      .setCameraEnabled(true, {
+        deviceId: selectedCameraId || undefined,
+        resolution: selectedVideoProfile.resolution,
+        frameRate: selectedVideoProfile.fps,
+      })
+      .catch((err) => console.warn("Failed to update video quality:", err));
+  }, [livekitRoom, selectedVideoProfile, selectedCameraId, isVideoOff]);
+
+  useEffect(() => () => {
+    leaveRoom();
+  }, [leaveRoom]);
 
   // ─────────────────────────────────────────────
   //  Early return if not logged in
@@ -674,9 +790,14 @@ export default function MeetWithFriends() {
                     🟡 {t("MeetWithFriends.Connecting")}
                   </span>
                 )}
+                {connectionStatus === "reconnecting" && (
+                  <span className="text-orange-300 ml-2">
+                    🟠 {t("MeetWithFriends.Reconnecting", "Reconnecting")}
+                  </span>
+                )}
                 {connectionStatus === "disconnected" && (
                   <span className="text-red-400 ml-2">
-                    🔴 {t("MeetWithFriends.Connecting")}
+                    🔴 {t("MeetWithFriends.Disconnected", "Disconnected")}
                   </span>
                 )}
               </p>
@@ -714,6 +835,19 @@ export default function MeetWithFriends() {
                     <option key={dev.deviceId || idx} value={dev.deviceId}>
                       {dev.label || `Mic ${idx + 1}`}
                     </option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="flex flex-col">
+                <span className="text-gray-300 mb-1">Quality</span>
+                <select
+                  className="bg-gray-700 text-white rounded px-2 py-1 text-xs md:text-sm"
+                  value={videoQuality}
+                  onChange={(e) => setVideoQuality(e.target.value)}
+                >
+                  {Object.keys(VIDEO_PRESETS).map((key) => (
+                    <option key={key} value={key}>{`${key} (${VIDEO_PRESETS[key].fps}fps)`}</option>
                   ))}
                 </select>
               </div>
