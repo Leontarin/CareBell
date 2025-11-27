@@ -293,47 +293,50 @@ export default function MeetWithFriends() {
   //  Wire LiveKit events
   // ─────────────────────────────────────────────
   function wireLiveKitEvents(room) {
-    // Existing remote participants
-    room.participants.forEach((p) => {
-      if (!p.isLocal) {
-        setRemoteParticipants((prev) => {
-          if (prev.find((rp) => rp.sid === p.sid)) return prev;
-          return [...prev, p];
-        });
-      }
+    // 🔹 Add existing remote participants (initial join state)
+    room.remoteParticipants.forEach((p) => {
+      setRemoteParticipants((prev) => {
+        if (prev.find((rp) => rp.sid === p.sid)) return prev;
+        return [...prev, p];
+      });
     });
 
-    // Remote participant connected
-    room.on(RoomEvent.ParticipantConnected, (p) => {
-      if (!p.isLocal) {
-        setRemoteParticipants((prev) => [...prev, p]);
-      }
+    // 🔹 Participant connected
+    room.on(RoomEvent.ParticipantConnected, (participant) => {
+      if (participant.isLocal) return;
+
+      setRemoteParticipants((prev) => [...prev, participant]);
     });
 
-    // Remote participant disconnected
-    room.on(RoomEvent.ParticipantDisconnected, (p) => {
-      setRemoteParticipants((prev) => prev.filter((x) => x.sid !== p.sid));
-      const ref = remoteVideoRefs.current.get(p.sid);
+    // 🔹 Participant disconnected
+    room.on(RoomEvent.ParticipantDisconnected, (participant) => {
+      setRemoteParticipants((prev) =>
+        prev.filter((p) => p.sid !== participant.sid)
+      );
+
+      const ref = remoteVideoRefs.current.get(participant.sid);
       if (ref?.current) {
         ref.current.srcObject = null;
       }
-      remoteVideoRefs.current.delete(p.sid);
+      remoteVideoRefs.current.delete(participant.sid);
     });
 
-    // Track subscribed (remote camera)
+    // 🔹 Track subscribed (remote track available)
     room.on(RoomEvent.TrackSubscribed, (track, publication, participant) => {
-      if (track.kind === "video" && !participant.isLocal) {
-        if (!remoteVideoRefs.current.has(participant.sid)) {
-          remoteVideoRefs.current.set(participant.sid, React.createRef());
-        }
-        const ref = remoteVideoRefs.current.get(participant.sid);
-        if (ref?.current) {
-          track.attach(ref.current);
-        }
+      if (participant.isLocal) return;
+      if (track.kind !== "video") return;
+
+      if (!remoteVideoRefs.current.has(participant.sid)) {
+        remoteVideoRefs.current.set(participant.sid, React.createRef());
+      }
+      const ref = remoteVideoRefs.current.get(participant.sid);
+
+      if (ref?.current) {
+        track.attach(ref.current);
       }
     });
 
-    // Track unsubscribed (remote camera off)
+    // 🔹 Track unsubscribed (remote camera disabled)
     room.on(RoomEvent.TrackUnsubscribed, (track, publication, participant) => {
       const ref = remoteVideoRefs.current.get(participant.sid);
       if (ref?.current) {
@@ -342,6 +345,7 @@ export default function MeetWithFriends() {
       }
     });
   }
+
 
   // ─────────────────────────────────────────────
   //  Create room (backend + auto-join)
