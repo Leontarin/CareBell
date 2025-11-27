@@ -30,43 +30,7 @@ const pickDefaultSignalingUrl = () => {
 const normalizeToHttp = (url) =>
   url.replace(/^ws(s)?:/i, (_, secure) => (secure ? "https:" : "http:"));
 
-export const P2P_SIGNALING_URL = envSignalingUrl || pickDefaultSignalingUrl();
-
-export const P2P_SIGNALING_HTTP_URL = normalizeToHttp(P2P_SIGNALING_URL);
-
 export const NEWS_REGIONS = "1";
-
-export const P2P_CONFIG = {
-  MAX_PARTICIPANTS: 10,
-  CONNECTION_TIMEOUT: 30000,
-  MAX_RETRY_ATTEMPTS: 3,
-  RETRY_DELAY_BASE: 3000,
-
-  VIDEO_CONSTRAINTS: {
-    width: { ideal: 640, max: 1280 },
-    height: { ideal: 480, max: 720 },
-    frameRate: { ideal: 15, max: 30 },
-  },
-
-  AUDIO_CONSTRAINTS: {
-    echoCancellation: true,
-    noiseSuppression: true,
-    autoGainControl: true,
-    sampleRate: 44100,
-  },
-
-  RTC_CONFIG: {
-    iceServers: [
-      { urls: "stun:stun.l.google.com:19302" },
-      { urls: "stun:stun1.l.google.com:19302" },
-      { urls: "stun:stun2.l.google.com:19302" },
-      { urls: "stun:openrelay.metered.ca:80" },
-    ],
-    iceCandidatePoolSize: 10,
-    bundlePolicy: "max-bundle",
-    rtcpMuxPolicy: "require",
-  },
-};
 
 // --- helpers ---
 const join = (base, path) => `${base}${path.startsWith("/") ? "" : "/"}${path}`;

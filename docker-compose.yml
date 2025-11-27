@@ -35,34 +35,38 @@ services:
     networks:
       - carebell_net
 
-  # ─────────────── DENO SIGNALING ───────────────
-  deno:
+  # ─────────────── LIVEKIT (SFU/WebRTC Server — PROD) ───────────────
+  livekit:
     profiles: ["prod"]
     restart: unless-stopped
     build:
-      context: ./deno-signaling
-      dockerfile: deno.Dockerfile
-    expose:
-      - "5175"
-    depends_on:
-      mongo:
-        condition: service_healthy
+      context: ./rtc
+      dockerfile: rtc.Dockerfile
+    ports:
+      - "5175:7880"     # PRODUCTION also exposes on 5175
+    environment:
+      LIVEKIT_API_KEY: "carebell"
+      LIVEKIT_API_SECRET: "supersecret"
+      LIVEKIT_PORT: 7880
     networks:
       - carebell_net
 
-  deno-dev:
+
+  # ─────────────── LIVEKIT (SFU/WebRTC Server — DEV) ───────────────
+  livekit-dev:
     profiles: ["dev"]
     restart: unless-stopped
     build:
-      context: ./deno-signaling
-      dockerfile: deno.Dockerfile.dev
+      context: ./rtc
+      dockerfile: rtc.Dockerfile.dev
     volumes:
-      - ./deno-signaling:/app
+      - ./rtc:/app
     ports:
-      - "5175:5175"
-    depends_on:
-      mongo:
-        condition: service_healthy
+      - "5175:7880"    # DEV also exposes on 5175
+    environment:
+      LIVEKIT_API_KEY: "carebell"
+      LIVEKIT_API_SECRET: "supersecret"
+      LIVEKIT_PORT: 7880
     networks:
       - carebell_net
 
@@ -81,8 +85,8 @@ services:
     expose:
       - "${BACKEND_PORT}"
     depends_on:
-      deno:
-        condition: service_started
+    livekit:
+      condition: service_started
       mongo:
         condition: service_healthy
     networks:
@@ -107,7 +111,7 @@ services:
     ports:
       - "${BACKEND_PORT}:${BACKEND_PORT}"
     depends_on:
-      deno-dev:
+      livekit-dev:
         condition: service_started
       mongo:
         condition: service_healthy

@@ -39,7 +39,8 @@ const roomsRoute         = require('../routes/rooms');
 const ttsRoute           = require('../routes/tts');
 const authRoute          = require('../routes/auth');
 const adminUsersRoute    = require("../routes/admin/users");
-const adminFoodsRoute = require("../routes/admin/foods");
+const adminFoodsRoute    = require("../routes/admin/foods");
+const rtcRoutes          = require("../routes/rtc");
 //const adminMealsRoute    = require("../routes/admin/meals");
 //const adminAllergiesRoute = require("../routes/admin/allergies");
 
@@ -151,6 +152,7 @@ app.use('/rooms',         roomsRoute);
 app.use('/tts',           ttsRoute);
 app.use("/admin/users", adminUsersRoute);
 app.use("/admin/foods", adminFoodsRoute);
+app.use("/api/rtc", rtcRoutes);
 
 app.get('/', (_req, res) => {
   res.send('API is live! 🚀');
