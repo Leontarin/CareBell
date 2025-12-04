@@ -153,7 +153,7 @@
     "notFoundSpoken": "מצטערים, המאכל לא נמצא.",
     "noDescription": "אין תיאור",
     "includesLabel": "כולל:",
-    "diabeticFriendlyLabel": "ידידותי לסוכרת:",
+    "diabeticFriendlyLabel": "ידידותי לסוכרת ✅",
     "diabeticFriendlyYes": "כן",
     "diabeticFriendlyNo": "לא",
     "allergyWarning": "את/ה אלרגי/ת לפריטים הבאים במנה:",
@@ -163,6 +163,8 @@
     "backToList": "חזרה לרשימה",
     "allergyWarningShort": "אזהרת אלרגיה!",
     "otherAllergens": "אלרגנים אחרים",
+    "diabeticWarningShort": "לא ידידותי לסוכרת ❌",
+    "todaysMeals": "ארוחות היום",
     "LegendHeadings": {
       "Additives": "תוספים",
       "Allergens": "אלרגנים",

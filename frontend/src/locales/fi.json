@@ -139,7 +139,7 @@
     "notFoundSpoken": "Valitettavasti ruokaa ei löytynyt.",
     "noDescription": "Ei kuvausta",
     "includesLabel": "Sisältää:",
-    "diabeticFriendlyLabel": "Diabeetikkoystävällinen:",
+    "diabeticFriendlyLabel": "✅ Diabeetikkoystävällinen",
     "diabeticFriendlyYes": "Kyllä",
     "diabeticFriendlyNo": "Ei",
     "allergyWarning": "Olet allerginen aterian seuraaville aineksille:",
@@ -149,6 +149,8 @@
     "backToList": "Takaisin listaan",
     "allergyWarningShort": "Allergiavaroitus!",
     "otherAllergens": "Muut allergeenit",
+    "diabeticWarningShort": "❌ Ei diabeetikkoystävällinen",
+    "todaysMeals": "Tämän päivän ateriat",
     "LegendHeadings": {
       "Additives":  "Lisäaineet",
       "Allergens":  "Allergeenit",

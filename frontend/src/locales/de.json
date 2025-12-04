@@ -150,7 +150,7 @@
     "notFoundSpoken": "Dieses Lebensmittel wurde nicht gefunden.",
     "noDescription": "Keine Beschreibung verfügbar",
     "includesLabel": "Enthält:",
-    "diabeticFriendlyLabel": "Diabetikerfreundlich:",
+    "diabeticFriendlyLabel": "✅ Für Diabetiker geeignet",
     "diabeticFriendlyYes": "Ja",
     "diabeticFriendlyNo": "Nein",
     "allergyWarning": "Du bist allergisch gegen folgende Bestandteile:",
@@ -160,6 +160,8 @@
     "backToList": "Zurück zur Liste",
     "allergyWarningShort": "Allergiewarnung!",
     "otherAllergens": "Andere Allergene",
+    "diabeticWarningShort": "❌ Nicht für Diabetiker geeignet",
+    "todaysMeals": "Heutige Mahlzeiten",
     "LegendHeadings": {
       "Additives": "Zusatzstoffe",
       "Allergens": "Allergene",

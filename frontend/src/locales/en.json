@@ -153,7 +153,7 @@
     "notFoundSpoken": "Sorry, this food was not found.",
     "noDescription": "No description available",
     "includesLabel": "It includes:",
-    "diabeticFriendlyLabel": "Diabetic friendly",
+    "diabeticFriendlyLabel": "✅ Diabetic Friendly",
     "diabeticFriendlyYes": "Yes",
     "diabeticFriendlyNo": "No",
     "allergyWarning": "You are allergic to the following in the meal:",
@@ -163,6 +163,8 @@
     "backToList": "Back to list",
     "allergyWarningShort": "Allergy Warning!",
     "otherAllergens": "Other allergens",
+    "diabeticWarningShort": "❌ Not diabetic-friendly",
+    "todaysMeals": "Today's Meals",
     "LegendHeadings": {
       "Additives":  "Additives",
       "Allergens":  "Allergens",

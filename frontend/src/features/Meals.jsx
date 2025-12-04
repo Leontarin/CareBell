@@ -237,8 +237,8 @@ export default function Meals() {
 
     const diabeticFriendly = meal.diabeticFriendly ?? isDiabeticFriendly(meal);
     const diabeticLabel = diabeticFriendly
-      ? "✅ Diabetic Friendly"
-      : "❌ Not Diabetic Friendly";
+      ? t("Meals.diabeticFriendlyLabel")
+      : t("Meals.diabeticWarningShort");
 
     // ✅ background logic: red if allergic OR user diabetic and not diabetic-friendly
     const bgClass =
@@ -359,7 +359,7 @@ export default function Meals() {
               title={
                 allergic
                   ? t("Meals.allergyWarningShort")
-                  : t("Meals.diabeticWarningShort", "Not diabetic-friendly")
+                  : t("Meals.diabeticWarningShort")
               }
             >
               ⚠️
@@ -388,8 +388,8 @@ export default function Meals() {
     const diabeticFriendly =
       selectedMeal.diabeticFriendly ?? isDiabeticFriendly(selectedMeal);
     const diabeticLabel = diabeticFriendly
-      ? "✅ Diabetic Friendly"
-      : "❌ Not Diabetic Friendly";
+      ? t("Meals.diabeticFriendlyLabel")
+      : t("Meals.diabeticWarningShort");
 
     const allergyInfo = isUserAllergic(userAllergens, allergens);
     const textToRead = buildVisibleText(
@@ -486,7 +486,7 @@ export default function Meals() {
                 : "bg-blue-800 hover:bg-blue-600"
             }`}
           >
-            {speaking ? "⏹ Stop" : "🔊 " + t("Exercise.read", "Read")}
+            {speaking ? "⏹ Stop" : "🔊 " + t("Exercise.read")}
           </button>
         </div>
 
@@ -565,21 +565,35 @@ export default function Meals() {
   };
 
   // ────────────────────────────────
-  //  ScanTab
-  // ────────────────────────────────
-  const ScanTab = () => (
-    <div className="space-y-4">
-      {!scanning && (
-        <div className="flex justify-center">
-          <button
-            onClick={() => setView("list")}
-            className="px-6 py-2 rounded-lg border border-yellow-500 bg-blue-800 text-white text-lg shadow hover:bg-blue-600"
-          >
-            {t("Meals.backToList")}
-          </button>
-        </div>
-      )}
-      <div className="flex gap-2">
+//  ScanTab
+// ────────────────────────────────
+const ScanTab = () => (
+  <div className="space-y-4">
+    {!scanning && (
+      <div className="flex justify-center">
+        <button
+          onClick={() => setView("list")}
+          className="px-6 py-2 rounded-lg border border-yellow-500 bg-blue-800 text-white text-lg shadow hover:bg-blue-600"
+        >
+          {t("Meals.backToList")}
+        </button>
+      </div>
+    )}
+
+    {/* Manual barcode input */}
+    <div className="space-y-2">
+      {/* PHONE: input alone, full width */}
+      <div className="md:hidden">
+        <input
+          value={manualCode}
+          onChange={(e) => setManualCode(e.target.value)}
+          className="w-full px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900"
+          placeholder={t("Meals.enterBarcodePlaceholder")}
+        />
+      </div>
+
+      {/* DESKTOP/TABLET: input + Enter in one row (old behaviour) */}
+      <div className="hidden md:flex gap-2">
         <input
           value={manualCode}
           onChange={(e) => setManualCode(e.target.value)}
@@ -593,32 +607,54 @@ export default function Meals() {
           {t("Meals.enterButton", "Enter")}
         </button>
       </div>
-      {!scanning ? (
+    </div>
+
+    {/* Controls */}
+    {!scanning ? (
+      <>
+        {/* PHONE: Start Camera + Enter on the SAME row */}
+        <div className="flex gap-2 md:hidden">
+          <button
+            onClick={() => setScanning(true)}
+            className="flex-1 py-3 text-lg bg-green-600 text-white rounded-lg hover:bg-green-700"
+          >
+            📷 {t("Meals.startCamera")}
+          </button>
+          <button
+            onClick={handleManualSubmit}
+            className="px-4 py-3 rounded-lg border border-yellow-500 bg-blue-800 text-white text-lg shadow hover:bg-blue-600"
+          >
+            {t("Meals.enterButton", "Enter")}
+          </button>
+        </div>
+
+        {/* DESKTOP/TABLET: Start Camera full width under the row (old behaviour) */}
         <button
           onClick={() => setScanning(true)}
-          className="w-full py-3 text-lg bg-green-600 text-white rounded-lg hover:bg-green-700"
+          className="hidden md:block w-full py-3 text-lg bg-green-600 text-white rounded-lg hover:bg-green-700"
         >
           📷 {t("Meals.startCamera")}
         </button>
-      ) : (
-        <div className="space-y-3">
-          <div className="rounded-xl overflow-hidden border border-gray-300 dark:border-gray-700">
-            <BarcodeScannerComponent
-              width={"100%"}
-              height={280}
-              onUpdate={handleDetected}
-            />
-          </div>
-          <button
-            onClick={() => setScanning(false)}
-            className="w-full py-3 text-lg bg-red-600 text-white rounded-lg hover:bg-red-700"
-          >
-            {t("Meals.stopCamera")}
-          </button>
+      </>
+    ) : (
+      <div className="space-y-3">
+        <div className="rounded-xl overflow-hidden border border-gray-300 dark:border-gray-700">
+          <BarcodeScannerComponent
+            width={"100%"}
+            height={280}
+            onUpdate={handleDetected}
+          />
         </div>
-      )}
-    </div>
-  );
+        <button
+          onClick={() => setScanning(false)}
+          className="w-full py-3 text-lg bg-red-600 text-white rounded-lg hover:bg-red-700"
+        >
+          {t("Meals.stopCamera")}
+        </button>
+      </div>
+    )}
+  </div>
+);
 
   // ────────────────────────────────
   //  Main Render
