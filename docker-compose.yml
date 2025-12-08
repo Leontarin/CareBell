@@ -80,6 +80,8 @@ services:
       FRONTEND_ORIGIN: https://demo.carebells.org
     expose:
       - "${BACKEND_PORT}"
+    ports:
+      - "${BACKEND_PORT}:${BACKEND_PORT}"
     depends_on:
       deno:
         condition: service_started
