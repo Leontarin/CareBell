@@ -77,7 +77,7 @@ services:
       DOCKER_ENV: "true"
       PORT: ${BACKEND_PORT}
       MONGODB_URI: mongodb://${MONGO_APP_USER}:${MONGO_APP_PASS}@mongo:27017/${MONGO_DB}?authSource=${MONGO_DB}
-      FRONTEND_ORIGIN: https://demo.carebells.org
+      FRONTEND_ORIGIN: https://test.carebells.de
     expose:
       - "${BACKEND_PORT}"
     ports:
@@ -124,7 +124,7 @@ services:
       context: .
       dockerfile: ./frontend/frontend.Dockerfile
       args:
-        VITE_BACKEND_URL: https://api.carebells.org
+        VITE_BACKEND_URL: https://api2.carebells.de
     ports:
       - "${FRONTEND_PORT}:80" # only public port!
     depends_on:
