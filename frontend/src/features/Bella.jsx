@@ -4,7 +4,7 @@ import React, { useEffect, useState, useRef, useContext } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import Vapi from '@vapi-ai/web';
 import { FaPhone, FaPhoneSlash, FaExpand, FaCompress } from 'react-icons/fa';
-import bella_img from '../resources/bella2_square.png';
+import bella_img from '../resources/Grafik3a_2.png';
 import { useTranslation } from 'react-i18next';
 import { AppContext } from '../shared/AppContext';
 import { API } from '../shared/config';
