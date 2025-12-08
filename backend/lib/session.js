@@ -17,7 +17,7 @@ function setSessionCookie(res, payload) {
     httpOnly: true,
     secure: isProd,                    // ✅ only requires HTTPS in production
     sameSite: isProd ? "none" : "lax", // ✅ 'none' for HTTPS, 'lax' for localhost/LAN
-    domain: isProd ? process.env.COOKIE_DOMAIN || ".carebells.org" || ".carebells.de" : undefined,
+    domain: isProd ? process.env.COOKIE_DOMAIN : undefined,
     path: "/",
     maxAge: 1000 * 60 * 60 * 24 * 30,  // 30 days
   });
@@ -44,7 +44,7 @@ function clearSessionCookie(res) {
     path: "/",
     secure: isProd,
     sameSite: isProd ? "none" : "lax",
-    domain: isProd ? process.env.COOKIE_DOMAIN || ".carebells.org" || ".carebells.de" : undefined,
+    domain: isProd ? process.env.COOKIE_DOMAIN : undefined,
   });
 }
 
