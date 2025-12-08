@@ -2,11 +2,11 @@
 set -Eeuo pipefail
 
 echo "====================================================="
-echo "🔒 Using branch: master"
+echo "🔒 Using branch: master2"
 echo "====================================================="
 git fetch --prune origin
-git checkout master
-git reset --hard origin/master
+git checkout master2
+git reset --hard origin/master2
 
 echo
 echo "🧾 Checking .env files..."
