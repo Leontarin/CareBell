@@ -11,7 +11,7 @@ import { API } from '../shared/config';
 
 export default function Bella() {
   const { t, i18n } = useTranslation();
-  const { user, bellaFullscreen, setBellaFullscreen } = useContext(AppContext);
+  const { user, bellaFullscreen, setBellaFullscreen, bellaVolume } = useContext(AppContext);
   const navigate   = useNavigate();
   const location   = useLocation();
 
@@ -89,6 +89,8 @@ export default function Bella() {
   useEffect(() => {
     const vapi = vapiRef.current = new Vapi(getVapiPublicKey());
     // inject reminders
+
+    
     vapi.on('call-start', async () => {
       setCallStatus('in-call');
       setIsChatOpen(true);
@@ -112,6 +114,18 @@ export default function Bella() {
       } catch(e) {
         console.error(e);
       }
+
+        //Set Bella volume to system
+      try{
+        setTimeout(() => {
+          const audioEls = document.querySelectorAll("audio");
+          audioEls.forEach(a => {
+            a.volume = bellaVolume;
+          });
+        }, 500);
+      }
+      catch(e){ console.error(e); }{}
+
       //Provide bella with all reminders of a user
       if (!user?.id) return;
       try {

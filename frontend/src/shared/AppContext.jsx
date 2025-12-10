@@ -9,4 +9,7 @@ export const AppContext = React.createContext({
   setMeetFullscreen: () => {},
   darkMode: false,
   setDarkMode: () => {},
+
+  bellaVolume: 0.5,
+  setBellaVolume: () => {},
 });

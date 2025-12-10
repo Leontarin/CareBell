@@ -17,7 +17,7 @@ import {PICTOGRAMS,ALLERGENS,ADDITIVES} from "../../../shared/constants/foodMeta
 export default function SettingsModal({ onClose }) {
   const { t, i18n } = useTranslation();
   const navigate = useNavigate();
-  const { user, setUser, darkMode, setDarkMode } = useContext(AppContext);
+  const { user, setUser, darkMode, setDarkMode, bellaVolume, setBellaVolume } = useContext(AppContext);
 
   const [scale, setScale] = useState(parseFloat(localStorage.getItem("fontScale")) || 1);
   const [activeTab, setActiveTab] = useState("general");
@@ -39,6 +39,11 @@ export default function SettingsModal({ onClose }) {
     setHealthFlags(allergenKeys.reduce((acc, k) => ({ ...acc, [k]: !!user?.[k] }), {}));
     setDiabetic(!!user?.Diabetic);
   }, [user, i18n.language]);
+  //Keep volume in sync
+  useEffect(() => {
+    const audioEls = document.querySelectorAll("audio");
+    audioEls.forEach(a => { a.volume = bellaVolume; });
+  }, [bellaVolume]);
 
   /** ─────────────────────────── Language logic ─────────────────────────── **/
   const LANGUAGE_LABELS = useMemo(
@@ -221,22 +226,31 @@ const fetchHealth = async (payload) => {
                 </div>
               </section>
 
-              {/* VOLUME (placeholder) */}
+              {/* VOLUME */}
               <section className="mb-8">
                 <h3 className="text-xl font-semibold mb-3">
                   {t("SettingsModal.volume")}
                 </h3>
+
                 <div className="flex items-center gap-4">
                   <FaVolumeMute className="text-2xl" />
+
                   <input
                     type="range"
                     min={0}
-                    max={100}
-                    defaultValue={70}
+                    max={1}
+                    step={0.01}
+                    value={bellaVolume}
+                    onChange={(e) => setBellaVolume(parseFloat(e.target.value))}
                     className="flex-1 accent-blue-600 h-2 rounded-lg bg-gray-300"
-                    disabled
                   />
+
                   <FaVolumeUp className="text-2xl" />
+
+                  {/* show volume percent */}
+                  <span className="text-sm font-medium w-12 text-right">
+                    {Math.round(bellaVolume * 100)}%
+                  </span>
                 </div>
               </section>
 
