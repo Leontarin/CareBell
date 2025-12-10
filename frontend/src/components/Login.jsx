@@ -165,7 +165,9 @@ export default function Login({ onLoggedIn }) {
                 {t("Auth.Login.cta", { defaultValue: "Login" })}
               </button>
 
+              
               {/* Google sign-in (localized & re-rendered on language change inside the component) */}
+              {/* DISABLED FOR PROD2}
               <div className="flex justify-center">
                 <GoogleSignIn
                   key={i18n.language}        // ensures full re-init on language switch
@@ -173,6 +175,8 @@ export default function Login({ onLoggedIn }) {
                   onError={(msg) => showError(msg, t("Login.googleTitle"))}
                 />
               </div>
+              */}
+              
 
               {/* Register link */}
               <p className="text-base md:text-lg lg:text-xl text-gray-700 dark:text-gray-300 text-center">
