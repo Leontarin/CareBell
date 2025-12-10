@@ -18,6 +18,13 @@ export default function App() {
   const [bellaFullscreen, setBellaFullscreen] = useState(false);
   const [meetFullscreen, setMeetFullscreen] = useState(false);
   const [darkMode, setDarkMode] = useState(localStorage.getItem("darkMode") === "true");
+  const [bellaVolume, setBellaVolume] = useState(
+    parseFloat(localStorage.getItem("bellaVolume")) || 0.7
+  );
+
+  useEffect(() => {
+    localStorage.setItem("bellaVolume", bellaVolume);
+  }, [bellaVolume]);
 
   useEffect(() => {
     const root = document.documentElement;
@@ -93,6 +100,8 @@ export default function App() {
             setMeetFullscreen,
             darkMode,
             setDarkMode,
+            bellaVolume,
+            setBellaVolume,
           }}
         >
           <Routes>
