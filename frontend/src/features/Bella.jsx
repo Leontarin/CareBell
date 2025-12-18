@@ -11,7 +11,7 @@ import { API } from '../shared/config';
 
 export default function Bella() {
   const { t, i18n } = useTranslation();
-  const { user, bellaFullscreen, setBellaFullscreen, bellaVolume } = useContext(AppContext);
+  const { user, bellaFullscreen, setBellaFullscreen } = useContext(AppContext);
   const navigate   = useNavigate();
   const location   = useLocation();
 
@@ -71,6 +71,42 @@ export default function Bella() {
     return (vapiLanguageMap[lang])[0] || (vapiLanguageMap.en)[0];
   };
 
+  //Medication Prompt Helper
+  function buildBellaMedicationSystemMessage(meds) {
+    const nowIso = new Date().toISOString();
+
+    const medsPayload = meds.map(m => ({
+      name: m.name,
+      dosage: m.dosage,
+      frequencyHours: m.frequency,
+      lastTaken: m.lastTaken,
+      nextDue: m.nextDue
+    }));
+
+    return `
+    IMPORTANT:
+    - You do NOT know the current time unless it is explicitly provided.
+    - The current system time is:
+      ${nowIso}
+
+    The following JSON is the user's active medication schedule.
+    Treat this data as accurate and authoritative.
+
+    ${JSON.stringify(medsPayload, null, 2)}
+
+    Rules for reasoning and answers:
+    - When the user asks when to take a medication:
+      • Use the provided current system time
+      • Compare it to "nextDue"
+      • Calculate how much time remains until the next dose
+    - If the time has already passed:
+      • Say that the dose is due now or overdue
+    - Answer in clear, simple language suitable for elderly users
+    - Never invent medications or times not listed above
+    - If the medication name is unclear, ask a clarification
+    `;
+  }
+
   // load & persist chat, auto-scroll
   useEffect(() => {
     const saved = localStorage.getItem('bella_chat');
@@ -89,12 +125,23 @@ export default function Bella() {
   useEffect(() => {
     const vapi = vapiRef.current = new Vapi(getVapiPublicKey());
     // inject reminders
-
-    
     vapi.on('call-start', async () => {
       setCallStatus('in-call');
       setIsChatOpen(true);
       setBellaFullscreen(true);
+
+      try{
+      // 🔊 Force volume to 50%
+        setTimeout(() => {
+          const audioEls = document.querySelectorAll("audio");
+          audioEls.forEach(a => {
+            a.volume = 0.5;   // 0.0 = silent, 1.0 = full blast
+          });
+        }, 500);
+      }
+      catch(e){
+        console.error(e);
+      }
       //Provide bella with all available meals
       try {
         const foodRes = await fetch(`${API}/foods`);
@@ -114,18 +161,6 @@ export default function Bella() {
       } catch(e) {
         console.error(e);
       }
-
-        //Set Bella volume to system
-      try{
-        setTimeout(() => {
-          const audioEls = document.querySelectorAll("audio");
-          audioEls.forEach(a => {
-            a.volume = bellaVolume;
-          });
-        }, 500);
-      }
-      catch(e){ console.error(e); }{}
-
       //Provide bella with all reminders of a user
       if (!user?.id) return;
       try {
@@ -150,13 +185,15 @@ if (rems.length > 0) {
         const res = await fetch(`${API}/medications/${user.id}`);
         if (!res.ok) throw new Error(res.statusText);
         const meds = await res.json();
-        for (let m of meds) {
-          await vapi.send({ //send bella a message as system
-            type: 'add-message',
-            message: { role: 'system', content: `This is one of the medications in the user's list: ${m.name}, the dosage is ${m.dosage} and they need to take it every ${m.frequency} hours. the last time it was taken was ${m.lastTaken}, and the next time is ${m.nextDue}, when asked when do I need to take it, please calculate in how many hours do I have to take it` }
-          });
-          console.log(m)
-        }
+        const systemMessage = buildBellaMedicationSystemMessage(meds);
+
+        await vapi.send({
+          type: 'add-message',
+          message: {
+            role: 'system',
+            content: systemMessage
+          }
+        });
       } catch (e) { console.error(e); }
     });
 
@@ -166,6 +203,7 @@ if (rems.length > 0) {
     });
 
     vapi.on('message', async msg => {
+      console.log(msg);
       if (msg.type !== 'transcript') return;
 
       const speaker = msg.role === 'assistant' ? 'assistant' : 'user';
