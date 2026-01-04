@@ -52,6 +52,7 @@ export default function SettingsModal({ onClose }) {
       he: "עברית",
       de: "Deutsch",
       fi: "Suomi",
+      ru: "русский",
     }),
     []
   );

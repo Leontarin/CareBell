@@ -4,7 +4,7 @@ export const COUNTRIES = [
   { code: "DE", name: "Germany", languages: ["de", "en"], flag: "🇩🇪" },
   { code: "FI", name: "Finland", languages: ["fi", "en"], flag: "🇫🇮" },
   { code: "IL", name: "Israel", languages: ["he", "en"], flag: "🇮🇱" },
-  { code: "US", name: "United States", languages: ["en"], flag: "🇺🇸" },
+  { code: "US", name: "United States", languages: ["en"], flag: "🇺🇸" }
 ];
 
 // 🔍 Dynamically build the language labels
