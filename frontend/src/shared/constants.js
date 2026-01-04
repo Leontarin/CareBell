@@ -9,7 +9,13 @@ export const COUNTRIES = [
 
 // 🔍 Dynamically build the language labels
 export const LANG_LABELS = Object.keys(i18n.options.resources).reduce((acc, key) => {
-  const names = { en: "English", he: "Hebrew", de: "German", fi: "Finnish" };
+  const names = {
+    en: "English",
+    he: "Hebrew",
+    de: "German",
+    fi: "Finnish",
+    ru: "Russian",
+  };
   acc[key] = names[key] || key.toUpperCase();
   return acc;
 }, {});

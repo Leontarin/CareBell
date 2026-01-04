@@ -57,17 +57,10 @@ export default function SettingsModal({ onClose }) {
     []
   );
 
-  const availableLanguages = useMemo(() => {
-    if (user?.languages?.length) {
-      const seen = new Set();
-      return user.languages.filter((code) => {
-        if (!code || seen.has(code)) return false;
-        seen.add(code);
-        return true;
-      });
-    }
-    return Object.keys(LANGUAGE_LABELS);
-  }, [LANGUAGE_LABELS, user]);
+  const availableLanguages = useMemo(
+    () => Object.keys(LANGUAGE_LABELS),
+    [LANGUAGE_LABELS]
+  );
 
   const languageLabel = (code) => LANGUAGE_LABELS[code] || code;
 

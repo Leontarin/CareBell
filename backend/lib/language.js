@@ -1,5 +1,5 @@
 //backend/lib/language.js
-const LANGUAGE_CODES = ["en", "de", "fi", "he"];
+const LANGUAGE_CODES = ["en", "de", "fi", "he", "ru"];
 const DEFAULT_LANGUAGE = "en";
 
 const COUNTRY_LANGUAGE_MAP = {
@@ -15,25 +15,18 @@ function getCountryConfig(countryCode) {
 }
 
 function computeLanguageSettings({ country, preferredLanguage } = {}) {
-  const available = [];
-  const addLanguage = (code) => {
-    if (!code && code !== 0) return;
-    const normalized = String(code).trim().toLowerCase();
-    if (!normalized) return;
-    if (!LANGUAGE_CODES.includes(normalized)) {
-      throw new Error(`Unsupported language code: ${code}`);
-    }
-    if (!available.includes(normalized)) {
-      available.push(normalized);
-    }
-    return normalized;
-  };
-
   const result = {
     country: undefined,
     language: DEFAULT_LANGUAGE,
-    languages: [DEFAULT_LANGUAGE],
   };
+
+  let normalizedPreferred;
+  if (preferredLanguage) {
+    normalizedPreferred = String(preferredLanguage).trim().toLowerCase();
+    if (!LANGUAGE_CODES.includes(normalizedPreferred)) {
+      throw new Error(`Unsupported language code: ${preferredLanguage}`);
+    }
+  }
 
   if (country) {
     const normalizedCountry = String(country).trim().toUpperCase();
@@ -44,44 +37,20 @@ function computeLanguageSettings({ country, preferredLanguage } = {}) {
     }
 
     result.country = normalizedCountry;
-
-    for (const lang of config.languages) {
-      addLanguage(lang);
-    }
-
-    if (preferredLanguage) {
-      const normalizedLang = String(preferredLanguage).trim().toLowerCase();
-      if (!available.includes(normalizedLang)) {
-        throw new Error(
-          `Language ${preferredLanguage} is not available for country ${normalizedCountry}`
-        );
-      }
-      result.language = normalizedLang;
+    if (normalizedPreferred) {
+      result.language = normalizedPreferred;
     } else {
-      const fallback = config.default || config.languages[0] || DEFAULT_LANGUAGE;
-      const normalizedFallback = String(fallback).trim().toLowerCase();
-      if (!available.includes(normalizedFallback)) {
-        addLanguage(normalizedFallback);
-      }
-      result.language = normalizedFallback;
+      const fallback = config.default || DEFAULT_LANGUAGE;
+      result.language = String(fallback).trim().toLowerCase();
     }
-  } else if (preferredLanguage) {
-    const normalizedLang = addLanguage(preferredLanguage);
-    result.language = normalizedLang || DEFAULT_LANGUAGE;
+  } else if (normalizedPreferred) {
+    result.language = normalizedPreferred;
   }
 
-  addLanguage(DEFAULT_LANGUAGE);
-
-  result.languages = available.length ? available : [DEFAULT_LANGUAGE];
-  if (!result.languages.includes(result.language)) {
-    result.languages.push(result.language);
-  }
-  if (result.languages[0] !== result.language) {
-    result.languages = [
-      result.language,
-      ...result.languages.filter((code) => code !== result.language),
-    ];
-  }
+  result.languages = [
+    result.language,
+    ...LANGUAGE_CODES.filter((code) => code !== result.language),
+  ];
 
   return result;
 }
@@ -116,9 +85,12 @@ function normalizeUserLanguage(doc = {}) {
   const config = getCountryConfig(rawCountry);
 
   let preferred = derivePreferredLanguage(doc);
+  if (preferred && !LANGUAGE_CODES.includes(preferred)) {
+    preferred = undefined;
+  }
 
   if (config) {
-    if (!preferred || !config.languages.includes(preferred)) {
+    if (!preferred) {
       const fallback = config.default || config.languages[0] || DEFAULT_LANGUAGE;
       preferred = String(fallback).trim().toLowerCase();
     }

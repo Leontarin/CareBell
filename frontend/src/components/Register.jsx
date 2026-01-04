@@ -8,7 +8,13 @@ import NotificationModal from "./NotificationModal";
 import TopRightControls from "./TopRightControls";
 
 
-const LANG_LABELS = { en: "English", de: "German", he: "עברית", fi: "suomi" };
+const LANG_LABELS = {
+  en: "English",
+  de: "German",
+  he: "עברית",
+  fi: "suomi",
+  ru: "русский",
+};
 const COUNTRIES = [
   { code: "DE", name: "Germany", languages: ["de", "en"], flag: "🇩🇪" },
   { code: "FI", name: "Finland", languages: ["fi", "en"], flag: "🇫🇮" },
