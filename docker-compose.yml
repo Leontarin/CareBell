@@ -78,17 +78,16 @@ services:
       PORT: ${BACKEND_PORT}
       MONGODB_URI: mongodb://${MONGO_APP_USER}:${MONGO_APP_PASS}@mongo:27017/${MONGO_DB}?authSource=${MONGO_DB}
       FRONTEND_ORIGIN: https://test.carebells.de
-    expose:
-      - "${BACKEND_PORT}"
+      BELLA_LOG_DIR: /app/logs/bella
     ports:
       - "${BACKEND_PORT}:${BACKEND_PORT}"
     depends_on:
-      deno:
-        condition: service_started
       mongo:
         condition: service_healthy
     networks:
       - carebell_net
+    volumes:
+      - ./backend/logs:/app/logs/
 
   backend-dev:
     profiles: ["dev"]
@@ -101,20 +100,21 @@ services:
       - /app/node_modules
       - ./shared:/shared:ro
       - /app/tts/bin/linux
+      - ./backend/logs:/app/logs/
     environment:
       DOCKER_ENV: "true"
       PORT: ${BACKEND_PORT}
       MONGODB_URI: mongodb://${MONGO_APP_USER}:${MONGO_APP_PASS}@mongo:27017/${MONGO_DB}?authSource=${MONGO_DB}
       FRONTEND_ORIGIN: http://localhost:${FRONTEND_PORT}
+      BELLA_LOG_DIR: /app/logs/bella
     ports:
       - "${BACKEND_PORT}:${BACKEND_PORT}"
     depends_on:
-      deno-dev:
-        condition: service_started
       mongo:
         condition: service_healthy
     networks:
       - carebell_net
+
 
   # ─────────────── FRONTEND ───────────────
   frontend:

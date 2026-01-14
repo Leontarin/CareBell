@@ -20,6 +20,8 @@ export default function Bella() {
   const [isChatOpen, setIsChatOpen] = useState(false);
   const vapiRef = useRef(null);
   const chatRef = useRef(null);
+  const logSessionIdRef = useRef(null);
+  const logStartedRef  = useRef(false);
 
   // Intent classifier
   async function classifyIntent(text) {
@@ -130,6 +132,45 @@ export default function Bella() {
       setIsChatOpen(true);
       setBellaFullscreen(true);
 
+      // ─── Bella logging: call start ─────────────────────────
+      const username =
+        user?.username ||
+        user?.email ||
+        'anonymous';
+
+      const now = new Date();
+
+      const pad = n => String(n).padStart(2, '0');
+
+      const ts =
+        now.getFullYear() +
+        pad(now.getMonth() + 1) +
+        pad(now.getDate()) +
+        '_' +
+        pad(now.getHours()) +
+        pad(now.getMinutes()) +
+        pad(now.getSeconds());
+
+      const safeUser = (username || 'anonymous')
+        .toLowerCase()
+        .replace(/[^a-z0-9_-]/g, '');
+
+      const sessionId = `${ts}_${safeUser}`;
+
+      logSessionIdRef.current = sessionId;
+      logStartedRef.current  = true;
+
+      // fire-and-forget
+      fetch(`${API}/bella/log/start`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          username,
+          sessionId,
+          startedAt: now.toISOString()
+        })
+      });
+
       try{
       // 🔊 Force volume to 50%
         setTimeout(() => {
@@ -200,6 +241,9 @@ if (rems.length > 0) {
     vapi.on('call-end', () => {
       setCallStatus('ready');
       setBellaFullscreen(false);
+
+      logStartedRef.current = false;
+      logSessionIdRef.current = null;
     });
 
     vapi.on('message', async msg => {
@@ -235,6 +279,24 @@ if (rems.length > 0) {
         }
         return out;
       });
+
+      // ─── Bella logging: transcript final ───────────────────
+      if (
+        msg.transcriptType === 'final' &&
+        logStartedRef.current &&
+        logSessionIdRef.current
+      ) {
+        fetch(`${API}/bella/log/line`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            sessionId: logSessionIdRef.current,
+            ts: new Date().toISOString(),
+            speaker: msg.role === 'assistant' ? 'Bella' : 'User',
+            text: msg.transcript.trim()
+          })
+        });
+      }
 
       // only user final
       if (speaker !== 'user' || !user?.id) return;
