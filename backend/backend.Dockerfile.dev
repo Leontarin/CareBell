@@ -1,0 +1,26 @@
+# ─── Backend Dev Dockerfile ─────────────────────────────────────
+FROM node:20-slim
+
+WORKDIR /app
+
+# Copy package files and install dependencies
+COPY package*.json ./
+RUN npm install    # dev image uses npm install (not ci) to allow quick edits
+
+# Install nodemon globally (needed for hot reload inside container)
+RUN npm install -g nodemon
+
+# Copy the rest of the backend source
+COPY . .
+
+ARG REBUILD_PIPER=1
+RUN rm -rf /app/tts/bin/linux/* && mkdir -p /app/tts/bin/linux
+RUN cd /app/tts/bin/linux && tar -xzf /app/tts/bin/piper_linux_x86_64.tar.gz --strip-components=1
+
+# Expose backend port
+ENV PORT=5174
+EXPOSE 5174
+
+# Use nodemon to watch for file changes
+CMD ["nodemon", "--legacy-watch", "api/index.js"]
+

@@ -1,0 +1,12 @@
+# ─── Deno Signaling Server (Dev / Hot Reload) ───────────────────
+FROM denoland/deno:alpine
+
+WORKDIR /app
+
+COPY . .
+
+EXPOSE 5175
+
+# Use deno run --watch to restart automatically on code changes
+CMD ["run", "--watch", "--allow-net", "server.js"]
+

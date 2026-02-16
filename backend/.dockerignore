@@ -1,0 +1,9 @@
+tts/bin/linux/
+tts/bin/linux/*
+tts/bin/linux/**
+
+# Also good practice:
+node_modules/
+npm-debug.log
+.DS_Store
+.vscode/

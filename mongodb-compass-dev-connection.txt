@@ -1,0 +1,1 @@
+mongodb://carebelluser:appsecure@localhost:5176/CareBell?authSource=CareBell

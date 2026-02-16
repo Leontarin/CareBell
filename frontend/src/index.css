@@ -1,0 +1,16 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+/* Desktop & tablet “no scroll” */
+html, body {
+  height: 100%;
+}
+
+/* Phones (max-width: 768px) can scroll */
+@media (max-width: 768px) {
+  html, body {
+    overflow: auto !important;
+    touch-action: auto !important;
+  }
+}
+
