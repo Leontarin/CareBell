@@ -5,6 +5,7 @@ const mongoose = require('mongoose');
 const Room = require('../models/room');
 const { readSession } = require('../lib/session');
 const isAdmin = require('../middleware/isAdmin');
+const { removeUserFromAllRooms } = require('../lib/rooms/roomLifecycle');
 
 //Test Mode and Helpr
 const TEST_MODE = process.env.NODE_ENV === 'test';
@@ -17,34 +18,6 @@ function getSessionForRequest(req) {
 
   return { userId, fullName };
 }
-/*
-  Helper: remove user from any existing room
-*/
-async function removeUserFromAllRooms(userId, excludeRoomId = null) {
-  await Room.updateMany(
-    {},
-    { $pull: { participants: { userId } } }
-  );
-
-  const query = {
-    type: 'temporary',
-    everHadParticipants: true,     //only rooms that were active at least once
-    participants: { $size: 0 }
-  };
-
-  if (excludeRoomId) {
-    // Make sure _id comparison uses ObjectId, otherwise $ne won't exclude correctly
-    const exclude =
-      mongoose.Types.ObjectId.isValid(excludeRoomId)
-        ? new mongoose.Types.ObjectId(excludeRoomId)
-        : excludeRoomId;
-
-    query._id = { $ne: exclude };
-  }
-
-  await Room.deleteMany(query);
-}
-
 /*
   GET all rooms
 */
