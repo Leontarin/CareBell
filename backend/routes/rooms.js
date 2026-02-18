@@ -1,25 +1,48 @@
 //backend/routes/rooms.js
 const express = require('express');
 const router = express.Router();
+const mongoose = require('mongoose');
 const Room = require('../models/room');
 const { readSession } = require('../lib/session');
 const isAdmin = require('../middleware/isAdmin');
-const TEST_MODE = process.env.NODE_ENV === 'test';
 
+//Test Mode and Helpr
+const TEST_MODE = process.env.NODE_ENV === 'test';
+function getSessionForRequest(req) {
+  if (!TEST_MODE) return null;
+
+  // Allow tests to override identity via headers
+  const userId = req.header('x-test-user') || 'test-user';
+  const fullName = req.header('x-test-name') || 'Test User';
+
+  return { userId, fullName };
+}
 /*
   Helper: remove user from any existing room
 */
-async function removeUserFromAllRooms(userId) {
+async function removeUserFromAllRooms(userId, excludeRoomId = null) {
   await Room.updateMany(
-    { "participants.userId": userId },
+    {},
     { $pull: { participants: { userId } } }
   );
 
-  // Auto-delete empty temporary rooms
-  await Room.deleteMany({
+  const query = {
     type: 'temporary',
+    everHadParticipants: true,     //only rooms that were active at least once
     participants: { $size: 0 }
-  });
+  };
+
+  if (excludeRoomId) {
+    // Make sure _id comparison uses ObjectId, otherwise $ne won't exclude correctly
+    const exclude =
+      mongoose.Types.ObjectId.isValid(excludeRoomId)
+        ? new mongoose.Types.ObjectId(excludeRoomId)
+        : excludeRoomId;
+
+    query._id = { $ne: exclude };
+  }
+
+  await Room.deleteMany(query);
 }
 
 /*
@@ -45,17 +68,11 @@ router.get('/', async (req, res) => {
   CREATE room
 */
 router.post('/create', async (req, res) => {
-  let session;
-
-  if (TEST_MODE) {
-    session = {
-      userId: 'test-user',
-      fullName: 'Test User'
-    };
-  } else {
+  let session = getSessionForRequest(req);
+  if (!session) {
     session = await readSession(req);
     if (!session) return res.status(401).json({ error: 'Unauthorized' });
-}
+  }
 
   const { name, type = 'temporary', maxParticipants = 8 } = req.body;
 
@@ -80,52 +97,43 @@ router.post('/create', async (req, res) => {
   res.json(room);
 });
 
-/*
-  JOIN room
-*/
+// JOIN room
 router.post('/join/:roomId', async (req, res) => {
-  let session;
-
-  if (TEST_MODE) {
-    session = {
-      userId: 'test-user',
-      fullName: 'Test User'
-    };
-  } else {
+  let session = getSessionForRequest(req);
+  if (!session) {
     session = await readSession(req);
     if (!session) return res.status(401).json({ error: 'Unauthorized' });
   }
 
-  const userId = session.userId;
-  const fullName = session.fullName;
+  const { userId, fullName } = session;
+  const targetRoomId = req.params.roomId;
 
-  const room = await Room.findById(req.params.roomId);
+  // 1) Enforce "one room per user" BEFORE anything else
+  await removeUserFromAllRooms(userId, targetRoomId);
+
+  // 2) Re-load the target room AFTER cleanup (fresh state)
+  const room = await Room.findById(targetRoomId);
   if (!room) return res.status(404).json({ error: 'Room not found' });
 
+  // 3) Capacity check on fresh state
   if (room.participants.length >= room.maxParticipants) {
     return res.status(400).json({ error: 'Room is full' });
   }
 
-  await removeUserFromAllRooms(userId);
-
+  // 4) Add user
   room.participants.push({ userId, fullName });
+  room.everHadParticipants = true; 
   await room.save();
 
-  res.json({ message: 'Joined room' });
+  return res.json({ message: 'Joined room' });
 });
 
 /*
   LEAVE room
 */
 router.post('/leave', async (req, res) => {
-  let session;
-
-  if (TEST_MODE) {
-    session = {
-      userId: 'test-user',
-      fullName: 'Test User'
-    };
-  } else {
+  let session = getSessionForRequest(req);
+  if (!session) {
     session = await readSession(req);
     if (!session) return res.status(401).json({ error: 'Unauthorized' });
   }

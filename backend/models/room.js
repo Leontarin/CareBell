@@ -26,6 +26,11 @@ const roomSchema = new mongoose.Schema({
     default: []
   },
 
+  everHadParticipants: {
+    type: Boolean,
+    default: false
+  },
+
   createdAt: {
     type: Date,
     default: Date.now
