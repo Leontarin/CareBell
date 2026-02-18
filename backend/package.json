@@ -3,10 +3,14 @@
   "version": "1.0.0",
   "main": "api/index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
     "start": "node api/index.js",
     "dev": "nodemon api/index.js",
-    "migrate:languages": "node scripts/backfill-language-settings.js"
+    "migrate:languages": "node scripts/backfill-language-settings.js",
+    "test": "jest --runInBand"
+  },
+  "jest": {
+    "testEnvironment": "node",
+    "setupFilesAfterEnv": ["./tests/jest.setup.js"]
   },
   "keywords": [],
   "author": "",
@@ -29,6 +33,9 @@
     "socket.io": "^4.8.1"
   },
   "devDependencies": {
-    "nodemon": "^3.1.10"
+    "jest": "^30.2.0",
+    "mongodb-memory-server": "^11.0.1",
+    "nodemon": "^3.1.10",
+    "supertest": "^7.2.2"
   }
 }

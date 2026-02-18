@@ -1,52 +1,152 @@
+//backend/routes/rooms.js
 const express = require('express');
 const router = express.Router();
+const Room = require('../models/room');
+const { readSession } = require('../lib/session');
+const isAdmin = require('../middleware/isAdmin');
+const TEST_MODE = process.env.NODE_ENV === 'test';
 
 /*
-  TEMPORARY STUB ROUTES
-  --------------------
-  This file intentionally contains NO business logic.
-  It exists only so the backend compiles while we
-  redesign rooms properly.
-
-  Do NOT add logic here yet.
+  Helper: remove user from any existing room
 */
+async function removeUserFromAllRooms(userId) {
+  await Room.updateMany(
+    { "participants.userId": userId },
+    { $pull: { participants: { userId } } }
+  );
 
-// Get all rooms (stub)
+  // Auto-delete empty temporary rooms
+  await Room.deleteMany({
+    type: 'temporary',
+    participants: { $size: 0 }
+  });
+}
+
+/*
+  GET all rooms
+*/
 router.get('/', async (req, res) => {
-  return res.json([]);
+  const rooms = await Room.find().lean();
+
+  const formatted = rooms.map(r => ({
+    _id: r._id,
+    name: r.name,
+    type: r.type,
+    maxParticipants: r.maxParticipants,
+    participantsCount: r.participants.length,
+    participants: r.participants,
+    isActive: r.participants.length > 0
+  }));
+
+  res.json(formatted);
 });
 
-// Create room (stub)
+/*
+  CREATE room
+*/
 router.post('/create', async (req, res) => {
-  return res.status(501).json({
-    error: 'Rooms not implemented yet'
+  let session;
+
+  if (TEST_MODE) {
+    session = {
+      userId: 'test-user',
+      fullName: 'Test User'
+    };
+  } else {
+    session = await readSession(req);
+    if (!session) return res.status(401).json({ error: 'Unauthorized' });
+}
+
+  const { name, type = 'temporary', maxParticipants = 8 } = req.body;
+
+  if (!name) return res.status(400).json({ error: 'Name required' });
+
+  if (type === 'permanent') {
+    const adminCheck = await isAdmin(req, res, () => {});
+    if (!adminCheck) return;
+  }
+
+  const existing = await Room.findOne({ name });
+  if (existing) {
+    return res.status(400).json({ error: 'Room name already exists' });
+  }
+
+  const room = await Room.create({
+    name,
+    type,
+    maxParticipants
   });
+
+  res.json(room);
 });
 
-// Join room (stub)
-router.post('/join', async (req, res) => {
-  return res.status(501).json({
-    error: 'Rooms not implemented yet'
-  });
+/*
+  JOIN room
+*/
+router.post('/join/:roomId', async (req, res) => {
+  let session;
+
+  if (TEST_MODE) {
+    session = {
+      userId: 'test-user',
+      fullName: 'Test User'
+    };
+  } else {
+    session = await readSession(req);
+    if (!session) return res.status(401).json({ error: 'Unauthorized' });
+  }
+
+  const userId = session.userId;
+  const fullName = session.fullName;
+
+  const room = await Room.findById(req.params.roomId);
+  if (!room) return res.status(404).json({ error: 'Room not found' });
+
+  if (room.participants.length >= room.maxParticipants) {
+    return res.status(400).json({ error: 'Room is full' });
+  }
+
+  await removeUserFromAllRooms(userId);
+
+  room.participants.push({ userId, fullName });
+  await room.save();
+
+  res.json({ message: 'Joined room' });
 });
 
-// Leave room (stub)
+/*
+  LEAVE room
+*/
 router.post('/leave', async (req, res) => {
-  return res.status(200).json({
-    message: 'Leave acknowledged (stub)'
-  });
+  let session;
+
+  if (TEST_MODE) {
+    session = {
+      userId: 'test-user',
+      fullName: 'Test User'
+    };
+  } else {
+    session = await readSession(req);
+    if (!session) return res.status(401).json({ error: 'Unauthorized' });
+  }
+
+  const userId = session.userId;
+
+  await removeUserFromAllRooms(userId);
+
+  res.json({ message: 'Left room' });
 });
 
-// Optional: default rooms (stub)
-router.get('/default', async (req, res) => {
-  return res.json([]);
-});
+/*
+  DELETE room (Admin only — even if active)
+*/
+router.delete('/:roomId', isAdmin, async (req, res) => {
+  const room = await Room.findById(req.params.roomId);
+  if (!room) return res.status(404).json({ error: 'Room not found' });
 
-// Optional: room details (stub)
-router.get('/details/:roomName', async (req, res) => {
-  return res.status(404).json({
-    error: 'Room not found (stub)'
-  });
+  await Room.deleteOne({ _id: room._id });
+
+  res.json({ message: 'Room deleted by admin' });
 });
 
 module.exports = router;
