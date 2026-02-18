@@ -120,4 +120,29 @@ describe('Rooms API', () => {
     expect(room).toBeNull();
   });
 
+  test('Admin can delete active room', async () => {
+    const createRes = await request(app)
+        .post('/rooms/create')
+        .send({ name: 'AdminDeleteRoom', type: 'temporary', maxParticipants: 5 });
+
+    const roomId = createRes.body._id;
+
+    // Join to make it active
+    const joinRes = await request(app)
+        .post(`/rooms/join/${roomId}`)
+        .set('x-test-user', 'user1')
+        .set('x-test-name', 'User 1');
+
+    expect(joinRes.statusCode).toBe(200);
+
+    // Delete as admin (middleware is mocked as admin)
+    const delRes = await request(app)
+        .delete(`/rooms/${roomId}`);
+
+    expect(delRes.statusCode).toBe(200);
+
+    const room = await Room.findById(roomId);
+    expect(room).toBeNull();
+    });
+
 });
