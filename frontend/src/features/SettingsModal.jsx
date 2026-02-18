@@ -17,7 +17,17 @@ import {PICTOGRAMS,ALLERGENS,ADDITIVES} from "../../../shared/constants/foodMeta
 export default function SettingsModal({ onClose }) {
   const { t, i18n } = useTranslation();
   const navigate = useNavigate();
-  const { user, setUser, darkMode, setDarkMode, bellaVolume, setBellaVolume } = useContext(AppContext);
+  const {
+    user,
+    setUser,
+    darkMode,
+    setDarkMode,
+    bellaVolume,
+    setBellaVolume,
+    adaptiveMode,
+    setAdaptiveMode,
+  } = useContext(AppContext);
+
 
   const [scale, setScale] = useState(parseFloat(localStorage.getItem("fontScale")) || 1);
   const [activeTab, setActiveTab] = useState("general");
@@ -314,6 +324,38 @@ const fetchHealth = async (payload) => {
                   <div className="absolute top-1 left-[26px] text-xl transition-opacity duration-300 opacity-0 peer-checked:opacity-100">🌙</div>
                 </label>
               </section>
+
+              {/* ADAPTIVE MODE */}
+              <section className="mb-8">
+                <h3 className="text-xl font-semibold mb-3">
+                  🧓 {t("SettingsModal.adaptiveMode", "Adaptive Mode")}
+                </h3>
+
+                <p className="text-sm mb-3 text-gray-600 dark:text-gray-300">
+                  {t(
+                    "SettingsModal.adaptiveDescription",
+                    "Enlarges buttons, increases spacing, and improves clarity for easier use."
+                  )}
+                </p>
+
+                <label className="relative inline-block w-14 h-8 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    className="peer sr-only"
+                    checked={adaptiveMode}
+                    onChange={(e) => setAdaptiveMode(e.target.checked)}
+                  />
+                  <div className="absolute inset-0 bg-gray-200 peer-checked:bg-blue-600 rounded-full transition-colors duration-300"></div>
+                  <div className="absolute top-1 left-1 w-6 h-6 bg-white rounded-full shadow transform transition-transform duration-300 peer-checked:translate-x-[26px]"></div>
+                  <div className="absolute top-1 left-1 text-xl transition-opacity duration-300 peer-checked:opacity-0">
+                    👓
+                  </div>
+                  <div className="absolute top-1 left-[26px] text-xl transition-opacity duration-300 opacity-0 peer-checked:opacity-100">
+                    🧓
+                  </div>
+                </label>
+              </section>
+
 
               <div className="flex flex-col md:flex-row justify-between mt-4 gap-2">
                 <button

@@ -35,37 +35,6 @@ services:
     networks:
       - carebell_net
 
-  # ─────────────── DENO SIGNALING ───────────────
-  deno:
-    profiles: ["prod"]
-    restart: unless-stopped
-    build:
-      context: ./deno-signaling
-      dockerfile: deno.Dockerfile
-    expose:
-      - "5175"
-    depends_on:
-      mongo:
-        condition: service_healthy
-    networks:
-      - carebell_net
-
-  deno-dev:
-    profiles: ["dev"]
-    restart: unless-stopped
-    build:
-      context: ./deno-signaling
-      dockerfile: deno.Dockerfile.dev
-    volumes:
-      - ./deno-signaling:/app
-    ports:
-      - "5175:5175"
-    depends_on:
-      mongo:
-        condition: service_healthy
-    networks:
-      - carebell_net
-
   # ─────────────── BACKEND ───────────────
   backend:
     profiles: ["prod"]
