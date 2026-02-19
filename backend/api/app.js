@@ -64,7 +64,7 @@ const io = new Server(server, {
 
 app.set('io', io);
 
-const setupSockets = require('../sockets');
+const setupSockets = require('../sockets/index.js');
 setupSockets(io);
 
 // ─── Static Resources ────────────────────────────────────────────────────────
