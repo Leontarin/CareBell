@@ -5,6 +5,7 @@ import { AppContext } from "../shared/AppContext";
 import { useTranslation } from "react-i18next";
 import { FaExpand, FaCompress, FaUsers, FaTimes } from "react-icons/fa";
 import { acquireMeetSocket, releaseMeetSocket } from "./meetSocket";
+import RoomCreateModal from "../components/RoomCreateModal";
 
 /* -----------------------------
    Participants Modal
@@ -71,7 +72,6 @@ export default function MeetWithFriends() {
   const [rooms, setRooms] = useState([]);
   const [joinedRoom, setJoinedRoom] = useState(null);
   const [participants, setParticipants] = useState([]);
-  const [newRoomName, setNewRoomName] = useState("");
 
   const [socketConnected, setSocketConnected] = useState(false);
   const [socketReady, setSocketReady] = useState(false);
@@ -80,6 +80,7 @@ export default function MeetWithFriends() {
   const [showParticipantsModal, setShowParticipantsModal] = useState(false);
   const [selectedRoomParticipants, setSelectedRoomParticipants] = useState([]);
   const [selectedRoomName, setSelectedRoomName] = useState("");
+  const [showCreateModal, setShowCreateModal] = useState(false);
 
   const socketRef = useRef(null);
   const joinedRoomIdRef = useRef(null);
@@ -296,33 +297,6 @@ export default function MeetWithFriends() {
   /* -----------------------------
      Room actions
   ------------------------------ */
-  const createRoom = async () => {
-    const name = newRoomName.trim();
-    if (!name) return;
-
-    setNotice(null);
-
-    try {
-      const createdRes = await api.post("/rooms/create", { name });
-      const createdRoom = createdRes?.room || createdRes;
-      const roomId = createdRoom?._id;
-
-      setNewRoomName("");
-
-      if (roomId) {
-        joinedRoomIdRef.current = roomId;
-        setJoinedRoom(createdRoom);
-        setParticipants([]);
-        await fetchRooms();
-      } else {
-        await fetchRooms();
-      }
-    } catch (e) {
-      console.error("❌ Failed to create room:", e);
-      const msg = e?.response?.data?.error || e?.message || "Failed to create room";
-      setNotice(msg);
-    }
-  };
 
   const joinRoom = async (room) => {
     if (!room?._id) return;
@@ -419,19 +393,11 @@ export default function MeetWithFriends() {
             </span>
           </div>
 
-          <div className="mb-8 flex items-center">
-            <input
-              type="text"
-              className="px-4 py-2 rounded-l border-none outline-none text-lg"
-              placeholder="Enter room name"
-              value={newRoomName}
-              onChange={(e) => setNewRoomName(e.target.value)}
-              onKeyDown={(e) => e.key === "Enter" && createRoom()}
-            />
+          <div className="mb-8 flex justify-center">
             <button
-              className="px-6 py-2 bg-green-600 text-white rounded-r hover:bg-green-700 text-lg font-semibold transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
-              onClick={createRoom}
-              disabled={!newRoomName.trim() || !socketConnected}
+              onClick={() => setShowCreateModal(true)}
+              disabled={!socketConnected}
+              className="px-8 py-3 bg-green-600 hover:bg-green-700 text-white rounded-xl font-semibold text-lg shadow-lg transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
               title={!socketConnected ? "Waiting for socket connection..." : ""}
             >
               {t("MeetWithFriends.createRoom")}
@@ -590,6 +556,31 @@ export default function MeetWithFriends() {
           </div>
         </div>
       )}
+            <RoomCreateModal
+              isOpen={showCreateModal}
+              onClose={() => setShowCreateModal(false)}
+              isAdmin={user?.isAdmin}
+              onCreate={async ({ name, maxParticipants, type }) => {
+                try {
+                  if (type === "permanent") {
+                    await api.post("/rooms/create-permanent", {
+                      name,
+                      maxParticipants,
+                    });
+                  } else {
+                    await api.post("/rooms/create", {
+                      name,
+                      maxParticipants,
+                    });
+                  }
+
+                  setShowCreateModal(false);
+                  await fetchRooms();
+                } catch (e) {
+                  console.error("Create failed:", e);
+                }
+              }}
+            />
     </div>
   );
 }
