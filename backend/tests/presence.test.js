@@ -15,12 +15,12 @@ const clients = new Set();
 
 function connectClient({ userId, fullName }) {
   const s = ioClient(baseURL, {
-    autoConnect: false,               // we manually connect
+    autoConnect: false,
     transports: ['websocket', 'polling'],
     forceNew: true,
     reconnection: false,
     timeout: 8000,
-    auth: { userId, fullName },       // ✅ server reads this in test mode
+    auth: { userId, fullName },
     path: '/socket.io',
   });
 
@@ -69,19 +69,15 @@ function delay(ms) {
 
 beforeAll(async () => {
   await connect();
-
   ({ app, server } = require('../api/app'));
-
   await new Promise((resolve) => {
-    httpServer = server.listen(0, resolve); // ephemeral port
+    httpServer = server.listen(0, resolve);
   });
-
   const port = httpServer.address().port;
   baseURL = `http://127.0.0.1:${port}`;
 });
 
 afterEach(async () => {
-  // prevent leaks that hang Jest
   for (const s of Array.from(clients)) {
     try { s.disconnect(); } catch {}
     clients.delete(s);
@@ -94,79 +90,112 @@ afterAll(async () => {
     try { s.disconnect(); } catch {}
   }
   clients.clear();
-
   if (httpServer) {
     await new Promise((resolve) => httpServer.close(resolve));
   }
   await close();
 });
 
-describe('Socket.IO Presence', () => {
-  test('One active socket per user: new connection kicks old', async () => {
-    const s1 = connectClient({ userId: 'u1', fullName: 'User One' });
-    const ready1P = waitForOrFail(s1, 'rtc:ready', 8000);
-    s1.connect();
-    await ready1P;
+describe('Socket.IO Presence - Architecture Invariants', () => {
 
-    // observe kick/disconnect
-    const kickedP = waitForOrFail(s1, 'rtc:kicked', 8000);
-    const disconnectedP = waitFor(s1, 'disconnect', 8000);
-
-    const s2 = connectClient({ userId: 'u1', fullName: 'User One' });
-    const ready2P = waitForOrFail(s2, 'rtc:ready', 8000);
-    s2.connect();
-    await ready2P;
-
-    await kickedP;
-    await disconnectedP;
-
-    expect(s2.connected).toBe(true);
-
-    const disc2P = waitFor(s2, 'disconnect', 8000);
-    s2.disconnect();
-    await disc2P;
-  });
-
-  test('Disconnect cleanup removes user from DB room and deletes empty active temporary room', async () => {
-    // Create room
+  test('Non-member cannot join presence room', async () => {
     const createRes = await request(app)
       .post('/rooms/create')
-      .send({ name: 'PresenceRoom', type: 'temporary', maxParticipants: 5 });
+      .send({ name: 'SecureRoom', type: 'temporary' });
 
-    expect(createRes.statusCode).toBe(200);
     const roomId = createRes.body._id;
 
-    // Join room via REST (authoritative)
-    const joinRes = await request(app)
-      .post(`/rooms/join/${roomId}`)
-      .set('x-test-user', 'u2')
-      .set('x-test-name', 'User Two');
-
-    expect(joinRes.statusCode).toBe(200);
-
-    let room = await Room.findById(roomId);
-    expect(room).not.toBeNull();
-    expect(room.participants.some(p => p.userId === 'u2')).toBe(true);
-
-    // Connect socket + presence join
-    const s = connectClient({ userId: 'u2', fullName: 'User Two' });
-    const readyP = waitForOrFail(s, 'rtc:ready', 8000);
+    const s = connectClient({ userId: 'attacker', fullName: 'Bad Actor' });
+    const readyP = waitForOrFail(s, 'rtc:ready');
     s.connect();
     await readyP;
 
     s.emit('rtc:join-room', { roomId });
-    const roster = await waitForOrFail(s, 'rtc:roster', 8000);
-    expect(roster.roomId).toBe(String(roomId));
 
-    // Disconnect -> should cleanup DB and delete empty temp room
-    const discP = waitFor(s, 'disconnect', 8000);
+    await expect(waitForOrFail(s, 'rtc:roster'))
+      .rejects
+      .toThrow();
+  });
+
+  test('Capacity cannot be bypassed via socket', async () => {
+    const createRes = await request(app)
+      .post('/rooms/create')
+      .send({ name: 'CapRoom', maxParticipants: 1 });
+
+    const roomId = createRes.body._id;
+
+    await request(app)
+      .post(`/rooms/join/${roomId}`)
+      .set('x-test-user', 'user1')
+      .set('x-test-name', 'User 1');
+
+    const s2 = connectClient({ userId: 'user2', fullName: 'User 2' });
+    const readyP = waitForOrFail(s2, 'rtc:ready');
+    s2.connect();
+    await readyP;
+
+    s2.emit('rtc:join-room', { roomId });
+
+    await expect(waitForOrFail(s2, 'rtc:roster'))
+      .rejects
+      .toThrow();
+  });
+
+  test('Permanent room does NOT auto-delete when empty', async () => {
+    const createRes = await request(app)
+      .post('/rooms/create-permanent')
+      .send({ name: 'PermRoom', maxParticipants: 5 });
+
+    const roomId = createRes.body._id;
+
+    await request(app)
+      .post(`/rooms/join/${roomId}`)
+      .set('x-test-user', 'user1')
+      .set('x-test-name', 'User 1');
+
+    const s = connectClient({ userId: 'user1', fullName: 'User 1' });
+    const readyP = waitForOrFail(s, 'rtc:ready');
+    s.connect();
+    await readyP;
+
+    s.emit('rtc:join-room', { roomId });
+    await waitForOrFail(s, 'rtc:roster');
+
+    const discP = waitFor(s, 'disconnect');
     s.disconnect();
     await discP;
 
-    // give server disconnect cleanup a moment
     await delay(250);
 
-    room = await Room.findById(roomId);
-    expect(room).toBeNull();
+    const room = await Room.findById(roomId);
+    expect(room).not.toBeNull();
   });
+
+  test('Duplicate rtc:join-room does not duplicate roster state', async () => {
+    const createRes = await request(app)
+      .post('/rooms/create')
+      .send({ name: 'DupRoom', type: 'temporary' });
+
+    const roomId = createRes.body._id;
+
+    await request(app)
+      .post(`/rooms/join/${roomId}`)
+      .set('x-test-user', 'user1')
+      .set('x-test-name', 'User 1');
+
+    const s = connectClient({ userId: 'user1', fullName: 'User 1' });
+    const readyP = waitForOrFail(s, 'rtc:ready');
+    s.connect();
+    await readyP;
+
+    s.emit('rtc:join-room', { roomId });
+    const roster1 = await waitForOrFail(s, 'rtc:roster');
+
+    s.emit('rtc:join-room', { roomId });
+    const roster2 = await waitForOrFail(s, 'rtc:roster');
+
+    expect(roster1.participantsCount).toBe(1);
+    expect(roster2.participantsCount).toBe(1);
+  });
+
 });

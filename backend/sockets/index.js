@@ -1,80 +1,130 @@
 // backend/sockets/index.js
+
 const { readSession } = require('../lib/session');
 const { removeUserFromAllRooms } = require('../lib/rooms/roomLifecycle');
 const { getRoomRoster } = require('../lib/rooms/roster');
-
-function getSessionForSocket(socket) {
-  if (process.env.NODE_ENV !== 'test') return null;
-
-  // In tests we pass identity via socket.handshake.auth
-  const userId = socket.handshake?.auth?.userId || 'test-user';
-  const fullName = socket.handshake?.auth?.fullName || 'Test User';
-  return { userId, fullName };
-}
 
 // One active socket per user
 const socketByUserId = new Map(); // userId -> socket
 
 module.exports = function setupSockets(io) {
-  io.on('connection', async (socket) => {
-    let userId = null;
-    let fullName = null;
 
+  /**
+   * 🔐 AUTH MIDDLEWARE
+   * Runs BEFORE "connection"
+   * Rejects unauthorized sockets early.
+   */
+  io.use(async (socket, next) => {
     try {
-      let session = getSessionForSocket(socket);
+      let session = null;
 
-      if (!session) {
+      // ✅ Test mode override
+      if (process.env.NODE_ENV === 'test') {
+        const userId = socket.handshake?.auth?.userId || 'test-user';
+        const fullName = socket.handshake?.auth?.fullName || 'Test User';
+        session = { userId, fullName };
+      } else {
+        // Production session resolution
         const maybePromise = readSession(socket.request);
-        session = (maybePromise && typeof maybePromise.then === 'function')
-          ? await maybePromise
-          : maybePromise;
+        session =
+          maybePromise && typeof maybePromise.then === 'function'
+            ? await maybePromise
+            : maybePromise;
       }
 
-      userId = session?.userId || session?.uid;
-      fullName = session?.fullName || '';
+      const userId = session?.userId || session?.uid;
+      const fullName = session?.fullName || '';
 
       if (!userId) {
-        socket.emit('rtc:error', { error: 'Unauthorized' });
-        return socket.disconnect(true);
+        return next(new Error('Unauthorized'));
       }
 
-      // Enforce one active connection per user
-      const existing = socketByUserId.get(userId);
-      if (existing && existing.id !== socket.id) {
-        try { existing.emit('rtc:kicked', { reason: 'New connection opened' }); } catch {}
-        try { existing.disconnect(true); } catch {}
-      }
-      socketByUserId.set(userId, socket);
-
+      // Attach identity to socket
       socket.data.userId = userId;
       socket.data.fullName = fullName;
       socket.data.roomId = null;
 
-      // Presence only (DB membership remains REST-authoritative)
+      return next();
+    } catch (err) {
+      return next(new Error('Unauthorized'));
+    }
+  });
+
+  /**
+   * 🔌 CONNECTION HANDLER
+   * At this point authentication is guaranteed.
+   */
+  io.on('connection', (socket) => {
+    const userId = socket.data.userId;
+    const fullName = socket.data.fullName;
+
+    try {
+      /**
+       * 🔁 Enforce ONE active connection per user
+       */
+      const existing = socketByUserId.get(userId);
+      if (existing && existing.id !== socket.id) {
+        try {
+          existing.emit('rtc:kicked', { reason: 'New connection opened' });
+        } catch {}
+        try {
+          existing.disconnect(true);
+        } catch {}
+      }
+
+      socketByUserId.set(userId, socket);
+
+      /**
+       * 🟢 PRESENCE: JOIN ROOM
+       * (DB membership remains REST-authoritative)
+       */
       socket.on('rtc:join-room', async ({ roomId }) => {
         if (!roomId) return;
 
         const nextRoomId = String(roomId);
 
+        // If switching rooms
         if (socket.data.roomId && socket.data.roomId !== nextRoomId) {
           socket.leave(socket.data.roomId);
           socket.to(socket.data.roomId).emit('rtc:user-left', { userId });
         }
 
+        // Load roster FIRST
+        const roster = await getRoomRoster(nextRoomId);
+        if (!roster) {
+        socket.emit('rtc:error', { error: 'Room not found' });
+        return;
+        }
+
+        // 🚨 Enforce DB membership
+        const isMember = Array.isArray(roster.participants) &&
+        roster.participants.some(p => p.userId === userId);
+
+        if (!isMember) {
+        socket.emit('rtc:error', { error: 'Not a room member' });
+        return;
+        }
+
+        // If switching rooms
+        if (socket.data.roomId && socket.data.roomId !== nextRoomId) {
+        socket.leave(socket.data.roomId);
+        socket.to(socket.data.roomId).emit('rtc:user-left', { userId });
+        }
+
+        // Now safe to join
         socket.data.roomId = nextRoomId;
         socket.join(nextRoomId);
 
-        const roster = await getRoomRoster(nextRoomId);
-        if (!roster) {
-          socket.emit('rtc:error', { error: 'Room not found' });
-          return;
-        }
-
+        // Send roster to self
         socket.emit('rtc:roster', roster);
 
+        // Notify others
         socket.to(nextRoomId).emit('rtc:user-joined', { userId, fullName });
       });
 
+      /**
+       * 🟡 PRESENCE: LEAVE ROOM
+       */
       socket.on('rtc:leave-room', async () => {
         const roomId = socket.data.roomId;
         if (!roomId) return;
@@ -85,28 +135,40 @@ module.exports = function setupSockets(io) {
         socket.to(roomId).emit('rtc:user-left', { userId });
       });
 
+      /**
+       * 🔴 DISCONNECT
+       * Authoritative DB cleanup + presence cleanup
+       */
       socket.on('disconnect', async () => {
-        // Remove from map if this was the active socket
-        const cur = socketByUserId.get(userId);
-        if (cur && cur.id === socket.id) socketByUserId.delete(userId);
+        const current = socketByUserId.get(userId);
+        if (current && current.id === socket.id) {
+          socketByUserId.delete(userId);
+        }
 
-        // Authoritative cleanup: remove user from DB rooms on disconnect
         try {
           const changed = await removeUserFromAllRooms(userId);
           if (changed) io.emit('rooms:changed');
-        } catch (e) {
-          // keep server stable; no console spam
+        } catch {
+          // keep server stable
         }
 
         const roomId = socket.data.roomId;
         if (roomId) {
-          try { socket.to(roomId).emit('rtc:user-left', { userId }); } catch {}
+          try {
+            socket.to(roomId).emit('rtc:user-left', { userId });
+          } catch {}
         }
       });
 
+      /**
+       * ✅ Ready signal
+       */
       socket.emit('rtc:ready', { userId, fullName });
-    } catch (_err) {
-      try { socket.disconnect(true); } catch {}
+
+    } catch {
+      try {
+        socket.disconnect(true);
+      } catch {}
     }
   });
 };
