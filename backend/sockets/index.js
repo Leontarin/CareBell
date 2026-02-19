@@ -92,7 +92,8 @@ module.exports = function setupSockets(io) {
 
         // Authoritative cleanup: remove user from DB rooms on disconnect
         try {
-          await removeUserFromAllRooms(userId);
+          const changed = await removeUserFromAllRooms(userId);
+          if (changed) io.emit('rooms:changed');
         } catch (e) {
           // keep server stable; no console spam
         }

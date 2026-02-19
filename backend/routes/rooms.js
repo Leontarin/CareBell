@@ -18,6 +18,12 @@ function getSessionForRequest(req) {
 
   return { userId, fullName };
 }
+
+function emitRoomsChanged(req) {
+  const io = req.app.get('io');
+  if (io) io.emit('rooms:changed');
+}
+
 /*
   GET all rooms
 */
@@ -38,7 +44,7 @@ router.get('/', async (req, res) => {
 });
 
 /*
-  CREATE room
+  CREATE temporary room
 */
 router.post('/create', async (req, res) => {
   let session = getSessionForRequest(req);
@@ -47,27 +53,42 @@ router.post('/create', async (req, res) => {
     if (!session) return res.status(401).json({ error: 'Unauthorized' });
   }
 
-  const { name, type = 'temporary', maxParticipants = 8 } = req.body;
+  const { name, maxParticipants = 8 } = req.body;
 
   if (!name) return res.status(400).json({ error: 'Name required' });
 
-  if (type === 'permanent') {
-    const adminCheck = await isAdmin(req, res, () => {});
-    if (!adminCheck) return;
-  }
-
   const existing = await Room.findOne({ name });
-  if (existing) {
-    return res.status(400).json({ error: 'Room name already exists' });
-  }
+  if (existing) return res.status(400).json({ error: 'Room name already exists' });
 
   const room = await Room.create({
     name,
-    type,
-    maxParticipants
+    type: 'temporary',
+    maxParticipants,
   });
 
-  res.json(room);
+  emitRoomsChanged(req);
+  return res.json(room);
+});
+
+/*
+  CREATE permanent room
+*/
+router.post('/create-permanent', isAdmin, async (req, res) => {
+  const { name, maxParticipants = 8 } = req.body;
+
+  if (!name) return res.status(400).json({ error: 'Name required' });
+
+  const existing = await Room.findOne({ name });
+  if (existing) return res.status(400).json({ error: 'Room name already exists' });
+
+  const room = await Room.create({
+    name,
+    type: 'permanent',
+    maxParticipants,
+  });
+
+  emitRoomsChanged(req);
+  return res.json(room);
 });
 
 // JOIN room
@@ -98,6 +119,7 @@ router.post('/join/:roomId', async (req, res) => {
   room.everHadParticipants = true; 
   await room.save();
 
+  emitRoomsChanged(req);
   return res.json({ message: 'Joined room' });
 });
 
@@ -115,6 +137,7 @@ router.post('/leave', async (req, res) => {
 
   await removeUserFromAllRooms(userId);
 
+  emitRoomsChanged(req);
   res.json({ message: 'Left room' });
 });
 
@@ -127,6 +150,7 @@ router.delete('/:roomId', isAdmin, async (req, res) => {
 
   await Room.deleteOne({ _id: room._id });
 
+  emitRoomsChanged(req);
   res.json({ message: 'Room deleted by admin' });
 });
 

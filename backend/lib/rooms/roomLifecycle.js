@@ -8,19 +8,21 @@ function asObjectId(id) {
 }
 
 async function removeUserFromAllRooms(userId, excludeRoomId = null) {
-  await Room.updateMany({}, { $pull: { participants: { userId } } });
+  const pullRes = await Room.updateMany({}, { $pull: { participants: { userId } } });
 
   const query = {
     type: 'temporary',
     everHadParticipants: true,
     participants: { $size: 0 }
   };
+  if (excludeRoomId) query._id = { $ne: asObjectId(excludeRoomId) };
 
-  if (excludeRoomId) {
-    query._id = { $ne: asObjectId(excludeRoomId) };
-  }
+  const delRes = await Room.deleteMany(query);
 
-  await Room.deleteMany(query);
+  const modified = (pullRes?.modifiedCount || pullRes?.nModified || 0) > 0;
+  const deleted = (delRes?.deletedCount || 0) > 0;
+
+  return modified || deleted;
 }
 
 module.exports = {

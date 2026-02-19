@@ -6,7 +6,7 @@ const { safeUserQuery } = require("../lib/utils");
 
 module.exports = async function isAdmin(req, res, next) {
   try {
-    const session = readSession(req);
+    const session = await readSession(req);
     const userKey = session?.uid || session?.userId;
     if (!userKey) return res.status(401).json({ message: "Not logged in" });
 
