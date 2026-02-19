@@ -1,10 +1,10 @@
-// frontend/src/features/MeetWithFriends.jsx
+//frontent/src/features/MeetWithFriends.jsx
 import React, { useState, useEffect, useContext, useRef } from "react";
-import { io } from "socket.io-client";
-import { api, API } from "../shared/config";
+import { api } from "../shared/config";
 import { AppContext } from "../shared/AppContext";
 import { useTranslation } from "react-i18next";
 import { FaExpand, FaCompress, FaUsers, FaTimes } from "react-icons/fa";
+import { acquireMeetSocket, releaseMeetSocket } from "./meetSocket";
 
 /* -----------------------------
    Participants Modal
@@ -115,11 +115,11 @@ export default function MeetWithFriends() {
     try {
       const data = await api.get("/rooms");
       const list = Array.isArray(data) ? data : [];
-      setRooms(list);
+      if (mountedRef.current) setRooms(list);
       return list;
     } catch (e) {
       console.error("❌ Error fetching rooms:", e);
-      setRooms([]);
+      if (mountedRef.current) setRooms([]);
       return [];
     }
   };
@@ -134,58 +134,42 @@ export default function MeetWithFriends() {
     }
 
     pendingJoinRoomIdRef.current = null;
-    s.emit("rtc:join-room", { roomId });
+    try { s.emit("rtc:join-room", { roomId }); } catch {}
   };
 
   const safeEmitLeave = () => {
     const s = socketRef.current;
     if (!s) return;
     pendingJoinRoomIdRef.current = null;
-    try {
-      s.emit("rtc:leave-room");
-    } catch {}
+    try { s.emit("rtc:leave-room"); } catch {}
   };
 
   /* -----------------------------
-     Socket lifecycle
-     Feature-scoped: exists ONLY while MeetWithFriends is mounted
+     Socket lifecycle (feature-scoped)
   ------------------------------ */
   useEffect(() => {
     if (!user?.id) return;
 
     mountedRef.current = true;
 
-    // reset UI every mount so you never get "stuck starting" from old state
+    // Reset UI on mount
     setSocketConnected(false);
     setSocketReady(false);
     setNotice(null);
     setParticipants([]);
 
-    // Create a fresh socket instance each mount
-    // IMPORTANT: allow polling + websocket (do not force websocket-only)
-    const s = io(API, {
-      withCredentials: true,
-      transports: ["polling", "websocket"],
-      timeout: 8000,
-      reconnection: true,
-      reconnectionAttempts: Infinity,
-      reconnectionDelay: 500,
-      reconnectionDelayMax: 3000,
-    });
-
-    s.io.engine.on("close", (reason) => {
-  console.log("🧯 engine close:", reason);
-    });
-    s.io.engine.on("error", (err) => {
-      console.log("🧯 engine error:", err);
-    });
-
+    const s = acquireMeetSocket();
     socketRef.current = s;
+
+    // If socket is already connected (e.g. StrictMode re-mount), reflect that immediately
+    if (s.connected) {
+      setSocketConnected(true);
+      setSocketReady(true);
+    }
 
     const onConnect = () => {
       if (!mountedRef.current) return;
       setSocketConnected(true);
-      // server also emits rtc:ready, but treat connect as "ready enough"
       setSocketReady(true);
       setNotice(null);
 
@@ -203,14 +187,11 @@ export default function MeetWithFriends() {
     const onReady = () => {
       if (!mountedRef.current) return;
       setSocketReady(true);
-
       const roomId = pendingJoinRoomIdRef.current || joinedRoomIdRef.current;
       if (roomId) safeEmitJoin(roomId);
     };
 
-    const onRoomsChanged = () => {
-      fetchRooms();
-    };
+    const onRoomsChanged = () => fetchRooms();
 
     const onRoster = (roster) => {
       if (!mountedRef.current) return;
@@ -276,26 +257,15 @@ export default function MeetWithFriends() {
     s.on("rtc:room-deleted", onRoomDeleted);
     s.on("connect_error", onConnectError);
 
-    // initial load
     fetchRooms();
 
-    // Cleanup runs when leaving route via Back (unmount)
     return () => {
       mountedRef.current = false;
 
-      // Best-effort: if we were in a room, tell server we are leaving.
-      // Your REST /rooms/leave requires an active socket, so do both.
-      try {
-        safeEmitLeave();
-      } catch {}
+      // Capture current room at unmount time
+      const roomId = joinedRoomIdRef.current;
 
-      try {
-        // If still connected, attempt REST leave (won’t block unmount).
-        // Don't await; we just fire and forget.
-        api.post("/rooms/leave").catch(() => {});
-      } catch {}
-
-      // Remove listeners first, then disconnect
+      // Detach listeners for THIS component instance (socket may survive StrictMode)
       try {
         s.off("connect", onConnect);
         s.off("disconnect", onDisconnect);
@@ -307,36 +277,20 @@ export default function MeetWithFriends() {
         s.off("rtc:kicked", onKicked);
         s.off("rtc:room-deleted", onRoomDeleted);
         s.off("connect_error", onConnectError);
-        s.removeAllListeners();
       } catch {}
 
-      try {
-        s.disconnect();
-      } catch {}
+      // Only when the feature truly goes away (no immediate remount) we teardown socket.
+      // This prevents StrictMode from "leaving" on the fake unmount.
+      releaseMeetSocket((sock) => {
+        if (roomId && sock?.connected) {
+          try { sock.emit("rtc:leave-room"); } catch {}
+          try { api.post("/rooms/leave").catch(() => {}); } catch {}
+        }
+      });
 
       socketRef.current = null;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [user?.id]);
-
-  /* -----------------------------
-     Optional: tab close cleanup
-  ------------------------------ */
-  useEffect(() => {
-    if (!user?.id) return;
-
-    const handleBeforeUnload = () => {
-      if (!joinedRoomIdRef.current) return;
-      try {
-        navigator.sendBeacon(
-          `${API}/rooms/leave`,
-          new Blob([], { type: "application/json" })
-        );
-      } catch (_) {}
-    };
-
-    window.addEventListener("beforeunload", handleBeforeUnload);
-    return () => window.removeEventListener("beforeunload", handleBeforeUnload);
   }, [user?.id]);
 
   /* -----------------------------
@@ -349,8 +303,6 @@ export default function MeetWithFriends() {
     setNotice(null);
 
     try {
-      // IMPORTANT: your backend /rooms/create already auto-joins via socket,
-      // so don't double-join here. Just accept the room + roster.
       const createdRes = await api.post("/rooms/create", { name });
       const createdRoom = createdRes?.room || createdRes;
       const roomId = createdRoom?._id;
@@ -360,11 +312,7 @@ export default function MeetWithFriends() {
       if (roomId) {
         joinedRoomIdRef.current = roomId;
         setJoinedRoom(createdRoom);
-        setParticipants([]); // will be replaced by rtc:roster
-
-        // Also join socket room (presence channel)
-        safeEmitJoin(roomId);
-
+        setParticipants([]);
         await fetchRooms();
       } else {
         await fetchRooms();
@@ -385,9 +333,7 @@ export default function MeetWithFriends() {
 
       joinedRoomIdRef.current = room._id;
       setJoinedRoom(room);
-      setParticipants([]); // wait for roster
-
-      safeEmitJoin(room._id);
+      setParticipants([]);
       await fetchRooms();
     } catch (e) {
       console.error("❌ Failed to join room:", e);
@@ -399,11 +345,13 @@ export default function MeetWithFriends() {
   const leaveRoom = async () => {
     setNotice(null);
 
-    // Tell server via REST first (requires active socket)
-    try {
-      await api.post("/rooms/leave");
-    } catch (e) {
-      console.warn("⚠️ leave failed:", e);
+    // /rooms/leave requires an active socket → avoid 409 spam
+    if (socketRef.current?.connected && joinedRoomIdRef.current) {
+      try {
+        await api.post("/rooms/leave");
+      } catch (e) {
+        console.warn("⚠️ leave failed:", e);
+      }
     }
 
     safeEmitLeave();
@@ -540,12 +488,6 @@ export default function MeetWithFriends() {
                           🚫 Room Full
                         </p>
                       )}
-
-                      {room.createdAt && (
-                        <p className="text-gray-500 dark:text-gray-500 text-xs mt-1">
-                          Created: {new Date(room.createdAt).toLocaleTimeString()}
-                        </p>
-                      )}
                     </div>
 
                     <div className="mt-4">
@@ -587,6 +529,7 @@ export default function MeetWithFriends() {
         </div>
       ) : (
         <div className="w-full h-full flex flex-col bg-gray-900">
+          {/* Room Header */}
           <div className="flex justify-between items-center w-full p-6 bg-gray-800 border-b border-gray-700">
             <div>
               <h2 className="text-white text-2xl font-bold">{joinedRoom?.name} Room</h2>
@@ -629,6 +572,7 @@ export default function MeetWithFriends() {
             </div>
           </div>
 
+          {/* Placeholder (mediasoup later) */}
           <div className="flex-1 bg-black p-6 overflow-hidden">
             <div className="h-full min-h-0 rounded-2xl border border-gray-700 bg-gradient-to-br from-gray-900 to-black flex items-center justify-center">
               <div className="text-center max-w-xl px-6">

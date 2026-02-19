@@ -1,26 +1,34 @@
-# ─── Backend Dev Dockerfile ─────────────────────────────────────
-FROM node:20-slim
+FROM node:22-bookworm
 
 WORKDIR /app
 
+# Install system build dependencies required for mediasoup
+RUN apt-get update && apt-get install -y \
+    python3 \
+    python3-pip \
+    make \
+    g++ \
+    build-essential \
+    && rm -rf /var/lib/apt/lists/*
+
+# Alias python -> python3 (mediasoup expects "python")
+RUN ln -s /usr/bin/python3 /usr/bin/python
+
 # Copy package files and install dependencies
 COPY package*.json ./
-RUN npm install    # dev image uses npm install (not ci) to allow quick edits
+RUN npm install
 
-# Install nodemon globally (needed for hot reload inside container)
+# Install nodemon globally
 RUN npm install -g nodemon
 
-# Copy the rest of the backend source
+# Copy the rest of backend source
 COPY . .
 
 ARG REBUILD_PIPER=1
 RUN rm -rf /app/tts/bin/linux/* && mkdir -p /app/tts/bin/linux
 RUN cd /app/tts/bin/linux && tar -xzf /app/tts/bin/piper_linux_x86_64.tar.gz --strip-components=1
 
-# Expose backend port
 ENV PORT=5174
 EXPOSE 5174
 
-# Use nodemon to watch for file changes
 CMD ["nodemon", "--legacy-watch", "api/index.js"]
-
