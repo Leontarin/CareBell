@@ -31,7 +31,7 @@ const userSchema = new mongoose.Schema({
     type: String,
     trim: true,
     lowercase: true,
-    index: true,
+    //index: true,
     // uniqueness handled by partial index below
   },  
   email: {

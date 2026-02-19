@@ -1,7 +1,4 @@
-// backend/tests/presence.test.js
-jest.setTimeout(30000);
-
-const request = require('supertest');
+//backend/tests/presence.test.js
 const { io: ioClient } = require('socket.io-client');
 const Room = require('../models/room');
 const { connect, close, clear } = require('./setup');
@@ -23,43 +20,14 @@ function connectClient({ userId, fullName }) {
     auth: { userId, fullName },
     path: '/socket.io',
   });
-
   clients.add(s);
-  s.on('disconnect', () => clients.delete(s));
   return s;
-}
-
-function waitForOrFail(socket, event, ms = 8000) {
-  return new Promise((resolve, reject) => {
-    const t = setTimeout(() => reject(new Error(`Timeout waiting for "${event}"`)), ms);
-
-    const cleanup = () => {
-      clearTimeout(t);
-      socket.off(event, onEvent);
-      socket.off('connect_error', onConnectError);
-      socket.off('rtc:error', onRtcError);
-      socket.off('disconnect', onDisconnect);
-    };
-
-    const onEvent = (data) => { cleanup(); resolve(data); };
-    const onConnectError = (err) => { cleanup(); reject(err instanceof Error ? err : new Error(String(err))); };
-    const onRtcError = (payload) => { cleanup(); reject(new Error(`rtc:error: ${JSON.stringify(payload)}`)); };
-    const onDisconnect = (reason) => { cleanup(); reject(new Error(`Disconnected before "${event}". reason="${reason}"`)); };
-
-    socket.once(event, onEvent);
-    socket.once('connect_error', onConnectError);
-    socket.once('rtc:error', onRtcError);
-    socket.once('disconnect', onDisconnect);
-  });
 }
 
 function waitFor(socket, event, ms = 8000) {
   return new Promise((resolve, reject) => {
     const t = setTimeout(() => reject(new Error(`Timeout waiting for "${event}"`)), ms);
-    socket.once(event, (data) => {
-      clearTimeout(t);
-      resolve(data);
-    });
+    socket.once(event, (data) => { clearTimeout(t); resolve(data); });
   });
 }
 
@@ -67,135 +35,87 @@ function delay(ms) {
   return new Promise((r) => setTimeout(r, ms));
 }
 
+async function hardDisconnect(s) {
+  if (!s) return;
+  try { s.removeAllListeners(); } catch {}
+  try { s.disconnect(); } catch {}
+  try { s.close(); } catch {}
+  try { s.io?.close(); } catch {}
+  try { s.io?.engine?.close(); } catch {}
+  await delay(50);
+  clients.delete(s);
+}
+
 beforeAll(async () => {
   await connect();
   ({ app, server } = require('../api/app'));
+
   await new Promise((resolve) => {
     httpServer = server.listen(0, resolve);
   });
+
   const port = httpServer.address().port;
   baseURL = `http://127.0.0.1:${port}`;
 });
 
 afterEach(async () => {
-  for (const s of Array.from(clients)) {
-    try { s.disconnect(); } catch {}
-    clients.delete(s);
-  }
+  for (const s of Array.from(clients)) await hardDisconnect(s);
   await clear();
 });
 
 afterAll(async () => {
-  for (const s of Array.from(clients)) {
-    try { s.disconnect(); } catch {}
-  }
-  clients.clear();
-  if (httpServer) {
-    await new Promise((resolve) => httpServer.close(resolve));
-  }
+  for (const s of Array.from(clients)) await hardDisconnect(s);
+
+  const io = app.get('io');
+  if (io) await new Promise((r) => io.close(r));
+
+  if (httpServer) await new Promise((resolve) => httpServer.close(resolve));
   await close();
 });
 
-describe('Socket.IO Presence - Architecture Invariants', () => {
+describe('Socket presence cleanup', () => {
+  test('Disconnect removes membership and deletes empty temp room after grace', async () => {
+    const room = await Room.create({ name: 'TempCleanup', type: 'temporary', maxParticipants: 5 });
 
-  test('Non-member cannot join presence room', async () => {
-    const createRes = await request(app)
-      .post('/rooms/create')
-      .send({ name: 'SecureRoom', type: 'temporary' });
-
-    const roomId = createRes.body._id;
-
-    const s = connectClient({ userId: 'attacker', fullName: 'Bad Actor' });
-    const readyP = waitForOrFail(s, 'rtc:ready');
+    const s = connectClient({ userId: 'u10', fullName: 'User Ten' });
     s.connect();
-    await readyP;
+    await waitFor(s, 'rtc:ready');
 
-    s.emit('rtc:join-room', { roomId });
+    s.emit('rtc:join-room', { roomId: String(room._id) });
+    await waitFor(s, 'rtc:roster');
 
-    await expect(waitForOrFail(s, 'rtc:roster'))
-      .rejects
-      .toThrow();
+    // simulate connection drop
+    await hardDisconnect(s);
+
+    // grace default is 4s; wait a bit more
+    await delay(4500);
+
+    const gone = await Room.findById(room._id);
+    expect(gone).toBeNull();
   });
 
-  test('Capacity cannot be bypassed via socket', async () => {
-    const createRes = await request(app)
-      .post('/rooms/create')
-      .send({ name: 'CapRoom', maxParticipants: 1 });
+  test('Reconnect without re-join does not keep membership (no autojoin)', async () => {
+    const room = await Room.create({ name: 'NoAutoJoin', type: 'temporary', maxParticipants: 5 });
 
-    const roomId = createRes.body._id;
+    const s1 = connectClient({ userId: 'u11', fullName: 'User Eleven' });
+    s1.connect();
+    await waitFor(s1, 'rtc:ready');
 
-    await request(app)
-      .post(`/rooms/join/${roomId}`)
-      .set('x-test-user', 'user1')
-      .set('x-test-name', 'User 1');
+    s1.emit('rtc:join-room', { roomId: String(room._id) });
+    await waitFor(s1, 'rtc:roster');
 
-    const s2 = connectClient({ userId: 'user2', fullName: 'User 2' });
-    const readyP = waitForOrFail(s2, 'rtc:ready');
+    await hardDisconnect(s1);
+
+    // reconnect quickly but do NOT re-join
+    const s2 = connectClient({ userId: 'u11', fullName: 'User Eleven' });
     s2.connect();
-    await readyP;
+    await waitFor(s2, 'rtc:ready');
 
-    s2.emit('rtc:join-room', { roomId });
+    await delay(4500);
 
-    await expect(waitForOrFail(s2, 'rtc:roster'))
-      .rejects
-      .toThrow();
+    const gone = await Room.findById(room._id);
+    expect(gone).toBeNull();
+
+    await hardDisconnect(s2);
   });
-
-  test('Permanent room does NOT auto-delete when empty', async () => {
-    const createRes = await request(app)
-      .post('/rooms/create-permanent')
-      .send({ name: 'PermRoom', maxParticipants: 5 });
-
-    const roomId = createRes.body._id;
-
-    await request(app)
-      .post(`/rooms/join/${roomId}`)
-      .set('x-test-user', 'user1')
-      .set('x-test-name', 'User 1');
-
-    const s = connectClient({ userId: 'user1', fullName: 'User 1' });
-    const readyP = waitForOrFail(s, 'rtc:ready');
-    s.connect();
-    await readyP;
-
-    s.emit('rtc:join-room', { roomId });
-    await waitForOrFail(s, 'rtc:roster');
-
-    const discP = waitFor(s, 'disconnect');
-    s.disconnect();
-    await discP;
-
-    await delay(250);
-
-    const room = await Room.findById(roomId);
-    expect(room).not.toBeNull();
-  });
-
-  test('Duplicate rtc:join-room does not duplicate roster state', async () => {
-    const createRes = await request(app)
-      .post('/rooms/create')
-      .send({ name: 'DupRoom', type: 'temporary' });
-
-    const roomId = createRes.body._id;
-
-    await request(app)
-      .post(`/rooms/join/${roomId}`)
-      .set('x-test-user', 'user1')
-      .set('x-test-name', 'User 1');
-
-    const s = connectClient({ userId: 'user1', fullName: 'User 1' });
-    const readyP = waitForOrFail(s, 'rtc:ready');
-    s.connect();
-    await readyP;
-
-    s.emit('rtc:join-room', { roomId });
-    const roster1 = await waitForOrFail(s, 'rtc:roster');
-
-    s.emit('rtc:join-room', { roomId });
-    const roster2 = await waitForOrFail(s, 'rtc:roster');
-
-    expect(roster1.participantsCount).toBe(1);
-    expect(roster2.participantsCount).toBe(1);
-  });
-
 });

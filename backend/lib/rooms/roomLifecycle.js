@@ -1,4 +1,4 @@
-//backend/lib/rooms/roomLifecycle.js
+// backend/lib/rooms/roomLifecycle.js
 const mongoose = require('mongoose');
 const Room = require('../../models/room');
 
@@ -8,7 +8,11 @@ function asObjectId(id) {
 }
 
 async function removeUserFromAllRooms(userId, excludeRoomId = null) {
-  const pullRes = await Room.updateMany({}, { $pull: { participants: { userId } } });
+  // Only touch rooms that actually contain this user
+  const pullRes = await Room.updateMany(
+    { 'participants.userId': userId },
+    { $pull: { participants: { userId } } }
+  );
 
   const query = {
     type: 'temporary',

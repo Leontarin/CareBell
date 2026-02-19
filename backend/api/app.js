@@ -47,6 +47,9 @@ app.use(cookieParser());
 const io = new Server(server, {
   cors: {
     origin: (origin, cb) => {
+      // In dev, allow anything same-machine-ish; in prod, you can tighten later.
+      if (process.env.NODE_ENV !== 'production') return cb(null, true);
+
       if (!origin) return cb(null, true);
       try {
         const u = new URL(origin);
@@ -61,6 +64,9 @@ const io = new Server(server, {
   },
   transports: ['websocket','polling'],
 });
+
+// ✅ CRITICAL: make cookies available on socket.request.cookies
+io.engine.use(cookieParser());
 
 app.set('io', io);
 

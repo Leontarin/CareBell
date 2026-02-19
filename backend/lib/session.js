@@ -1,13 +1,11 @@
-// ./backend/lib/session.js
+// backend/lib/session.js
+const cookie = require("cookie");
 const jwt = require("jsonwebtoken");
 
-const COOKIE_NAME = "session"; // ✅ unified cookie name everywhere
+const COOKIE_NAME = "session";
 const isProd =
   process.env.NODE_ENV === "production" || process.env.FORCE_HTTPS === "true";
 
-/**
- * Set the session cookie adaptively for dev (HTTP) and prod (HTTPS)
- */
 function setSessionCookie(res, payload) {
   const token = jwt.sign(payload, process.env.SESSION_JWT_SECRET, {
     expiresIn: "30d",
@@ -15,30 +13,33 @@ function setSessionCookie(res, payload) {
 
   res.cookie(COOKIE_NAME, token, {
     httpOnly: true,
-    secure: isProd,                    // ✅ only requires HTTPS in production
-    sameSite: isProd ? "none" : "lax", // ✅ 'none' for HTTPS, 'lax' for localhost/LAN
+    secure: isProd,
+    sameSite: isProd ? "none" : "lax",
     domain: isProd ? process.env.COOKIE_DOMAIN : undefined,
     path: "/",
-    maxAge: 1000 * 60 * 60 * 24 * 30,  // 30 days
+    maxAge: 1000 * 60 * 60 * 24 * 30,
   });
 }
 
 /**
- * Read and verify the JWT from the cookie
+ * Works for:
+ * - Express: req.cookies (cookie-parser) OR req.headers.cookie
+ * - Socket.IO: socket.request.headers.cookie
  */
 function readSession(req) {
-  const token = req.cookies?.[COOKIE_NAME];
-  if (!token) return null;
   try {
+    const cookieHeader = req?.headers?.cookie || "";
+    const cookies = req?.cookies || cookie.parse(cookieHeader || "");
+
+    const token = cookies[COOKIE_NAME];
+    if (!token) return null;
+
     return jwt.verify(token, process.env.SESSION_JWT_SECRET);
   } catch {
     return null;
   }
 }
 
-/**
- * Clear the cookie safely on logout
- */
 function clearSessionCookie(res) {
   res.clearCookie(COOKIE_NAME, {
     path: "/",
