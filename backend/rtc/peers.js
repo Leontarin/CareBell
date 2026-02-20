@@ -16,6 +16,10 @@ function ensurePeer(socket) {
         sendTransportId: null,
         recvTransportId: null,
       
+        // Strict: max 1 audio + 1 video producer
+        audioProducerId: null,
+        videoProducerId: null,
+
         transports: new Map(), // transportId -> transport
         producers: new Map(),  // producerId -> producer
         consumers: new Map(),  // consumerId -> consumer

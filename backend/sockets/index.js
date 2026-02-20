@@ -306,14 +306,36 @@ module.exports = function setupSockets(io) {
       try {
         const peer = getPeer(socket);
         if (!peer) throw new Error("Peer not found");
-
-        const transport = peer.transports.get(String(transportId));
-        if (!transport) throw new Error("Transport not found");
-
+      
+        if (!transportId) throw new Error("Missing transportId");
+        if (!dtlsParameters) throw new Error("Missing dtlsParameters");
+      
+        const tid = String(transportId);
+        const transport = peer.transports.get(tid);
+      
+        if (!transport)
+          throw new Error("Transport not found");
+      
+        // Prevent double connect
+        if (transport.appData?.connected)
+          throw new Error("Transport already connected");
+      
         await connectWebRtcTransport(transport, dtlsParameters);
-
+      
+        // Mark as connected
+        transport.appData = {
+          ...transport.appData,
+          connected: true
+        };
+      
+        // Guardrail: cap max incoming bitrate (client -> server)
+        // Protects backend from abuse & crazy encodings
+        try {
+          await transport.setMaxIncomingBitrate(2_000_000); // 2 Mbps cap
+        } catch {}
+      
         cb?.({ ok: true });
-
+      
       } catch (err) {
         cb?.({ ok: false, error: err.message });
       }
@@ -333,20 +355,48 @@ module.exports = function setupSockets(io) {
         if (!peer.sendTransportId || peer.sendTransportId !== tid)
           throw new Error("Produce must use send transport");
 
+        // Validate kind
+        if (kind !== "audio" && kind !== "video") {
+          throw new Error("Invalid kind");
+        }
+
+        // Enforce 1 producer per kind
+        if (kind === "audio" && peer.audioProducerId) {
+          throw new Error("Audio producer already exists");
+        }
+        if (kind === "video" && peer.videoProducerId) {
+          throw new Error("Video producer already exists");
+        }
+
+        if (!rtpParameters) {
+          throw new Error("Missing rtpParameters");
+        }
+
         const producer = await transport.produce({ kind, rtpParameters });
 
         peer.producers.set(producer.id, producer);
+        if (kind === "audio") peer.audioProducerId = producer.id;
+        if (kind === "video") peer.videoProducerId = producer.id;
+
+        const cleanupProducer = () => {
+          peer.producers.delete(producer.id);
+          if (peer.audioProducerId === producer.id) peer.audioProducerId = null;
+          if (peer.videoProducerId === producer.id) peer.videoProducerId = null;
+        };
 
         producer.on("transportclose", () => {
-          producer.close();
-          peer.producers.delete(producer.id);
+          try { producer.close(); } catch {}
+          cleanupProducer();
+          try {
+            socket.to(peer.roomId).emit("rtc:producer-closed", { producerId: producer.id });
+          } catch {}
         });
 
         producer.on("close", () => {
-          peer.producers.delete(producer.id);
-          socket.to(peer.roomId).emit("rtc:producer-closed", {
-            producerId: producer.id
-          });
+          cleanupProducer();
+          try {
+            socket.to(peer.roomId).emit("rtc:producer-closed", { producerId: producer.id });
+          } catch {}
         });
 
         // Notify others in room
@@ -368,39 +418,57 @@ module.exports = function setupSockets(io) {
       try {
         const peer = getPeer(socket);
         if (!peer) throw new Error("Peer not found");
-
+        if (!peer.roomId) throw new Error("Not in room");
+      
+        if (!producerId) throw new Error("Missing producerId");
+        if (!rtpCapabilities || !rtpCapabilities.codecs)
+          throw new Error("Invalid rtpCapabilities");
+      
         const tid = String(transportId);
         const transport = peer.transports.get(tid);
         if (!transport) throw new Error("Transport not found");
-
-        // Enforce recv transport usage
+      
+        // Strict recv transport enforcement
         if (!peer.recvTransportId || peer.recvTransportId !== tid)
           throw new Error("Consume must use recv transport");
-
+      
         const router = await getOrCreateRouter(peer.roomId);
-
+      
+        // Prevent consuming own producer
+        if (peer.producers.has(producerId))
+          throw new Error("Cannot consume own producer");
+      
+        // Prevent duplicate consumer for same producer
+        for (const existing of peer.consumers.values()) {
+          if (existing.producerId === producerId)
+            throw new Error("Already consuming this producer");
+        }
+      
         if (!router.canConsume({ producerId, rtpCapabilities }))
           throw new Error("Cannot consume");
-
+      
         const consumer = await transport.consume({
           producerId,
           rtpCapabilities,
           paused: false,
         });
-
+      
         peer.consumers.set(consumer.id, consumer);
-
-        consumer.on("transportclose", () => {
-          consumer.close();
+      
+        const cleanupConsumer = () => {
+          try { consumer.close(); } catch {}
           peer.consumers.delete(consumer.id);
-        });
-
+        };
+      
+        consumer.on("transportclose", cleanupConsumer);
+      
         consumer.on("producerclose", () => {
-          consumer.close();
-          peer.consumers.delete(consumer.id);
-          socket.emit("rtc:producer-closed", { producerId });
+          cleanupConsumer();
+          try {
+            socket.emit("rtc:producer-closed", { producerId });
+          } catch {}
         });
-
+      
         cb?.({
           ok: true,
           consumerParameters: {
@@ -410,7 +478,7 @@ module.exports = function setupSockets(io) {
             rtpParameters: consumer.rtpParameters,
           }
         });
-
+      
       } catch (err) {
         cb?.({ ok: false, error: err.message });
       }
