@@ -509,12 +509,12 @@ export default function MeetWithFriends() {
         remoteMediaByUserRef.current.set(x.userId, entry);
       }
     
-      s.on("rtc:media-snapshot", onMediaSnapshot);
+      
       
 
       setRemoteVersion((v) => v + 1);
     };
-
+    s.on("rtc:media-snapshot", onMediaSnapshot);
     fetchRooms();
 
     return () => {
