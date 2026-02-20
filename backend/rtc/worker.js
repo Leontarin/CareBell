@@ -7,10 +7,10 @@ async function createWorker() {
   if (worker) return worker;
 
   worker = await mediasoup.createWorker({
+    rtcMinPort: Number(process.env.RTC_PORT_MIN || 40000),
+    rtcMaxPort: Number(process.env.RTC_PORT_MAX || 40200),
     logLevel: "warn",
     logTags: ["info", "ice", "dtls", "rtp", "rtcp"],
-    rtcMinPort: 40000,
-    rtcMaxPort: 40200,
   });
 
   console.log("✅ Mediasoup worker created");

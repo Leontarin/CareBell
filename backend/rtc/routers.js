@@ -24,7 +24,6 @@ async function getOrCreateRouter(roomId) {
   }
 
   const worker = getWorker();
-
   const router = await worker.createRouter({ mediaCodecs });
 
   routers.set(roomId, router);

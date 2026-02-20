@@ -602,10 +602,28 @@ module.exports = function setupSockets(io) {
     });
 
     // Alias (your frontend sometimes emits rtc:media-state)
-    socket.on("rtc:media-state", (payload, cb) => {
-      socket.emit("rtc:update-media", payload, cb);
-    });
+    socket.on("rtc:media-state", async (payload, cb) => {
+        try {
+            const { muted, cameraOff } = payload || {};
+            const peer = ensurePeer(socket);
+            if (!peer.roomId) throw new Error("Not in room");
 
+            if (typeof muted === "boolean") peer.muted = muted;
+            if (typeof cameraOff === "boolean") peer.cameraOff = cameraOff;
+
+            socket.to(peer.roomId).emit("rtc:peer-media", {
+            userId: peer.userId,
+            fullName: socket.data.fullName,
+            muted: peer.muted,
+            cameraOff: peer.cameraOff,
+            });
+
+            cb?.({ ok: true });
+        } catch (err) {
+            cb?.({ ok: false, error: err.message });
+    }
+    
+    });
     socket.on('disconnect', () => {
       closePeer(socket).catch(() => {});
       const current = socketByUserId.get(userId);

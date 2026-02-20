@@ -871,12 +871,9 @@ export default function MeetWithFriends() {
 
         if (cancelled) return;
 
-        const transport = device.createSendTransport({
-          ...response.transportOptions,
-          iceServers: [
-            { urls: "stun:stun.l.google.com:19302" }
-          ]
-        });
+        const transport = device.createSendTransport(
+          response.transportOptions
+        );
 
         //VIDEO DEBUG
         transport.on("connectionstatechange", (state) => {
@@ -973,12 +970,9 @@ export default function MeetWithFriends() {
 
         if (cancelled) return;
 
-        const transport = device.createRecvTransport({
-          ...response.transportOptions,
-          iceServers: [
-            { urls: "stun:stun.l.google.com:19302" }
-          ]
-        });
+        const transport = device.createRecvTransport(
+          response.transportOptions
+        );
         //VIDEO DEBUG
         transport.on("connectionstatechange", (state) => {
           console.log("📥 recv transport state:", state);

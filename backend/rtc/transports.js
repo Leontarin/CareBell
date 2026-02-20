@@ -1,12 +1,31 @@
 // backend/rtc/transports.js
 const { getOrCreateRouter } = require("./routers");
 
+/**
+ * IMPORTANT:
+ * In Docker bridge mode you MUST announce a reachable host.
+ *
+ * For your localhost dev:
+ *   MEDIASOUP_ANNOUNCED_IP=localhost
+ *
+ * For VPS:
+ *   MEDIASOUP_ANNOUNCED_IP=YOUR_PUBLIC_IP
+ */
 function getListenIps() {
-  const announcedIp = process.env.MEDIASOUP_ANNOUNCED_IP;
+  const announcedIp =
+    process.env.MEDIASOUP_ANNOUNCED_IP ||
+    process.env.MEDIASOUP_ANNOUNCED_ADDRESS;
 
-  // In Docker bridge mode, you typically set MEDIASOUP_ANNOUNCED_IP in prod.
-  // In dev (localhost), leaving it undefined is fine.
-  return [{ ip: "0.0.0.0", announcedIp }];
+  if (!announcedIp) {
+    throw new Error("MEDIASOUP_ANNOUNCED_IP is not set");
+  }
+
+  return [
+    {
+      ip: "0.0.0.0",
+      announcedIp,
+    },
+  ];
 }
 
 async function createWebRtcTransport({ roomId }) {
@@ -20,9 +39,8 @@ async function createWebRtcTransport({ roomId }) {
     initialAvailableOutgoingBitrate: 600_000,
   });
 
-  // Optional: cap max incoming bitrate (client -> server), useful later for mobile safety
-  // You can adjust per transport when we start simulcast.
-  // await transport.setMaxIncomingBitrate(2_000_000);
+  // Debug helper (safe to keep during dev)
+  console.log("🧊 ICE candidates:", transport.iceCandidates);
 
   return { router, transport };
 }
