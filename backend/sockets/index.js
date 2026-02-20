@@ -283,8 +283,15 @@ module.exports = function setupSockets(io) {
         if (direction === "recv" && peer.recvTransportId)
           throw new Error("Recv transport already exists");
     
+        const forwardedHost = socket.handshake?.headers?.["x-forwarded-host"];
+        const hostHeader = (Array.isArray(forwardedHost) ? forwardedHost[0] : forwardedHost)
+          || socket.handshake?.headers?.host
+          || "";
+        const announcedAddress = String(hostHeader).split(",")[0].trim().split(":")[0];
+
         const { transport } = await createWebRtcTransport({
-          roomId: socket.data.roomId
+          roomId: socket.data.roomId,
+          announcedAddress,
         });
     
         peer.transports.set(transport.id, transport);
