@@ -50,6 +50,7 @@ services:
       BELLA_LOG_DIR: /app/logs/bella
     ports:
       - "${BACKEND_PORT}:${BACKEND_PORT}"
+      - "40000-40200:40000-40200/udp"
     depends_on:
       mongo:
         condition: service_healthy
@@ -78,6 +79,7 @@ services:
       BELLA_LOG_DIR: /app/logs/bella
     ports:
       - "${BACKEND_PORT}:${BACKEND_PORT}"
+      - "40000-40200:40000-40200/udp"
     depends_on:
       mongo:
         condition: service_healthy

@@ -54,8 +54,16 @@ connectWithRetry();
 if (require.main === module) {
   const PORT = process.env.PORT || 5174;
 
-  function startServer() {
-    server.listen(PORT);
+  const { createWorker } = require("../rtc/worker");
+
+  async function startServer() {
+    try {
+      await createWorker();
+      server.listen(PORT);
+    } catch (err) {
+      console.error("🔥 Failed to start mediasoup worker:", err);
+      process.exit(1);
+    }
   }
 
   server
