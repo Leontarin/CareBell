@@ -8,13 +8,18 @@ function ensurePeer(socket) {
   let p = peers.get(sid);
   if (!p) {
     p = {
-      socketId: sid,
-      userId: String(socket.data.userId),
-      roomId: null,
-      transports: new Map(), // transportId -> transport
-      producers: new Map(),  // producerId -> producer
-      consumers: new Map(),  // consumerId -> consumer
-    };
+        socketId: sid,
+        userId: String(socket.data.userId),
+        roomId: null,
+      
+        // Strict: one send + one recv
+        sendTransportId: null,
+        recvTransportId: null,
+      
+        transports: new Map(), // transportId -> transport
+        producers: new Map(),  // producerId -> producer
+        consumers: new Map(),  // consumerId -> consumer
+      };
     peers.set(sid, p);
   }
   return p;

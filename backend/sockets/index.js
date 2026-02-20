@@ -123,6 +123,9 @@ async function leaveRoomForSocket(io, socket) {
   } catch {}
 
   socket.to(curRoomId).emit('rtc:user-left', { userId });
+
+  // Clean mediasoup resources on leave
+  await closePeer(socket).catch(() => {});
   return true;
 }
 
@@ -256,19 +259,33 @@ module.exports = function setupSockets(io) {
     socket.on("rtc:createWebRtcTransport", async ({ direction }, cb) => {
       try {
         if (!socket.data.roomId) throw new Error("Not in room");
-
+    
         const peer = ensurePeer(socket);
-
+    
+        if (direction !== "send" && direction !== "recv")
+          throw new Error("Invalid direction");
+    
+        // Strict: only one send + one recv
+        if (direction === "send" && peer.sendTransportId)
+          throw new Error("Send transport already exists");
+        if (direction === "recv" && peer.recvTransportId)
+          throw new Error("Recv transport already exists");
+    
         const { transport } = await createWebRtcTransport({
           roomId: socket.data.roomId
         });
-
+    
         peer.transports.set(transport.id, transport);
-
+    
+        if (direction === "send") peer.sendTransportId = transport.id;
+        if (direction === "recv") peer.recvTransportId = transport.id;
+    
         transport.on("close", () => {
           peer.transports.delete(transport.id);
+          if (peer.sendTransportId === transport.id) peer.sendTransportId = null;
+          if (peer.recvTransportId === transport.id) peer.recvTransportId = null;
         });
-
+    
         cb?.({
           ok: true,
           transportOptions: {
@@ -278,7 +295,7 @@ module.exports = function setupSockets(io) {
             dtlsParameters: transport.dtlsParameters,
           }
         });
-
+    
       } catch (err) {
         cb?.({ ok: false, error: err.message });
       }
@@ -302,6 +319,103 @@ module.exports = function setupSockets(io) {
       }
     });
 
+    // 4️⃣ PRODUCE
+    socket.on("rtc:produce", async ({ transportId, kind, rtpParameters }, cb) => {
+      try {
+        const peer = getPeer(socket);
+        if (!peer) throw new Error("Peer not found");
+
+        const tid = String(transportId);
+        const transport = peer.transports.get(tid);
+        if (!transport) throw new Error("Transport not found");
+
+        // Enforce send transport usage
+        if (!peer.sendTransportId || peer.sendTransportId !== tid)
+          throw new Error("Produce must use send transport");
+
+        const producer = await transport.produce({ kind, rtpParameters });
+
+        peer.producers.set(producer.id, producer);
+
+        producer.on("transportclose", () => {
+          producer.close();
+          peer.producers.delete(producer.id);
+        });
+
+        producer.on("close", () => {
+          peer.producers.delete(producer.id);
+          socket.to(peer.roomId).emit("rtc:producer-closed", {
+            producerId: producer.id
+          });
+        });
+
+        // Notify others in room
+        socket.to(peer.roomId).emit("rtc:new-producer", {
+          producerId: producer.id,
+          userId: peer.userId,
+          kind
+        });
+
+        cb?.({ ok: true, producerId: producer.id });
+
+      } catch (err) {
+        cb?.({ ok: false, error: err.message });
+      }
+    });
+
+    // 5️⃣ CONSUME
+    socket.on("rtc:consume", async ({ producerId, transportId, rtpCapabilities }, cb) => {
+      try {
+        const peer = getPeer(socket);
+        if (!peer) throw new Error("Peer not found");
+
+        const tid = String(transportId);
+        const transport = peer.transports.get(tid);
+        if (!transport) throw new Error("Transport not found");
+
+        // Enforce recv transport usage
+        if (!peer.recvTransportId || peer.recvTransportId !== tid)
+          throw new Error("Consume must use recv transport");
+
+        const router = await getOrCreateRouter(peer.roomId);
+
+        if (!router.canConsume({ producerId, rtpCapabilities }))
+          throw new Error("Cannot consume");
+
+        const consumer = await transport.consume({
+          producerId,
+          rtpCapabilities,
+          paused: false,
+        });
+
+        peer.consumers.set(consumer.id, consumer);
+
+        consumer.on("transportclose", () => {
+          consumer.close();
+          peer.consumers.delete(consumer.id);
+        });
+
+        consumer.on("producerclose", () => {
+          consumer.close();
+          peer.consumers.delete(consumer.id);
+          socket.emit("rtc:producer-closed", { producerId });
+        });
+
+        cb?.({
+          ok: true,
+          consumerParameters: {
+            id: consumer.id,
+            producerId,
+            kind: consumer.kind,
+            rtpParameters: consumer.rtpParameters,
+          }
+        });
+
+      } catch (err) {
+        cb?.({ ok: false, error: err.message });
+      }
+    });
+
     socket.on('disconnect', () => {
       closePeer(socket).catch(() => {});
       const current = socketByUserId.get(userId);
@@ -318,6 +432,19 @@ module.exports = function setupSockets(io) {
         try {
           const changed = await removeUserFromAllRooms(userId);
           if (changed) io.emit('rooms:changed');
+        
+          // After membership cleanup, close router if room is gone OR empty.
+          try {
+            const room = await Room.findById(asObjectId(roomId)).lean();
+        
+            // If temporary room got deleted -> close router
+            if (!room) {
+              await closeRouter(roomId);
+            } else if (room.participants.length === 0) {
+              // If room still exists but empty -> close router (also fine for permanent rooms)
+              await closeRouter(roomId);
+            }
+          } catch {}
         } catch {}
 
         try { io.to(roomId).emit('rtc:user-left', { userId }); } catch {}
