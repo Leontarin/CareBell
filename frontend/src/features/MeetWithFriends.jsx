@@ -704,7 +704,12 @@ export default function MeetWithFriends() {
           // First time ever: create producer
           const producer = await transport.produce({ track });
           transport._videoProducer = producer;
-  
+          //VIDEO DEBUG
+          console.log("🎥 VIDEO PRODUCER CREATED", {
+            producerId: producer.id,
+            trackId: track.id,
+            deviceLabel: track.label,
+          });
           producer.on("close", () => {
             if (transport._videoProducer === producer) transport._videoProducer = null;
           });
@@ -867,6 +872,10 @@ export default function MeetWithFriends() {
         if (cancelled) return;
 
         const transport = device.createSendTransport(response.transportOptions);
+        //VIDEO DEBUG
+        transport.on("connectionstatechange", (state) => {
+          console.log("📤 send transport state:", state);
+        });
 
         sendTransportRef.current = transport;
 
@@ -959,6 +968,11 @@ export default function MeetWithFriends() {
         if (cancelled) return;
 
         const transport = device.createRecvTransport(response.transportOptions);
+        //VIDEO DEBUG
+        transport.on("connectionstatechange", (state) => {
+          console.log("📥 recv transport state:", state);
+        });
+        
 
         recvTransportRef.current = transport;
 
@@ -1135,9 +1149,18 @@ export default function MeetWithFriends() {
         if (!response?.ok) {
           throw new Error(response?.error || "Consume failed");
         }
-
+        //VIDEO DEBUG
+        console.log("✅ CONSUME ACK", response.consumerParameters);
+        
         const consumer = await transport.consume(response.consumerParameters);
         remoteConsumersRef.current.set(producerId, consumer);
+        //VIDEO DEBUG
+        console.log("🎬 TRACK RECEIVED", {
+          producerId,
+          consumerId: consumer.id,
+          kind: consumer.kind,
+          trackId: consumer.track?.id,
+        });
 
         const actualKind = kind || response.consumerParameters?.kind || consumer.kind;
 
@@ -1220,6 +1243,7 @@ export default function MeetWithFriends() {
     };
 
     const handleNewProducer = async (payload) => {
+      console.log("🆕 rtc:new-producer", payload);
       if (!payload?.producerId) return;
       if (!ensureRecvReadyOrQueue(payload)) return;
       await consumeProducer(payload);
@@ -1339,7 +1363,8 @@ if (!resp?.ok) return;
         >
           {/* if has camera -> show video; else show name block */}
           {tile.videoStream ? (
-            <VideoEl stream={tile.videoStream} muted={tile.isMe} />
+            /*<VideoEl stream={tile.videoStream} muted={tile.isMe} />*/
+            <VideoEl stream={tile.videoStream} muted={true} />
           ) : (
             <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-gray-800 to-gray-900">
               <div className="text-center px-4">

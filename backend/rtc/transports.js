@@ -19,6 +19,11 @@ async function createWebRtcTransport({ roomId }) {
     preferUdp: true,
     // These caps help slow networks and avoid insane burst rates:
     initialAvailableOutgoingBitrate: 600_000, // 600 kbps start
+
+    iceServers: [
+        { urls: ["stun:stun.l.google.com:19302"] },
+        { urls: ["stun:global.stun.twilio.com:3478"] },
+      ],
   });
 
   // Optional: cap max incoming bitrate (client -> server), useful later for mobile safety

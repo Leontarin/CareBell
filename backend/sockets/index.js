@@ -426,7 +426,13 @@ module.exports = function setupSockets(io) {
           userId: peer.userId,
           kind
         });
-
+        //VIDEO DEBUG
+        console.log("📤 PRODUCE", {
+          roomId: peer.roomId,
+          userId: peer.userId,
+          kind,
+          producerId: producer.id,
+        });
         cb?.({ ok: true, producerId: producer.id });
 
       } catch (err) {
@@ -472,6 +478,18 @@ module.exports = function setupSockets(io) {
           producerId,
           rtpCapabilities,
           paused: false,
+        });
+        
+        console.log("📥 CONSUME", {
+          roomId: peer.roomId,
+          userId: peer.userId,
+          producerId,
+          consumerId: consumer.id,
+          kind: consumer.kind,
+        });
+
+        transport.on("connectionstatechange", (state) => {
+          console.log("📥 recv transport state:", state);
         });
       
         peer.consumers.set(consumer.id, consumer);
