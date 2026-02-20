@@ -490,6 +490,31 @@ export default function MeetWithFriends() {
     s.on("rtc:peer-media", onPeerMedia);
     s.on("rtc:media-updated", onPeerMedia);
 
+    const onMediaSnapshot = ({ peers }) => {
+      if (!mountedRef.current) return;
+      if (!Array.isArray(peers)) return;
+    
+      for (const x of peers) {
+        if (!x?.userId) continue;
+    
+        const entry = remoteMediaByUserRef.current.get(x.userId) || {
+          fullName: `User ${String(x.userId).slice(-4)}`,
+          audioStream: null,
+          videoStream: null,
+        };
+    
+        if (typeof x.muted === "boolean") entry.muted = x.muted;
+        if (typeof x.cameraOff === "boolean") entry.camOff = x.cameraOff;
+    
+        remoteMediaByUserRef.current.set(x.userId, entry);
+      }
+    
+      s.on("rtc:media-snapshot", onMediaSnapshot);
+      
+
+      setRemoteVersion((v) => v + 1);
+    };
+
     fetchRooms();
 
     return () => {
@@ -510,7 +535,7 @@ export default function MeetWithFriends() {
         s.off("rtc:kicked", onKicked);
         s.off("rtc:room-deleted", onRoomDeleted);
         s.off("connect_error", onConnectError);
-
+        s.off("rtc:media-snapshot", onMediaSnapshot);
         s.off("rtc:peer-media", onPeerMedia);
         s.off("rtc:media-updated", onPeerMedia);
       } catch {}
@@ -1202,6 +1227,34 @@ export default function MeetWithFriends() {
 
     socket.on("rtc:new-producer", handleNewProducer);
 
+      const handleProducerClosed = ({ producerId }) => {
+        if (!producerId) return;
+      
+        // close consumer if we have it
+        const consumer = remoteConsumersRef.current.get(producerId);
+        if (consumer) {
+          try { consumer.close(); } catch {}
+          remoteConsumersRef.current.delete(producerId);
+        }
+      
+        remoteStreamsRef.current.delete(producerId);
+      
+        const mapped = producerToUserRef.current.get(producerId);
+        if (mapped?.userId) {
+          const ent = remoteMediaByUserRef.current.get(mapped.userId);
+          if (ent) {
+            if (mapped.kind === "audio") ent.audioStream = null;
+            if (mapped.kind === "video") ent.videoStream = null;
+            remoteMediaByUserRef.current.set(mapped.userId, ent);
+          }
+        }
+      
+        producerToUserRef.current.delete(producerId);
+        setRemoteVersion((v) => v + 1);
+      };
+      
+      socket.on("rtc:producer-closed", handleProducerClosed);
+
     // If recv already ready, flush any pending
     flushPending();
 
@@ -1210,35 +1263,19 @@ export default function MeetWithFriends() {
       if (cancelled) return;
       if (!recvTransportRef.current || !deviceRef.current) return;
 
-      const resp = await emitWithAck(
-        socket,
-        "rtc:getProducers",
-        { roomId: joinedRoom?._id },
-        1500
-      );
+      const resp = await emitWithAck(socket, "rtc:getProducers", {}, 2000);
+if (!resp?.ok) return;
 
-      if (!resp) return;
-
-      const producerList =
-        resp?.producerIds ||
-        resp?.producers ||
-        resp?.data ||
-        (Array.isArray(resp) ? resp : null);
-
-      if (Array.isArray(producerList)) {
-        for (const item of producerList) {
-          if (typeof item === "string") {
-            await handleNewProducer({ producerId: item });
-          } else if (item?.producerId) {
-            await handleNewProducer(item);
-          }
-        }
+      const producerList = Array.isArray(resp.producers) ? resp.producers : [];
+      for (const item of producerList) {
+        await handleNewProducer(item); // item already has producerId/userId/fullName/kind
       }
     })();
 
     return () => {
       cancelled = true;
       socket.off("rtc:new-producer", handleNewProducer);
+      socket.off("rtc:producer-closed", handleProducerClosed);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [joinedRoom?._id, recvTransportReady, deviceReady]);

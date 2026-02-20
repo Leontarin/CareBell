@@ -19,7 +19,11 @@ function ensurePeer(socket) {
         // Strict: max 1 audio + 1 video producer
         audioProducerId: null,
         videoProducerId: null,
-
+      
+        // Media UI state (for signaling)
+        muted: false,
+        cameraOff: true,
+      
         transports: new Map(), // transportId -> transport
         producers: new Map(),  // producerId -> producer
         consumers: new Map(),  // consumerId -> consumer
@@ -57,9 +61,24 @@ async function closePeer(socket) {
   peers.delete(socket.id);
 }
 
+function listPeersInRoom(roomId) {
+    const rid = roomId ? String(roomId) : null;
+    if (!rid) return [];
+    return Array.from(peers.values()).filter((p) => p.roomId === rid);
+  }
+  
+  function findPeerByProducerId(producerId) {
+    for (const p of peers.values()) {
+      if (p.producers.has(String(producerId))) return p;
+    }
+    return null;
+  }
+
 module.exports = {
   ensurePeer,
   setPeerRoom,
   getPeer,
   closePeer,
+  listPeersInRoom,
+  findPeerByProducerId,
 };

@@ -8,7 +8,7 @@ const { getRoomRoster } = require('../lib/rooms/roster');
 
 // Mediasoup
 const { getOrCreateRouter, closeRouter } = require('../rtc/routers');
-const { ensurePeer, setPeerRoom, getPeer, closePeer } = require('../rtc/peers');
+const { ensurePeer, setPeerRoom, getPeer, closePeer, listPeersInRoom, findPeerByProducerId } = require('../rtc/peers');
 const { createWebRtcTransport, connectWebRtcTransport } = require('../rtc/transports');
 
 // One active socket per user
@@ -103,6 +103,18 @@ async function joinRoomForSocket(io, socket, roomIdRaw) {
   const roster = await getRoomRoster(nextRoomId);
   safeEmit(socket, 'rtc:roster', roster);
   socket.to(nextRoomId).emit('rtc:user-joined', { userId, fullName });
+
+  // Send current media-state snapshot to the joining socket
+  try {
+    const peersInRoom = listPeersInRoom(nextRoomId);
+    const snapshot = peersInRoom.map((p) => ({
+      userId: p.userId,
+      // fullName is not stored in peer; take from DB roster if needed
+      muted: !!p.muted,
+      cameraOff: typeof p.cameraOff === "boolean" ? p.cameraOff : true,
+    }));
+    safeEmit(socket, "rtc:media-snapshot", { peers: snapshot });
+  } catch {}
 
   return roster;
 }
@@ -372,7 +384,16 @@ module.exports = function setupSockets(io) {
           throw new Error("Missing rtpParameters");
         }
 
-        const producer = await transport.produce({ kind, rtpParameters });
+        const producer = await transport.produce({
+          kind,
+          rtpParameters,
+          appData: {
+            roomId: peer.roomId,
+            userId: peer.userId,
+            fullName: socket.data.fullName,
+            kind,
+          },
+        });
 
         peer.producers.set(producer.id, producer);
         if (kind === "audio") peer.audioProducerId = producer.id;
@@ -482,6 +503,89 @@ module.exports = function setupSockets(io) {
       } catch (err) {
         cb?.({ ok: false, error: err.message });
       }
+    });
+
+    // 6️⃣ GET EXISTING PRODUCERS (for late joiners)
+    socket.on("rtc:getProducers", async (_, cb) => {
+      try {
+        const peer = getPeer(socket);
+        if (!peer || !peer.roomId) throw new Error("Not in room");
+
+        const peersInRoom = listPeersInRoom(peer.roomId);
+
+        // Return producer objects with metadata so frontend can map streams to users
+        const producers = [];
+        for (const p of peersInRoom) {
+          for (const [producerId, producer] of p.producers.entries()) {
+            // never include the requester's own producers
+            if (p.socketId === peer.socketId) continue;
+
+            const kind = producer?.kind || producer?.appData?.kind || null;
+
+            producers.push({
+              producerId,
+              userId: p.userId,
+              fullName: producer?.appData?.fullName || null,
+              kind,
+            });
+          }
+        }
+
+        cb?.({ ok: true, producers });
+      } catch (err) {
+        cb?.({ ok: false, error: err.message });
+      }
+    });
+
+    // 7️⃣ OPTIONAL: GET PRODUCER INFO (frontend fallback)
+    socket.on("rtc:getProducerInfo", async ({ producerId }, cb) => {
+      try {
+        if (!producerId) throw new Error("Missing producerId");
+
+        const owner = findPeerByProducerId(String(producerId));
+        if (!owner) throw new Error("Producer not found");
+
+        const producer = owner.producers.get(String(producerId));
+        const kind = producer?.kind || producer?.appData?.kind || null;
+
+        cb?.({
+          ok: true,
+          producerId: String(producerId),
+          userId: owner.userId,
+          fullName: producer?.appData?.fullName || null,
+          kind,
+        });
+      } catch (err) {
+        cb?.({ ok: false, error: err.message });
+      }
+    });
+
+    // 8️⃣ MEDIA STATE SYNC (mute/cameraOff)
+    socket.on("rtc:update-media", async ({ muted, cameraOff }, cb) => {
+      try {
+        const peer = ensurePeer(socket);
+        if (!peer.roomId) throw new Error("Not in room");
+
+        if (typeof muted === "boolean") peer.muted = muted;
+        if (typeof cameraOff === "boolean") peer.cameraOff = cameraOff;
+
+        // Broadcast to everyone else
+        socket.to(peer.roomId).emit("rtc:peer-media", {
+          userId: peer.userId,
+          fullName: socket.data.fullName,
+          muted: peer.muted,
+          cameraOff: peer.cameraOff,
+        });
+
+        cb?.({ ok: true });
+      } catch (err) {
+        cb?.({ ok: false, error: err.message });
+      }
+    });
+
+    // Alias (your frontend sometimes emits rtc:media-state)
+    socket.on("rtc:media-state", (payload, cb) => {
+      socket.emit("rtc:update-media", payload, cb);
     });
 
     socket.on('disconnect', () => {
