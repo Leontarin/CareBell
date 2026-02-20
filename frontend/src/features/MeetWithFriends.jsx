@@ -6,6 +6,7 @@ import { useTranslation } from "react-i18next";
 import { FaExpand, FaCompress, FaUsers, FaTimes } from "react-icons/fa";
 import { acquireMeetSocket, releaseMeetSocket } from "./meetSocket";
 import RoomCreateModal from "../components/RoomCreateModal";
+import * as mediasoupClient from "mediasoup-client";
 
 /* -----------------------------
    Participants Modal
@@ -85,6 +86,14 @@ export default function MeetWithFriends() {
   const socketRef = useRef(null);
   const joinedRoomIdRef = useRef(null);
   const pendingJoinRoomIdRef = useRef(null);
+
+    // -------- mediasoup refs --------
+  const deviceRef = useRef(null);
+  const sendTransportRef = useRef(null);
+  const recvTransportRef = useRef(null);
+
+  const localStreamRef = useRef(null);
+  const remoteStreamsRef = useRef(new Map()); // producerId -> MediaStream
 
   const mountedRef = useRef(false);
 
@@ -300,18 +309,34 @@ export default function MeetWithFriends() {
 
   const joinRoom = async (room) => {
     if (!room?._id) return;
+  
     setNotice(null);
-
+  
     try {
+      // 1️⃣ REST join (authoritative)
       await api.post(`/rooms/join/${room._id}`);
-
+  
+      // 2️⃣ Update local state immediately
       joinedRoomIdRef.current = room._id;
       setJoinedRoom(room);
       setParticipants([]);
+  
+      // 3️⃣ Immediately tell socket to join
+      if (socketRef.current?.connected) {
+        socketRef.current.emit("rtc:join-room", { roomId: room._id });
+      } else {
+        pendingJoinRoomIdRef.current = room._id;
+      }
+  
+      // 4️⃣ Refresh room list
       await fetchRooms();
+  
     } catch (e) {
       console.error("❌ Failed to join room:", e);
-      const msg = e?.response?.data?.error || e?.message || "Could not join room";
+      const msg =
+        e?.response?.data?.error ||
+        e?.message ||
+        "Could not join room";
       setNotice(msg);
     }
   };
@@ -338,6 +363,56 @@ export default function MeetWithFriends() {
 
     await fetchRooms();
   };
+
+  /* -----------------------------
+   Mediasoup Device Init
+  ------------------------------ */
+  useEffect(() => {
+    const socket = socketRef.current;
+
+    if (!joinedRoom?._id) return;
+    if (!socketReady) return;
+    if (!socket) return;
+    if (deviceRef.current) return; // already initialized
+
+    let cancelled = false;
+
+    const initDevice = async () => {
+      try {
+        console.log("🎥 Initializing mediasoup device...");
+
+        // 1️⃣ Get RTP Capabilities
+        const rtpResponse = await new Promise((resolve) => {
+          socket.emit("rtc:getRtpCapabilities", {}, resolve);
+        });
+
+        if (!rtpResponse?.ok) {
+          throw new Error(rtpResponse?.error || "Failed to get RTP capabilities");
+        }
+
+        if (cancelled) return;
+
+        // 2️⃣ Create Device
+        const device = new mediasoupClient.Device();
+
+        await device.load({
+          routerRtpCapabilities: rtpResponse.rtpCapabilities,
+        });
+
+        deviceRef.current = device;
+
+        console.log("✅ Mediasoup device loaded");
+      } catch (err) {
+        console.error("❌ Device init failed:", err);
+      }
+    };
+
+    initDevice();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [joinedRoom?._id, socketReady]);
 
   if (!user?.id) {
     return (
@@ -562,20 +637,37 @@ export default function MeetWithFriends() {
               isAdmin={user?.isAdmin}
               onCreate={async ({ name, maxParticipants, type }) => {
                 try {
+                  let createdRoom = null;
+              
                   if (type === "permanent") {
-                    await api.post("/rooms/create-permanent", {
+                    createdRoom = await api.post("/rooms/create-permanent", {
                       name,
                       maxParticipants,
                     });
                   } else {
-                    await api.post("/rooms/create", {
+                    createdRoom = await api.post("/rooms/create", {
                       name,
                       maxParticipants,
                     });
                   }
-
+              
                   setShowCreateModal(false);
-                  await fetchRooms();
+              
+                  // Refresh list
+                  const updatedRooms = await fetchRooms();
+              
+                  // Auto-join ONLY temporary rooms
+                  if (type !== "permanent" && createdRoom?.room?._id) {
+                    const room = createdRoom.room;
+
+                    joinedRoomIdRef.current = room._id;
+                    setJoinedRoom(room);
+                    setParticipants(createdRoom?.roster?.participants || []);
+
+                    // IMPORTANT: Do NOT emit rtc:join-room
+                    // Backend already joined the socket inside /rooms/create
+                  }
+              
                 } catch (e) {
                   console.error("Create failed:", e);
                 }
