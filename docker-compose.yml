@@ -48,7 +48,7 @@ services:
       MONGODB_URI: mongodb://${MONGO_APP_USER}:${MONGO_APP_PASS}@mongo:27017/${MONGO_DB}?authSource=${MONGO_DB}
       FRONTEND_ORIGIN: https://test.carebells.de
       BELLA_LOG_DIR: /app/logs/bella
-      MEDIASOUP_ANNOUNCED_IP: "127.0.0.1"
+      MEDIASOUP_ANNOUNCED_IP: ${MEDIASOUP_ANNOUNCED_IP}
     ports:
       - "${BACKEND_PORT}:${BACKEND_PORT}"
       - "40000-40200:40000-40200/udp"
@@ -57,7 +57,7 @@ services:
       mongo:
         condition: service_healthy
     networks:
-      - carebell_net
+     - carebell_net
     volumes:
       - ./backend/logs:/app/logs/
 
@@ -79,7 +79,7 @@ services:
       MONGODB_URI: mongodb://${MONGO_APP_USER}:${MONGO_APP_PASS}@mongo:27017/${MONGO_DB}?authSource=${MONGO_DB}
       FRONTEND_ORIGIN: http://localhost:${FRONTEND_PORT}
       BELLA_LOG_DIR: /app/logs/bella
-      MEDIASOUP_ANNOUNCED_IP: "127.0.0.1"
+      MEDIASOUP_ANNOUNCED_IP: ${MEDIASOUP_ANNOUNCED_IP}
     ports:
       - "${BACKEND_PORT}:${BACKEND_PORT}"
       - "40000-40200:40000-40200/udp"

@@ -2,7 +2,7 @@
 const { getOrCreateRouter } = require("./routers");
 
 function getListenIps() {
-  const announcedIp = process.env.MEDIASOUP_ANNOUNCED_IP || undefined;
+  const announcedIp = process.env.MEDIASOUP_ANNOUNCED_IP;
 
   // In Docker bridge mode, you typically set MEDIASOUP_ANNOUNCED_IP in prod.
   // In dev (localhost), leaving it undefined is fine.
@@ -17,13 +17,7 @@ async function createWebRtcTransport({ roomId }) {
     enableUdp: true,
     enableTcp: true,
     preferUdp: true,
-    // These caps help slow networks and avoid insane burst rates:
-    initialAvailableOutgoingBitrate: 600_000, // 600 kbps start
-
-    iceServers: [
-        { urls: ["stun:stun.l.google.com:19302"] },
-        { urls: ["stun:global.stun.twilio.com:3478"] },
-      ],
+    initialAvailableOutgoingBitrate: 600_000,
   });
 
   // Optional: cap max incoming bitrate (client -> server), useful later for mobile safety
